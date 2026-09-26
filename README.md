@@ -19,9 +19,9 @@ This repository is the open-source part of MyBarPool: the Solana program that ho
 1. [How a pool works](#how-a-pool-works)
 2. [The rules, precisely](#the-rules-precisely)
 3. [Fees](#fees)
-4. [What happens when things go wrong](#what-happens-when-things-go-wrong)
+4. [If a game doesn't go to plan](#if-a-game-doesnt-go-to-plan)
 5. [Randomness](#randomness)
-6. [Trust model](#trust-model)
+6. [How winners are decided](#how-winners-are-decided)
 7. [Building on the program](#building-on-the-program)
 8. [What is in this repo](#what-is-in-this-repo)
 9. [Design and screens](#design-and-screens)
@@ -92,7 +92,7 @@ Worked example, 0.05 SOL boxes, 2% add-on, 20/20/20/40: pot 1.25 SOL, fee 12% = 
 
 **Ceilings are hard-coded.** `platform_bps ≤ 500` and `base + add-on ≤ 1500` are constants in the program. Config can lower them, never raise them; raising them would need a program upgrade, which is public, verifiable and announced in advance. No change of any kind touches an existing pool.
 
-## What happens when things go wrong
+## If a game doesn't go to plan
 
 | Situation | What the program does |
 |---|---|
@@ -113,26 +113,32 @@ Returns and splits are executed by the platform keeper. Players and creators nev
 - Two independent Fisher–Yates shuffles of 0–9 seeded with `hash(value, "home")` and `hash(value, "away")`. The digit assignment is recorded on the pool account and emitted as an event, so anyone can re-derive it.
 - No re-rolls. The pool records the `Var` address at lock and the draw instruction only accepts a value from that account. Replacing a `Var` is an admin (multisig) instruction that emits an event, never a keeper action.
 
-## Trust model
+## How winners are decided
 
-MyBarPool is platform-operated. Every state change after a purchase is performed by keys the platform controls, and players rely on the platform to run the keeper honestly and keep it running. What the program guarantees regardless:
+Winners come from the real score. Nothing else.
 
-| Key | Can do | Held in |
+After each quarter ends on the game clock, the official end-of-quarter score is posted on-chain and the program pays whoever holds the box whose digits match the last digit of each team's score. Nobody picks a winner, nobody approves a payout, nobody can hold one back. The score decides, the program pays.
+
+What makes that reliable, in plain terms:
+
+- **The money is in a program vault, not in anyone's wallet.** Only the program can move it, and only by the rules written in this repository. Not the team, not the creator, not the keeper.
+- **Scores come from two independent sources** (ESPN and API-Sports) and are posted only when both agree. If they disagree, nothing is paid until they do.
+- **Quarters go in order and can't be rushed.** Scores are posted one quarter at a time, in order, and can only go up. Because a quarter is 15 minutes of game clock, the program refuses any score posted less than 15 minutes after the previous one; a stolen key couldn't fake a whole game in seconds.
+- **The digits are drawn on-chain, after the grid is full,** from a public randomness source ([Regolith Labs' Entropy](https://github.com/regolith-labs/entropy)), and recorded on the pool. Nobody can know them while boxes are on sale, and there are no re-rolls.
+- **Every payout is written on the pool** with the score, the box, the wallet and the amount, and links to its transaction. Anyone can check any result, forever.
+- **Nothing about a pool changes after it's created.** Price, split, fees and rules are fixed on the pool account at creation.
+- **Fee ceilings are constants in the program**, not settings: 5% platform, 15% total. Lowering them is a config change; raising them would need a new program version, which is public, verifiable and announced in advance.
+- **If a game isn't played, everyone gets their money back in full.** Fees only ever come out of a pool that has actually paid a prize.
+
+Who holds which keys:
+
+| Who | Can do | Can't do |
 |---|---|---|
-| Platform admin | Update config (fees within the hard-coded ceilings, price steps, payout presets, creator limits), per-wallet overrides, mark a game postponed, cancelled or suspended (which makes its pools returnable or splittable), cancel a single pool, replace a pool's random variable | Squads multisig |
-| Score authority (keeper) | Post scores and kickoff-time changes, settle quarters, run the Entropy draw, return unfilled pools, execute returns and splits on games the multisig has marked postponed, cancelled or suspended | Cloud KMS, single purpose |
-| Program upgrade authority | Deploy new versions | Squads multisig |
-| Players and creators | Buy boxes, create pools within the limits, rotate the gate key on their own private pools | Their own wallets |
+| The keeper (MyBarPool's automated service) | Post scores and kickoff changes, run the draw, pay quarters, return unfilled pools, carry out returns and splits the team has approved | Pay anyone but the box that matches the score; skip or reorder a quarter; touch fees, prices or splits; return or split a pool without the team's mark |
+| The MyBarPool team (multisig) | Adjust config within the hard-coded ceilings, mark a game postponed, cancelled or suspended, cancel a pool, replace a failed draw (publicly, with an event), publish new program versions | Move money to itself, change an existing pool, pick a winner, pause a payout |
+| You | Buy boxes, create pools within the limits, run your own private pools | Nothing that needs asking for: no claims, no disputes, no approvals |
 
-Program-enforced checks on the keeper, so a bug or a stolen score key can't drain pools in one transaction:
-
-- Quarters must be posted in order, one per game; scores can only increase.
-- Wall-clock floors on every quarter: Q1 needs at least 15 real minutes after kickoff, each later quarter at least 15 minutes after the previous post. These are sanity checks, not triggers; scores are posted when both feeds report the quarter over.
-- Returns of unfilled pools are only accepted after kickoff.
-- Marking a game postponed, cancelled or suspended, and cancelling a single pool, need the admin key; the keeper can only execute the transfers that follow. Kickoff updates must be to a time in the future.
-- Every admin capability is an explicit, documented instruction. There is no privileged path in `buy` or `settle`.
-
-The keeper is closed source and its details are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) only to the extent needed to understand the trust model. The program is what you are trusting; the program is what is published.
+The keeper's code is closed; how it makes decisions is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The program that holds the money and enforces every rule above is what's published here, with verifiable builds, so you never have to take the keeper's word for it.
 
 ## Building on the program
 
