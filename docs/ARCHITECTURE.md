@@ -1,0 +1,244 @@
+# MyBarPool Architecture
+
+How the program, the keeper and the clients fit together, and why each rule is the way it is. This is the design the program is being built from; where the program and this document disagree once code exists, the program is the truth and this document gets fixed.
+
+## Game rules
+
+### Grid
+- 5×5 = 25 boxes. Columns = home team, rows = away team.
+- Digits 0–9 are shuffled onto each axis independently, two digits per row/column (positions i and i+5 share a lane).
+- Each box covers 4 of the 100 possible last-digit pairs, so every box has a 4% chance per quarter and a full grid always produces a winner.
+- Naming: the word is **box**, which is what bars call them. It is used consistently in everything a person sees and in all code: UI copy, notifications, program instructions and account fields (`box_count`, `boxes`), events, API responses, keeper logs, and component names. "Square" appears nowhere in the product or codebase; in conversation and notes either word is fine.
+
+### Buying
+- Any wallet can buy any number of boxes in any number of pools. The one exception is a pool's creator, who is capped at 5 boxes in their own pool (see Limits below).
+- Nobody picks a box. The buy instruction takes a count, and the program assigns boxes from those still available. Because digits are drawn after the grid sells out, every box is identical before the draw (4% per quarter), so choosing was never a real choice. Assignment removes collisions ("box already taken" after signing), makes multi-buy one signature, and simplifies the program.
+- Assignment must look random. Boxes are chosen by shuffling the remaining set with a seed from the current slot hash mixed with the buyer's key and the pool's sale count, so three boxes bought together land scattered across the grid, never 1-2-3. Predictability is harmless here since positions carry no value; Entropy is reserved for the digit draw.
+- Buyers see their name (or .skr name) on their assigned boxes immediately after purchase.
+- Numbering: boxes are labelled 1–25 everywhere a person sees them (frontend, notifications, keeper logs, on-chain events, API responses). The program may store a 0-based index internally, but the conversion happens once in `packages/shared` and nothing user-facing ever shows 0–24. Box 1 is top-left, numbering runs left to right, then down.
+- Sales close at the scheduled kickoff.
+- Box price: each token has a minimum, a step, and a maximum in platform config. The program rejects any price that isn't `min + k × step` within the cap. Initial values (SOL ≈ $121, ORE ≈ $59, SKR ≈ $0.021 at the time of writing; adjusted by the admin as prices move, no program upgrade needed):
+
+| Token | Min | Step | Max per box | Smallest / largest pool |
+|---|---|---|---|---|
+| SOL | 0.05 | 0.05 | 1 | 1.25 / 25 SOL |
+| SKR | 100 | 100 | 5,000 | 2,500 / 125,000 SKR |
+| ORE | 0.05 | 0.05 | 2 | 1.25 / 50 ORE |
+
+- The per-box cap also bounds the damage of any single wrong-score incident while the keeper builds a track record; it will be raised later.
+- Prices display in each token's natural precision: SKR as whole numbers, SOL and ORE to two decimals.
+
+### Lifecycle
+1. Open — creator picks an NFL game, token (SOL / SKR / ORE), box price, optional creator add-on fee, and payout split. Players buy boxes; funds go to a program-owned vault.
+2. Locked — only when all 25 boxes are sold. Every quarter therefore has exactly one winning box that belongs to a player, so there is no rollover logic.
+3. Numbers drawn — randomness (see below) assigns digits to both axes.
+4. Live — after each quarter ends, the keeper posts the official score on-chain and the program pays that quarter's winner immediately. No dispute window. Platform and creator fees are taken in the first settlement transaction, never before. The Q4 prize is paid when the game is final (see overtime below).
+5. Settled — all four quarters paid.
+6. Returned — the pool never locked or the game was postponed or cancelled; every buyer's full purchase is sent back to their wallet.
+7. Split — the game was suspended and not finished; every unpaid prize is split equally across all 25 boxes.
+8. Abandoned — the pool is still unresolved 30 days after kickoff, which can only mean the platform has stopped operating; buyers reclaim their own share (see below).
+
+### Returns and splits
+All returns and splits are decided and executed by the platform. No player, creator, or third party can trigger them, with one narrow exception for abandoned pools described at the end of this section.
+- Unfilled at kickoff: the keeper returns each buyer's full purchase to their wallet. No fees are taken and players don't have to do anything.
+- Delayed game (weather, etc.): the pool stays locked and waits.
+- Postponed or cancelled game, verified by both score sources: the keeper cancels the pool and returns every purchase, even if the pool had locked. No fee leaves the vault until a prize is paid, so a return is always the full purchase price and the creator earns nothing on a game that didn't happen.
+- Suspended game (stopped during or after any quarter and not finished): every prize not yet paid, including the quarter in progress, is split equally across all 25 boxes and sent to their owners. Before the first settlement this is the same as a full return (no fee has been taken); after it, the fee stays taken and only the unpaid prize pool is split.
+- Ambiguous game status (sources disagree, or an unfamiliar status): the pool stays locked and the keeper alerts the team. Waiting is always the safe default because funds never leave the vault without a decision.
+- Cost: a return is one or two transactions for the whole pool (many transfers per transaction), paid by the keeper. Buyers pay nothing to be returned.
+
+The one exception to platform-only control is the abandoned-pool reclaim, a dead-man switch for the case where the platform itself has stopped:
+- Condition: the pool is not settled, returned, or split, and the current time is at least 30 days past the pool's kickoff (the kickoff the keeper last recorded, so a postponed game counts from its new date). Nothing else can satisfy it. A working keeper resolves every pool within hours of the game, and the league resolves suspended games within days, so any pool still open a month after kickoff is by definition one nobody is operating.
+- Action: `reclaim` is permissionless per buyer. For a pool that never paid a prize (Open or Locked), each box returns its purchase price. For a pool that has paid some prizes, the pool account tracks `unpaid_prize_pool`, and each box returns `unpaid_prize_pool / 25`, the same arithmetic as a split. Fees already taken stay taken; fees not yet taken are never taken, and the creator earns nothing. Once every box is reclaimed, anyone can close the pool and the rent goes to the creator.
+- What it is not: an outage safeguard. An outage lasting hours delays settlement by hours and the keeper then catches up; the floors and ordering rules are unaffected. Thirty days is far past anything infrastructure can cause. The switch exists so that money in the program never depends on the team continuing to exist, which is the guarantee integrators and auditors will ask for.
+
+### Pool creation
+- Creation fee: the creator pays the rent for the pool account, the vault, and (first time per game) the open-pool counter, about 0.014 SOL in total (pool ~0.011, SPL vault ~0.002, counter ~0.001). When the pool closes in any outcome, the program reclaims that rent to the platform. It is therefore a non-refundable creation fee, and the app labels it as one ("Creation fee 0.014 SOL, covers account rent"), never as a deposit.
+- Why the platform keeps it: it is simpler than a refund path, it covers the keeper's transaction costs on pools that never earn a fee, and the creator's 5% share (below) is set high enough that the fee is small next to what a filled pool pays. A creator whose pool doesn't fill loses the creation fee and nothing else.
+- Keep the pool account small, since rent is the creation fee: box owners (25 × 32 bytes) dominate; settlement records store only box index and amount (the score lives on the per-game record and the wallet is the box owner); everything else is fixed-width with reserved padding. Target about 1.2 KB, which would bring the fee under 0.012 SOL.
+- The creator may buy boxes in the same transaction as creating the pool (the create flow's stepper starts at 1 and runs 0–5), so rent and any boxes are one signature. Buying is optional: a bar can run a board without betting in it. Their boxes are assigned like everyone else's.
+- Creator expectation: a box returns 90% of its price on average, so a 0.05 SOL box is a 0.005 SOL expected loss, while the 5% share of a 1.25 SOL pot is 0.0625 SOL, against a creation fee of about 0.014 SOL. A creator who fills the smallest pool nets roughly 0.05 SOL whether or not they buy in; a creator whose pool doesn't fill is out the creation fee only.
+
+### Limits
+- Open pools: a wallet may have at most 3 open (unfilled) pools per game. Locked, settled, returned, and split pools don't count, so a creator who fills a pool can open another. A bar can still run a pool on every game of the week.
+- Creator boxes: a creator may own at most 5 boxes in a pool they created, counted across the create transaction and any later buys. Other wallets have no per-pool or cross-pool limit; a player can buy into as many pools as they like.
+- Both limits are values in platform config, with an optional per-wallet override account (PDA seeded by the wallet) that the admin can create to raise or lower either number for one creator. The program reads the override if it exists, else the config. Changing either is an admin transaction, no program upgrade.
+- Why: the open-pool cap stops list clutter, since an unfilled pool costs its creator only the small creation fee. The box cap keeps a creator from stuffing their own grid to make it look nearly full, and keeps the creator's overall expectation positive: at the 10% base fee a creator's break-even is about 12 boxes (5% × 25 ÷ 10%), so at 5 or fewer, buying in never costs them money in expectation.
+- What these limits are not: a security boundary. Self-buying isn't an exploit. A creator who bought all 25 boxes would pay the platform 5% to play against themselves; every box is worth the same before the draw, so buying early gives no edge; and the refund on an unfilled pool goes to every buyer, not just the creator. Someone determined to hold more boxes can use a second wallet, and the outcome is the same as if they'd bought them as a player.
+
+### Payouts
+- The creator picks a payout split at creation from presets stored in platform config. Default: Q1 20% / Q2 20% / Q3 20% / Q4 40%. Other presets include 25/25/25/25 and Q4 100% (winner-take-all on the final score). Splits are shown on the pool.
+- Fees (platform, creator base, creator add-on) are taken in the same transaction as the first prize with a non-zero share: Q1 for most splits, the final for Q4 100%. Details and amounts under Fees.
+- Q1–Q3 use the official end-of-quarter line score, not the running total.
+- Q4 uses the final score. If the game goes to overtime, the final score after overtime replaces the end-of-Q4 score (the standard rule in the game), so the Q4 prize is paid when the game is final, not when the fourth quarter clock runs out. The keeper must recognise overtime periods and wait for a final status from both sources.
+- Push payouts: the settle instruction transfers the prize directly to the winning box owner's wallet. Players never claim.
+  - SPL tokens (SKR, ORE): buyers already hold a token account from buying in. Settle and return still use an idempotent create for the recipient's associated token account, because a buyer may close an empty account after spending their tokens; this is a no-op when the account exists and the keeper pays rent when it doesn't.
+- Rounding: integer division leaves at most divisor − 1 base units per split (≤ 4 lamports on a 20/40% split, ≤ 24 on a 25-way split), regardless of pool size. This dust goes to the platform and isn't itemised in the pool view; the fee is.
+- Every payout, return, and split is recorded on the pool account (quarter, score, winning box, wallet, amount) and emitted as an event, so anyone can verify results on-chain. The app shows this per pool with explorer links to the transfer transactions.
+
+### Randomness
+- Use Regolith Labs' deployed Entropy program ([regolith-labs/entropy](https://github.com/regolith-labs/entropy), program `3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X`, upgrade authority is a Squads multisig), the same system ORE uses to pick its winning square. Integrating with ORE's stack keeps MyBarPool part of the ORE ecosystem; if the provider charges for variables, the platform pays, for third-party pools too.
+- How it works: commit-reveal plus slothash sampling. The keeper requests a commit from Regolith's off-chain Entropy API, then opens a `Var` account with that commit and an end slot. After the end slot, the slothash is sampled on-chain, the provider publishes the seed, and `Reveal` finalizes value = hash(seed, slothash). The program rejects a seed that doesn't match the commit. The provider can't predict the slothash and validators can't see the seed, so neither can steer the result.
+- For MyBarPool: the keeper opens one `Var` per pool at lock with an end slot about a minute later, so the digits are unknown to everyone while boxes are on sale. `Sample` and `Reveal` are permissionless, so the keeper runs them itself rather than relying on the provider's auto mode. After the draw the program closes the `Var` to recover rent.
+- Two independent axis shuffles: the home (top) axis uses `hash(value, "home")` and the away (side) axis uses `hash(value, "away")` as seeds for separate Fisher–Yates shuffles of 0–9. The axes are never a copy of one another. Coincidences (the same pair appearing on a column and a row, even the same lane) are possible and accepted; they don't change any box's odds. The digit assignment is recorded on the pool account and emitted as an event.
+- Timing constraint: `Sample` must run within the slot-hashes window (~512 slots, a few minutes) after the end slot. If it misses, the program substitutes a deterministic hash of the slot number, which the provider could predict. The keeper samples promptly and alerts if it can't.
+- Trust assumptions: Regolith keeps seeds secret and does not run a validator; their provider API stays available. Fallback if the draw isn't finalized within a set time after lock: a fresh `Var` is opened and the draw retried; if it still can't finalize before kickoff, the pool is returned.
+- No re-rolls: the pool records the `Var` address at lock and the draw instruction only accepts a value from that account. Opening a replacement `Var` for a pool is an admin (multisig) instruction that emits an event, never a keeper action, so a draw can't be quietly abandoned because someone disliked the outcome. This matters because the deployed Entropy program does not currently require the provider to co-sign `Open` (the check is commented out in the source), so a `Var` opened with a self-made commit would let its authority see the value before revealing it. Confirm the provider co-signs in whatever version is live when we build; either way our program enforces one draw per pool.
+- Cost, from the Entropy source as of 2026-09: the program takes no fee. On-chain cost is the `Var` rent (paid at `Open`, recovered at `Close`) plus four transaction fees, under 0.001 SOL per pool. The provider API is where a charge would be introduced and Regolith has not published one (the repo is marked WIP). Whatever it costs is paid by the platform out of its 5%, for third-party pools the same as for its own.
+
+### Fees
+
+What is charged:
+- Base fee: 10% of the pot on every pool, split 5% to the platform and 5% to the creator automatically. Players see "Fee 10%"; the creator share comes out of it, not on top.
+- Add-on budget: up to 5% of the pot on top of the base, chosen at creation, fixed for the life of the pool, and displayed on every pool as part of one total fee. Total rake is therefore 10–15%. The budget is shared between two optional recipients:
+  - Creator add-on (`creator_addon_bps`, 0–500): extra fee to the creator, default 0.
+  - Integrator fee (`integrator_bps`, 0–500, with `integrator` wallet): a fee to the client that created the pool, for third-party frontends that let their users create pools and need a reason to. Our app never sets it. `creator_addon_bps + integrator_bps ≤ 500` is enforced by `create_pool`, so the maximum rake is 15% no matter which client created the pool.
+- Why an even split: creators fill the grid, and a pool only locks when they do. At 5% the smallest pool pays a creator 0.0625 SOL, which clears the ~0.014 SOL creation fee several times over, so creating is worth doing even for strangers at the minimum price. The platform's 5% pays for the keeper, the score feeds and the randomness on every pool.
+- Why the integrator fee comes out of the add-on budget rather than the platform's 5%: a share of our 5% would be a leak, since anyone with the SDK could tag their own pools and skim, and closing it would need an admin-approved integrator list. Inside the add-on budget, self-tagging gains nothing a creator couldn't already give themselves, so there is nothing to police. Subsidies for large partners, if ever, are off-chain deals.
+
+Amounts (all in the pool's token, integer base units, computed once from the pot `P = 25 × price` and stored on the pool account at creation so they never drift):
+- `platform_fee = floor(P × 500 / 10000)`
+- `creator_fee = floor(P × (500 + creator_addon_bps) / 10000)` — the 5% and the add-on are one number to the program and one transfer to the creator; the event records both components.
+- `integrator_fee = floor(P × integrator_bps / 10000)`, zero when unset.
+- `prize_pool = P − platform_fee − creator_fee − integrator_fee`
+- `quarter_prize[q] = floor(prize_pool × split[q] / 100)`; whatever integer division leaves over (a few base units) is swept to the platform when the pool closes.
+
+When fees move, and the one rule behind it: **no fee leaves the vault until the pool has paid a prize.**
+- Every share (platform 5%, creator 5% plus add-on, integrator fee if set) is transferred in the same `settle` transaction as the first prize with a non-zero share, atomically with it. That is Q1 for 20/20/20/40 and 25/25/25/25, and the final for Q4 100%. There is no separate fee instruction and no fee at lock, at draw, or at creation. The creation fee (account rent) is separate: paid by the creator at creation, reclaimed by the platform at close.
+- Until that moment the vault holds the full pot, so every return path (unfilled at kickoff, postponed, cancelled, draw failure, suspended before the first settlement) is 100% of each purchase with nothing to claw back. A creator whose pool is returned earns nothing, which is right: no game, no fee.
+- After that moment the fee is final. A game suspended later splits only the remaining `prize_pool`, not the fee; the platform and creator keep it because the work the fee pays for (draw, keeper, settlement) has been done.
+- Destinations: the creator wallet and integrator wallet stored on the pool. SOL goes to the wallet directly; SKR/ORE go to its associated token account with an idempotent create, keeper paying rent if the account is missing, same as winners.
+- Every number is fixed at creation and shown on the pool for everyone ("Fee 12% · platform 5% · creator 7%", or with a client line when an integrator is set: "Fee 12% · platform 5% · creator 5% · client 2%"), and to the creator as "You earn 0.0875 SOL when the pool pays Q1".
+
+Worked example, 0.05 SOL boxes, 2% add-on, 20/20/20/40: `P` = 1.25 SOL. Total fee 12% = 0.15 SOL (platform 0.0625, creator 0.0875 = 0.0625 base + 0.025 add-on). `prize_pool` = 1.1 SOL, quarters 0.22 / 0.22 / 0.22 / 0.44. The Q1 `settle` transaction moves 0.22 to the Q1 winner, 0.0625 to the platform and 0.0875 to the creator; the vault goes from 1.25 to 0.88 SOL and holds only unpaid prizes from then on.
+
+Why not the alternatives:
+- At lock: a postponement after lock would need a clawback or a 90% return. Whole returns are worth more than the creator being paid an hour earlier.
+- Per quarter (fee taken from each prize as it settles): four times the transfers and rounding, and the creator is paid in four pieces. The only case where it differs is a suspended game, which is rare enough not to design around.
+
+### What the keeper pays for
+- Per pool, the keeper signs about ten transactions: Entropy open/sample/reveal/close, the draw, four settlements and the pool close. Score posts are shared by every pool on a game. Entropy `Var` rent is recovered on close. Occasionally it also pays the rent to create a winner's missing token account.
+- All of that is paid by the platform out of its 5% and the creation fee, for every pool on the program, whichever client created it.
+
+## Trust model
+MyBarPool is platform-operated. Every state change after a purchase is performed by keys we control, and players rely on the platform to run the keeper honestly and keep it running.
+
+| Key | Can do | Held in |
+|---|---|---|
+| Platform admin | Update platform config (fees, minimums, payout presets, creator limits), set per-wallet limit overrides, cancel/return pools, split suspended pools, update a pool's kickoff time | Squads multisig controlled by the team, same pattern ORE and Entropy use for upgrade authority |
+| Score authority (keeper) | Post quarter scores, settle quarters, open/sample/reveal/close Entropy vars, return unfilled pools | Cloud KMS, single-purpose; the key never leaves the HSM |
+| Program upgrade authority | Deploy new program versions | Squads multisig |
+| Players / creators | Buy boxes (count only; positions assigned by the program), create pools within the creator limits, rotate the gate key on their own private pools | Their own wallets |
+
+Program-enforced checks on the keeper, so a bug or stolen score key can't drain pools in one transaction:
+- Quarters must be posted in order, one per game; scores can only increase.
+- Wall-clock sanity floors, applied to every quarter and to the final: Q1 can't be posted until at least 15 real minutes after kickoff, and Q2, Q3, Q4/final each need at least 15 real minutes after the previous post. These are not triggers. Every quarter is posted when both feeds report it ended (15 minutes of game clock, which always takes longer in real time with timeouts, injuries, reviews, the two-minute warning, and halftime). The floors only make it impossible for a compromised key to post a whole game's scores in seconds.
+- Returns of unfilled pools are only accepted after the pool's kickoff time.
+- Cancels and splits require the platform admin key, not the score key.
+- Abandoned-pool reclaim needs no key at all, but only becomes possible 30 days after kickoff on a pool nobody has resolved, and only ever returns a buyer's own share. It is the guarantee that funds don't depend on the platform continuing to exist.
+
+## Components
+
+```
+ESPN + API-Sports -> scores service -> WebSocket -> web app / Seeker app
+scores service -> game events (quarter end, status change) -> keeper -> post_scores / settle / return / split -> Solana program
+keeper -> Entropy API + Entropy program (open / sample / reveal / close)
+keeper signing key lives in a cloud KMS
+```
+
+### Solana program
+- Written with Anchor. ORE and Entropy are written with Regolith's Steel framework; Anchor can still read the Entropy `Var` account and CPI into the Entropy program via the `entropy-api` crate (ORE currently pins `0.1.4`).
+- Accounts: platform config (including the platform fee address), pool (including `access_type`, `gate_key`, `creator_addon_bps`, and the optional `integrator` and `integrator_bps`), per-game score record (shared by all pools on that game), vault, per-pool Entropy `Var` (temporary), per-creator open-pool counter per game (PDA of wallet + game, incremented on create, decremented when a pool leaves Open), optional per-wallet limit override.
+- Creator limits are enforced in the program, not just the app: `create_pool` fails when the wallet's open-pool count for that game is at the limit, and both `create_pool` and `buy` fail when they would take the creator above their box cap in their own pool.
+- Token support: native SOL vault; SPL token vaults for SKR and ORE. ORE mint `oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp`, 11 decimals. Confirm Token vs Token-2022 for each mint; ORE's codebase depends on both.
+- Checked arithmetic everywhere; score authority separate from platform admin.
+
+### Private pools
+Gating ships in the v1 program even though the v1 app only creates public pools, so third-party clients can use it from day one without waiting for a program upgrade.
+- Anything that restricts who can buy must live in the program. The app can hide a pool from its list, but anyone who reads the chain can find the account and send `buy` directly, so "private" only means something if the program refuses the transaction.
+- No passwords on-chain. Accounts and transactions are public, so a code stored on the pool or passed to `buy` is visible the moment it's used. Instead, a gate key: the client generates a throwaway keypair at creation, the public key is stored on the pool as `gate_key`, and the private key goes into the invite link (and a QR code a bar can print). `buy` on a link-gated pool requires the gate key as a co-signer; the client signs silently for anyone who opened the link. The key never appears on-chain, only signatures from it. Same pattern NFT mints use for third-party-signer gating.
+- `access_type` on the pool: `public` (default), `link` (gate key required), `allowlist` (Merkle root of allowed wallets on the pool, buyer supplies a proof; for closed groups where a forwardable link isn't enough). Fixed at creation.
+- `rotate_gate_key`: creator-only instruction to replace the gate key, killing a leaked link.
+- Private pools are otherwise identical: same fees, draw, settlement, returns, and creator limits. The keeper doesn't distinguish them. Listing is a client concern: our app will not show `link` or `allowlist` pools on the game page, only via their link and in My Boxes / Pools I created.
+- The gate key is a bearer credential; anyone the link is forwarded to can buy. That is the intended behaviour for a bar. Use `allowlist` when it isn't.
+- "Private" therefore means unlisted by our app and gated by whoever holds the key, nothing more. A third-party site can hold the key itself and offer the pool to all of its visitors: public on their site, absent from ours, and it still pays the platform fee and is served by the keeper. That is an intended use, alongside creating ordinary public pools that also appear in our app. Partners who need more than the default open-pool limit get a per-wallet override.
+
+### Open source and third-party clients
+- The program (`programs/mybarpool`) is open source under Apache-2.0, the licence ORE uses, and deployed with verifiable builds (see Toolchain). `packages/shared` is published as the client SDK under the same licence. The app, keeper, scores service, and infrastructure stay proprietary.
+- Why: the program holds the money, and its bytecode is public regardless. Verifiable builds are only meaningful if the source is public, and a platform-operated real-money game needs that trust argument more than it needs to hide 2,000 lines of Anchor.
+- Anyone may build a frontend, bot, or integration. Everything that matters is enforced by the program, not the client: the platform fee is paid to the config account's fee address inside `settle`, the creator fee, add-on and integrator fee are paid the same way, price steps and creator limits are checked on `create_pool` and `buy`, and private-pool gating is checked on `buy`. A client can't turn any of it off. The keeper watches every pool account on the program and serves third-party pools identically; the 5% and the creation fee cover that cost.
+- What a third party chooses and what it doesn't: everything that is a per-pool choice is the client's (token, price, payout split, creator add-on, integrator fee, public or private, which of the allowed tokens its UI offers at all); everything that is a list or a ceiling is the platform's (allowed tokens and their mints, price steps, fee caps, creator limits). A client that wants only ORE pools offers only ORE; a client that wants a token not on the list asks, and if added it is added for everyone by config.
+- How a third party earns: either as the sole creator on its own site (5% base plus up to 5% add-on on every pool, with a per-wallet override for the open-pool limit), or by letting its users create pools and setting itself as `integrator` for a share of the add-on budget. What it cannot change: the 5% to the platform and the 5% to the creator. Different terms mean a fork, and a fork means running a keeper.
+- The fork case: someone can deploy their own copy with their own fee address. They then need their own keeper, score feeds, Entropy integration, mainnet operations, and users. The running service is the moat, not the code; ORE's position is the same.
+- Nothing privileged is hidden. Every admin capability is an explicit, documented instruction gated on the multisig (see Trust model). A quiet exception in `buy` or `settle` would be found by anyone reading the source or the bytecode, and would end the product.
+- Guarantees to integrators, enforced in code rather than promised: the platform fee and the 15% total cap are hard-coded ceilings in the program (`platform_bps ≤ 500`, `base + add-on budget ≤ 1500`); config can lower them, never raise them, so raising fees would need a program upgrade, which is public, verifiable, and announced. Every pool's fees are fixed on its account at creation, so no change of any kind touches an existing pool.
+- Upgrade discipline, since third-party clients depend on layouts and events: the pool and config accounts carry reserved padding so fields can be added without migrations; the IDL is published on-chain and versioned; events are additive only; breaking changes get a deprecation notice in the public changelog at least one NFL week before deploy. Official program ID and config PDA are published in the public repo so clients can check they're talking to the real deployment and not a fork.
+- Trademark: Apache-2.0 covers the code, not the name or the sign. The public repo carries a notice that "MyBarPool", the neon-sign logo and mybarpool.com are trademarks of the team and may not be used by forks or clients to imply endorsement. Clients say "powered by MyBarPool" or nothing.
+- Security: [`SECURITY.md`](../SECURITY.md) with a disclosure route and a response commitment; an independent audit of the program before the first mainnet deploy, with the report published; a bug bounty once there is enough in vaults to justify one. Dependency licences (Anchor, `entropy-api`, Steel) are checked for Apache-2.0 compatibility before the program is published.
+- Contributions: issues and discussion welcome; the program does not accept external pull requests in v1. It holds money, and review capacity is the constraint. Revisit after the audit. See [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+
+### Platform services
+Closed source, run by the platform. Described here so the trust model is complete.
+- Scores service — polls ESPN and API-Sports during live games, detects quarter ends, overtime periods, and game status changes (delayed, postponed, cancelled, suspended, final), pushes deltas over WebSockets, exposes REST for schedule/games.
+- Keeper — event-driven; runs the Entropy draw, posts scores, settles quarters (pushing payouts to winners), returns unfilled or cancelled pools, splits suspended pools, and updates kickoff times when the schedule changes. Signing key in a cloud KMS, never in environment variables or on disk.
+- Notifications — push messages for "your box hit" alerts.
+- Web hosting — static hosting behind a CDN for mybarpool.com.
+
+### Clients
+- Seeker first. Most users are expected to arrive through the Solana dApp Store, so the Android app is the primary client and the web app is the second target of the same codebase, not the other way round. No web-view or TWA wrapper.
+- One Expo (React Native) project in `apps/app` builds both:
+  - Android (Seeker, dApp Store) — native APK, signing via Solana Mobile's React Native Mobile Wallet Adapter (Seed Vault and installed wallets), push notifications via FCM, haptics, share sheet, .skr names on the grid.
+  - Web (mybarpool.com) — the same screens rendered with React Native Web, signing via the standard wallet adapters (Phantom, Solflare, Backpack).
+- A small wallet abstraction sits between the screens and the two signing paths (MWA on Android, wallet-standard on web) so screens never know which one they're on.
+- Precedent: ORE's app ships web, mobile and Seeker from one codebase (Dioxus, Rust). We take the same approach in TypeScript so the app shares `packages/shared` with the keeper and program tests.
+- If the dApp Store rejects a real-money game, MyBarPool ships as the web app only; nothing in the design depends on the store.
+
+### Live scores vs. results
+The frontend receives two separate streams and must never confuse them:
+- Live scores (from the scores service over WebSocket): display only. The grid may highlight the box that would currently win as "leading", clearly marked provisional, and it changes with every score update.
+- Results (from on-chain settlement events emitted by the program): the only source of truth for winners and payouts. A box is shown as "won" only after the settle transaction confirms, with a link to it.
+Winner calculation happens in the program at settlement, driven by the keeper. Neither the scores service nor the frontend ever decides a winner.
+
+### Score integrity
+- Scores are public, so there is no on-chain dispute process. The risk is the keeper posting a wrong score (bad feed data, bug, or a compromised key), and payouts are irreversible.
+- Sources: ESPN's public scoreboard feed plus API-Sports' API-American-Football. Two independent sources, and the keeper acts only when they agree.
+- Polling: one request per source returns every live NFL game, and the scores service fans that out to all pools over WebSockets, so API usage doesn't grow with the number of pools. Only the scores service calls the APIs; clients never do.
+- Mitigations: keeper posts only when both sources agree on the end-of-quarter line score and game status (including "final" after any overtime), and halts and alerts on disagreement; program-enforced ordering and timing checks (see trust model); score authority key is single-purpose and held in KMS.
+
+## Decisions log
+- Scores: ESPN plus API-Sports API-American-Football, both required to agree. Two sources with different upstreams is the cheapest defence against a bad feed.
+- Entropy: build against Regolith's deployed program and provider (`entropy-api.onrender.com`, the endpoint ORE's CLI uses). It's open source; talk to Regolith only if something requires it.
+- Seeker: submit to the dApp Store; if rejected, web app only.
+- NFL logos: real team logos throughout the app.
+- Fee split: 10% base as 5% platform / 5% creator, add-on budget up to 5%, 15% cap, and the creation fee (rent, ~0.014 SOL) kept by the platform. Replaces an earlier 6/2 split with an 8% base: at 2% the smallest pool paid a creator about 0.025 SOL against a ~0.014 SOL creation fee, too thin to motivate creating for strangers; 5% pays 0.0625 SOL. Refundable rent was considered and rejected as an extra path for little gain once the creator share was raised.
+- Fee timing: platform 5%, creator 5%, add-on and integrator fee all move in the first settlement transaction that pays a prize, never at creation, lock, or draw. Amounts are fixed on the pool account at creation. Rejected: fees at lock (breaks whole returns on postponement) and per-quarter fees (4× transfers for a difference that only shows in a suspended game). Confirmed: on a game suspended after the first settlement, the fee stays taken and only the unpaid prize pool is split; a pro-rata fee refund was considered and rejected as not worth the complexity for a once-a-decade case.
+- Open source: program and SDK under Apache-2.0 with verifiable builds; app, keeper, scores service and infra proprietary. Third-party clients welcome; fees, limits and gating are program-enforced so they apply to every client. Forks are accepted as the cost of the trust argument.
+- Abandoned-pool reclaim: permissionless per-buyer reclaim of their own share on any pool still unresolved 30 days after kickoff. The one exception to platform-only control of returns, accepted because it can only fire if the platform has stopped operating and it is the guarantee integrators and auditors will require. Not an outage measure; outages are hours, not months.
+- Integrator fee: optional per-pool `integrator` wallet and `integrator_bps`, sharing the 5% add-on budget with the creator add-on so the 15% maximum holds for every client. Gives third-party frontends a reason to let their users create pools. Rejected: paying integrators from the platform's 5%, which would need an approved-integrator list to stop self-tagging.
+- Private pools: gate-key (`link`) and Merkle `allowlist` gating built into the v1 program; the v1 app creates public pools only and exposes private pools later. Participants are not capped per pool; a big buyer doesn't change the creator's fee or anyone's odds, and the bar use case is served by private pools rather than a platform rule.
+- Creator limits: 3 open pools per wallet per game and 5 boxes in your own pool, both adjustable in config globally or per wallet. Players are unlimited. Chosen to prevent clutter and grid-stuffing, not because self-buying is exploitable (it isn't; see Limits).
+- House pools (considered, deferred to v2): one platform-created pool per game per token with unlimited entries at a unit price (0.05 SOL / 100 SKR / 0.05 ORE, buy any number), several buyers per box, the box's prize split among its entries. Fixes fill risk and fragmentation and gives every game action from day one, but it is a parimutuel rather than a bar's board: no names on the grid, no creator, none of the creator economics. It also needs an empty-box rule (about 9 empty boxes at 25 entries, under one at 100), per-buyer accounts, and multi-transaction settlement fan-out. Expected value per entry equals owning a box today. Decision: keep the creator model as the core; revisit as a second pool type (`shared`) in the same program, featured above creator pools on a game, if launch data shows small pools aren't filling. Cold start is handled in v1 without it (below).
+- Launch seeding: the platform wallet creates a standard 0.05 SOL pool on every game each week (per-wallet limit override on its own wallet, no program change), so the games list is never empty before creators arrive. Unfilled ones return like any other; the platform collects the creator share on those that fill, visibly, from a published wallet.
+
+## Toolchain
+- Always build with the latest stable release of each Solana tool. Stable means a tagged release Anza marks suitable for mainnet; never alpha, beta, or rc builds, which exist for validator operators testing upcoming changes. On 2026-09-25 that is Agave/Solana CLI 4.3.0 (4.4 is alpha only), Anchor 1.2.0, and platform-tools v1.57 behind `cargo build-sbf`.
+- Pin every version in the repo so all builds are reproducible: `rust-toolchain.toml`, the `[toolchain]` section of `Anchor.toml`, and the Node version and package lockfile for the apps and services. CI builds with exactly those pins.
+- Upgrade policy: when a new stable ships, bump the pins in a dedicated PR, run the full program test suite on localnet, then merge. Don't let versions drift silently.
+- Verifiable builds: deploy with `solana-verify` and submit the build for on-chain verification, as ORE and Entropy do, so anyone can confirm the deployed program matches the public program source (see Open source and third-party clients).
+- Dependency caveat: Entropy's `entropy-api` crate (ORE pins 0.1.4) is built on Steel and `solana-program ^2.1`. If it won't resolve alongside Anchor 1.x's newer Solana crates, define the `Var` account layout and instruction data in our own crate instead of depending on `entropy-api`; the account is small and the layout is public.
+- Mainnet's validator version doesn't gate program builds. Programs compile to SBF bytecode that runs on any supported cluster version; only new syscalls or SBF features need the matching feature gate active on mainnet.
+
+## Environments
+- Two environments only: localnet and mainnet. No devnet.
+- Localnet: `solana-test-validator` (and LiteSVM/Bankrun in the test suite) with the Entropy program, the SKR and ORE mints, and any other mainnet dependencies cloned from mainnet, so tests run against the real bytecode and account layouts. The full lifecycle (fill, draw, four settlements, return, split, suspended) must pass here in CI before any mainnet deploy.
+- Mainnet: the first deploy is the launch. Entropy is live on mainnet, so the draw works exactly as designed with no fallback path. Program upgrade authority is the Squads multisig from the very first deploy.
+- Demos and smoke tests on mainnet use real pools at the 0.05 SOL minimum price.
+
+## Delivery
+- Launch week: the platform wallet seeds one 0.05 SOL pool per game (see Decisions log, launch seeding) before the app is announced, so first-time users see pools to join, not an empty list.
+- The Solana program and the app are built in parallel, not in sequence. Within the app, Android is built and tested first on a device; the web target is enabled from the same code once the Android screens work.
+- Because both targets come from one Expo project, "web" is mostly the wallet-standard signing path, responsive layout for desktop (two-column list/detail), and hosting.
+- Shared TypeScript package (`packages/shared`) holds grid math, payout math, the 1–25 box labelling, team data, and account types so the program tests, app, and keeper agree on every number.
+
+## Open questions
+- Program rent-exemption for tiny SOL payouts is handled by the 0.05 SOL minimum (smallest quarter prize 0.23 SOL, far above the ~0.001 SOL rent floor).

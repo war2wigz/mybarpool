@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyBarPool — screen mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg0:#0B0B10; --bg1:#13131A; --bg2:#1C1C26; --line:#2A2A38;
+    --t1:#F2F2F7; --t2:#9A9AAE;
+    --purple:#9945FF; --green:#14F195; --teal:#00C2FF; --amber:#FFB020; --red:#FF4D6D;
+    --num:"Barlow Condensed",sans-serif; --body:"Inter",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#050507;color:var(--t1);font-family:var(--body);font-size:15px;-webkit-font-smoothing:antialiased}
+  body.overview{padding:40px;display:flex;gap:32px;align-items:flex-start;flex-wrap:nowrap;width:max-content}
+  body.overview .label{position:absolute;top:-28px;left:0;color:var(--t2);font:600 13px var(--body);letter-spacing:.04em;text-transform:uppercase}
+  .frame{position:relative;width:390px;height:844px;background:var(--bg0);border-radius:44px;overflow:hidden;border:1px solid #23232e;display:flex;flex-direction:column}
+  body.single{padding:0;background:var(--bg0)}
+  body.single .frame{border-radius:0;border:0;height:100vh}
+  body.single .label{display:none}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  .t2{color:var(--t2)}
+  .content{flex:1;overflow:hidden;padding:0 16px 0 22px}
+
+  /* header */
+  .top{display:flex;align-items:center;justify-content:space-between;padding:56px 16px 10px}
+  .logo{font:400 24px Pacifico,cursive;line-height:1;background:linear-gradient(90deg,#B06CFF 0%,#5FD6FF 55%,#14F195 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px rgba(153,69,255,.55)) drop-shadow(0 0 12px rgba(20,241,149,.25))}
+  .back{color:var(--t2);font-size:14px;display:flex;align-items:center;gap:6px}
+  .wallet{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:6px 10px 6px 6px;font-size:13px;font-weight:500}
+  .avatar{width:22px;height:22px;border-radius:50%;background:conic-gradient(from 90deg,#9945FF,#14F195,#00C2FF,#9945FF)}
+
+  /* pills & chips */
+  .pill{display:inline-flex;align-items:center;gap:6px;font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:4px 8px;border:1px solid transparent}
+  .pill.open{color:var(--purple);border-color:rgba(153,69,255,.5)}
+  .pill.locked{color:var(--amber);border-color:rgba(255,176,32,.5)}
+  .pill.live{color:var(--teal);background:rgba(0,194,255,.10)}
+  .pill.settled{color:var(--green);background:rgba(20,241,149,.10)}
+  .pill.returned{color:var(--red);border-color:rgba(255,77,109,.5)}
+  .dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+  .team{display:flex;align-items:center;gap:10px}
+  .logo-img{width:28px;height:28px;object-fit:contain}
+  .logo-img.sm{width:22px;height:22px}
+  .logo-img.lg{width:40px;height:40px}
+
+  /* cards */
+  .card{background:var(--bg1);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+  .row{display:flex;align-items:center;justify-content:space-between}
+  .sect{display:flex;align-items:baseline;justify-content:space-between;margin:18px 0 10px;font:600 13px var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
+  .sect b{color:var(--t1);font-size:17px;letter-spacing:0;text-transform:none}
+  .score{font:700 30px/1 var(--num);letter-spacing:.01em}
+  .kick{font:600 15px var(--num);color:var(--t2);letter-spacing:.02em}
+  .fill{display:grid;grid-template-columns:repeat(25,1fr);gap:2px;height:6px;margin-top:10px}
+  .fill i{background:var(--line);border-radius:1px}
+  .fill i.on{background:var(--purple)}
+  .meta{display:flex;gap:6px;flex-wrap:wrap;color:var(--t2);font-size:13px;margin-top:8px}
+  .meta span+span::before{content:"·";margin-right:6px;color:var(--line)}
+  .lines{display:grid;grid-template-columns:auto repeat(4,32px);gap:2px 8px;font:600 15px var(--num);color:var(--t2);margin-top:8px}
+  .lines .h{font-size:12px;letter-spacing:.08em}
+  .lines .v{color:var(--t1)}
+
+  /* tabs */
+  .tabs{display:flex;border-top:1px solid var(--line);padding:10px 8px 26px;background:var(--bg0)}
+  .tabs a{flex:1;text-align:center;color:var(--t2);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;display:flex;flex-direction:column;gap:6px;align-items:center}
+  .tabs a.on{color:var(--t1)}
+  .tabs .ic{width:22px;height:22px;border-radius:6px;border:2px solid currentColor}
+  .tabs a.on .ic{background:var(--purple);border-color:var(--purple)}
+
+  /* grid */
+  .gridwrap{margin-top:14px}
+  .axis-top{display:grid;grid-template-columns:34px repeat(5,1fr);gap:4px;margin-bottom:4px}
+  .axis-top .d,.axis-side .d{font:700 15px var(--num);color:var(--t1);text-align:center;letter-spacing:.06em}
+  .axis-top .d.q,.axis-side .d.q{color:var(--t2)}
+  .board{display:grid;grid-template-columns:34px 1fr;gap:4px;position:relative}
+  .sidelbl{position:absolute;left:-16px;top:0;bottom:0;display:flex;align-items:center;justify-content:center;width:14px}
+  .sidelbl span{writing-mode:vertical-rl;transform:rotate(180deg);font:600 11px var(--body);color:var(--t2);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+  .axis-side{display:grid;grid-template-rows:repeat(5,1fr);gap:4px}
+  .axis-side .d{display:flex;align-items:center;justify-content:center}
+  .cells{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:4px;aspect-ratio:1}
+  .cell{background:var(--bg2);border:1px solid var(--line);border-radius:8px;position:relative;padding:6px;font-size:11px;font-weight:500;display:flex;align-items:flex-end;overflow:hidden;color:var(--t1)}
+  .cell .n{position:absolute;top:4px;left:6px;font:600 10px var(--num);color:var(--t2)}
+  .cell.o1{background:#1a1f3a} .cell.o2{background:#2a1a2a} .cell.o3{background:#1a2a24} .cell.o4{background:#2a2418}
+  .cell.you{background:rgba(153,69,255,.28);border-color:var(--purple);font-weight:700}
+  .cell.lead{border:1.5px dashed var(--teal);box-shadow:0 0 0 1px rgba(0,194,255,.2) inset}
+  .cell.lead .tag,.cell.won .tag{position:absolute;top:3px;right:4px;font:700 9px var(--body);letter-spacing:.04em;text-transform:uppercase}
+  .cell.lead .tag{color:var(--teal)}
+  .cell.won{background:rgba(20,241,149,.18);border-color:var(--green)}
+  .cell.won .tag{color:var(--green)}
+  .teamlbl{display:flex;align-items:center;gap:6px;font:600 12px var(--body);color:var(--t2);letter-spacing:.06em;text-transform:uppercase}
+  .teamlbl.top{justify-content:center;margin-left:38px;margin-bottom:6px}
+  .teamlbl.side{writing-mode:vertical-rl;transform:rotate(180deg);justify-content:center}
+
+  /* pool header */
+  .poolhead{padding-top:6px}
+  .poolhead .big{font:700 22px var(--num);letter-spacing:.01em;margin-top:6px}
+  .scorestrip{display:flex;align-items:center;gap:12px;margin-top:8px;padding:10px 12px;background:var(--bg1);border:1px solid var(--line);border-radius:12px}
+  .scorestrip .s{font:700 26px/1 var(--num)}
+  .scorestrip .clk{margin-left:auto;color:var(--teal);font:600 14px var(--num);letter-spacing:.04em;display:flex;align-items:center;gap:6px}
+
+  /* tables */
+  .tbl{width:100%;border-collapse:collapse;font-size:14px}
+  .tbl td{padding:8px 0;border-bottom:1px solid var(--line)}
+  .tbl td:last-child{text-align:right}
+  .tbl .amt{font:600 16px var(--num);letter-spacing:.02em}
+  .tbl .win{color:var(--green)}
+  .link{color:var(--t2);font-size:12px}
+  .link::after{content:" ↗"}
+
+  /* sticky buy */
+  .buybar{position:absolute;left:0;right:0;bottom:0;padding:12px 16px 30px;background:linear-gradient(180deg,rgba(11,11,16,0),var(--bg0) 30%)}
+  .buybar .inner{display:flex;gap:10px;align-items:center}
+  .step{display:flex;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:12px;height:52px}
+  .step b{width:40px;text-align:center;font:600 20px var(--num)}
+  .step span{width:40px;text-align:center;color:var(--t2);font-size:20px}
+  .btn{flex:1;height:52px;border-radius:12px;background:var(--purple);color:#fff;font:600 16px var(--body);display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn .num{font-weight:700;font-size:18px}
+  .btn.ghost{background:var(--bg2);border:1px solid var(--line);color:var(--t1)}
+
+  /* sheet */
+  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg1);border-top-left-radius:22px;border-top-right-radius:22px;padding:14px 20px 34px;border-top:1px solid var(--line)}
+  .sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px}
+  .sheet h3{font:700 24px var(--num);letter-spacing:.01em}
+  .kv{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .kv .num{font-size:17px;font-weight:600}
+  .kv.total{border:0;padding-top:12px}
+  .kv.total .num{font-size:24px;font-weight:700}
+  .note{color:var(--t2);font-size:13px;line-height:1.45;margin:14px 0}
+  .progress{display:flex;gap:6px;margin:6px 0 16px}
+  .progress i{flex:1;height:3px;border-radius:2px;background:var(--line)}
+  .progress i.on{background:var(--purple)}
+  .field{margin-top:14px}
+  .field label{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
+  .seg{display:flex;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg span{flex:1;text-align:center;padding:9px 0;border-radius:8px;font-weight:600;font-size:14px;color:var(--t2)}
+  .seg span.on{background:var(--bg1);color:var(--t1);box-shadow:0 1px 0 var(--line)}
+  .input{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:0 14px;height:50px}
+  .input .num{font-size:22px;font-weight:700}
+  .input .unit{color:var(--t2);font-weight:600}
+  .hint{color:var(--t2);font-size:12px;margin-top:6px}
+  .radio{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .radio .r{width:18px;height:18px;border-radius:50%;border:2px solid var(--line)}
+  .radio.on .r{border-color:var(--purple);background:radial-gradient(circle,var(--purple) 45%,transparent 50%)}
+  .cta{height:52px;border-radius:12px;background:var(--purple);color:#fff;font:600 16px var(--body);display:flex;align-items:center;justify-content:center;margin-top:18px}
+  .result{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 6px}
+  .check{width:64px;height:64px;border-radius:50%;background:rgba(20,241,149,.14);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:14px;box-shadow:0 0 30px rgba(20,241,149,.25)}
+  .sqs{display:flex;gap:8px;margin:12px 0 4px}
+  .sqs b{width:44px;height:44px;border-radius:10px;background:rgba(153,69,255,.28);border:1px solid var(--purple);display:flex;align-items:center;justify-content:center;font:700 18px var(--num)}
+  .actions{display:flex;gap:10px;width:100%;margin-top:16px}
+  .actions .btn{height:48px;font-size:15px}
+  .list .li{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .list .li .num{font-size:15px;font-weight:600}
+  .owner{display:flex;align-items:center;gap:8px}
+  .sw{width:10px;height:10px;border-radius:3px}
+  .won-total{color:var(--green);font:700 16px var(--num)}
+  .neon-off{text-align:center;color:var(--line);font:400 34px Pacifico,cursive;margin:60px 0 8px}
+</style>
+</head>
+<body class="overview">
+
+<!-- ============ 1. GAMES ============ -->
+<div class="frame" id="games">
+  <div class="label">1 · Games (home)</div>
+  <div class="top"><div class="logo">My Bar Pool</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="content">
+    <div class="row" style="margin:6px 0 12px">
+      <div class="num" style="font-size:22px;font-weight:700">Week 4 <span class="t2" style="font-size:16px">▾</span></div>
+      <span class="pill live"><i class="dot"></i>3 live</span>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:10px"><span class="pill live"><i class="dot"></i>Live · Q2 4:12</span><span class="t2" style="font-size:12px">CBS</span></div>
+      <div class="row" style="margin-bottom:8px"><div class="team"><img class="logo-img" src="https://a.espncdn.com/i/teamlogos/nfl/500/kc.png"><b>Chiefs</b></div><div class="score">14</div></div>
+      <div class="row"><div class="team"><img class="logo-img" src="https://a.espncdn.com/i/teamlogos/nfl/500/bal.png"><b>Ravens</b></div><div class="score t2">10</div></div>
+      <div class="meta"><span>6 pools</span><span>2 open</span><span class="num" style="color:var(--t1);font-weight:600">38.2 SOL in pots</span></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:10px"><span class="kick">SUN 1:00 PM</span><span class="t2" style="font-size:12px">FOX</span></div>
+      <div class="row" style="margin-bottom:8px"><div class="team"><img class="logo-img" src="https://a.espncdn.com/i/teamlogos/nfl/500/dal.png"><b>Cowboys</b></div></div>
+      <div class="row"><div class="team"><img class="logo-img" src="https://a.espncdn.com/i/teamlogos/nfl/500/phi.png"><b>Eagles</b></div></div>
+      <div class="meta"><span>3 pools</span><span>3 open</span><span class="num" style="color:var(--t1);font-weight:600">4.1 SOL in pots</span></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:10px"><span class="kick">SUN 4:25 PM</span><span class="t2" style="font-size:12px">FOX</span></div>
+      <div class="row" style="margin-bottom:8px"><div class="team"><img class="logo-img" src="https://a.espncdn.com/i/teamlogos/nfl/500/sf.png"><b>49ers</b></div></div>
+      <div class="row"><div class="team"><img class="logo-img" src="https://a.espncdn.com/i/teamlogos/nfl/500/sea.png"><b>Seahawks</b></div></div>
+      <div class="meta"><span>No pools yet</span><span style="color:var(--purple)">Create one →</span></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:10px"><span class="kick">SUN 8:20 PM</span><span class="t2" style="font-size:12px">NBC</span></div>
+      <div class="row" style="margin-bottom:8px"><div class="team"><img class="logo-img" src="https://a.espncdn.com/i/teamlogos/nfl/500/gb.png"><b>Packers</b></div></div>
+      <div class="row"><div class="team"><img class="logo-img" src="https://a.espncdn.com/i/teamlogos/nfl/500/det.png"><b>Lions</b></div></div>
+      <div class="meta"><span>9 pools</span><span>5 open</span><span class="num" style="color:var(--t1);font-weight:600">12,400 ORE in pots</span></div>
+    </div>
+  </div>
+  <div class="tabs"><a class="on"><i class="ic"></i>Games</a><a><i class="ic"></i>My Boxes</a><a><i class="ic"></i>Create</a></div>
+</div>
+
+<!-- ============ 2. GAME ============ -->
+<div class="frame" id="game">
+  <div class="label">2 · Game</div>
+  <div class="top"><div class="back">‹ Week 4</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="content">
+    <div class="row" style="margin-bottom:8px"><div class="team"><img class="logo-img lg" src="https://a.espncdn.com/i/teamlogos/nfl/500/kc.png"><div><b style="font-size:17px">Chiefs</b><div class="t2" style="font-size:12px">3–0 · Home</div></div></div><div class="score" style="font-size:36px">14</div></div>
+    <div class="row"><div class="team"><img class="logo-img lg" src="https://a.espncdn.com/i/teamlogos/nfl/500/bal.png"><div><b style="font-size:17px">Ravens</b><div class="t2" style="font-size:12px">2–1 · Away</div></div></div><div class="score t2" style="font-size:36px">10</div></div>
+    <div class="row" style="margin-top:12px"><span class="pill live"><i class="dot"></i>Q2 4:12</span><span class="t2" style="font-size:12px">Arrowhead · CBS</span></div>
+    <div class="lines"><span class="h"></span><span class="h">Q1</span><span class="h">Q2</span><span class="h">Q3</span><span class="h">Q4</span>
+      <span class="h">KC</span><span class="v">7</span><span class="v">7</span><span>–</span><span>–</span>
+      <span class="h">BAL</span><span class="v">3</span><span class="v">7</span><span>–</span><span>–</span></div>
+
+    <div class="sect"><b>Pools on this game</b><span style="color:var(--purple);text-transform:none;letter-spacing:0;font-size:14px">+ Create</span></div>
+
+    <div class="card">
+      <div class="row"><span class="pill open">Open</span><span class="num" style="font-weight:700;font-size:18px">0.05 SOL <span class="t2" style="font-weight:500;font-size:13px">/ box</span></span></div>
+      <div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="meta"><span class="num" style="color:var(--t1);font-weight:600">19/25</span><span>Pot 1.25 SOL</span><span>20/20/20/40</span><span>Fee 10%</span><span>mike.skr</span></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="num" style="font-weight:700;font-size:18px">1 SOL <span class="t2" style="font-weight:500;font-size:13px">/ box</span></span></div>
+      <div class="meta"><span>Pot 25 SOL</span><span>Q4 100%</span><span>Fee 12%</span><span>bigmikes.skr</span></div>
+      <div class="row" style="margin-top:10px;font-size:13px"><span class="t2">Leading Q2</span><span>box 7 · a3f9</span></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="num" style="font-weight:700;font-size:18px">0.1 SOL <span class="t2" style="font-weight:500;font-size:13px">/ box</span></span></div>
+      <div class="meta"><span>Pot 2.5 SOL</span><span>25/25/25/25</span><span>Fee 10%</span><span>jon.skr</span></div>
+      <div class="row" style="margin-top:10px;font-size:13px"><span class="t2">Q1 won</span><span style="color:var(--green)">ana.skr · 0.5625 SOL ↗</span></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><span class="pill open">Open</span><span class="num" style="font-weight:700;font-size:18px">50 ORE <span class="t2" style="font-weight:500;font-size:13px">/ box</span></span></div>
+      <div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="meta"><span class="num" style="color:var(--t1);font-weight:600">6/25</span><span>Pot 1,250 ORE</span><span>25/25/25/25</span><span>Fee 15%</span></div>
+    </div>
+  </div>
+  <div class="tabs"><a class="on"><i class="ic"></i>Games</a><a><i class="ic"></i>My Boxes</a><a><i class="ic"></i>Create</a></div>
+</div>
+
+<!-- ============ 3. POOL (OPEN) ============ -->
+<div class="frame" id="pool-open">
+  <div class="label">3 · Pool — open</div>
+  <div class="top"><div class="back">‹ KC vs BAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>ana.skr</div><span class="t2">⇪</span></div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill open">Open · locks when full</span><span class="num" style="font-weight:700;font-size:18px">19<span class="t2">/25</span></span></div>
+      <div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="big">0.05 SOL <span class="t2" style="font-size:15px;font-weight:500">/ box</span> <span style="margin-left:10px">Pot 1.25 SOL</span></div>
+      <div class="meta"><span>Split 20 / 20 / 20 / 40</span><span>Fee 10%</span><span>by mike.skr</span></div>
+    </div>
+
+    <div class="gridwrap">
+      <div class="teamlbl top"><img class="logo-img sm" src="https://a.espncdn.com/i/teamlogos/nfl/500/kc.png">Chiefs →</div>
+      <div class="axis-top"><span></span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+      <div class="board"><div class="sidelbl"><span>↓ Ravens</span></div>
+        <div class="axis-side"><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+        <div class="cells">
+          <div class="cell o1"><i class="n">1</i>mike</div><div class="cell"><i class="n">2</i></div><div class="cell you"><i class="n">3</i>YOU</div><div class="cell you"><i class="n">4</i>YOU</div><div class="cell"><i class="n">5</i></div>
+          <div class="cell o3"><i class="n">6</i>a3f9</div><div class="cell o2"><i class="n">7</i>jon</div><div class="cell"><i class="n">8</i></div><div class="cell o1"><i class="n">9</i>mike</div><div class="cell o3"><i class="n">10</i>a3f9</div>
+          <div class="cell o4"><i class="n">11</i>sara</div><div class="cell"><i class="n">12</i></div><div class="cell you"><i class="n">13</i>YOU</div><div class="cell o4"><i class="n">14</i>sara</div><div class="cell o2"><i class="n">15</i>jon</div>
+          <div class="cell o2"><i class="n">16</i>jon</div><div class="cell"><i class="n">17</i></div><div class="cell o4"><i class="n">18</i>sara</div><div class="cell o3"><i class="n">19</i>a3f9</div><div class="cell o1"><i class="n">20</i>mike</div>
+          <div class="cell o4"><i class="n">21</i>sara</div><div class="cell o1"><i class="n">22</i>mike</div><div class="cell o2"><i class="n">23</i>jon</div><div class="cell o3"><i class="n">24</i>a3f9</div><div class="cell you"><i class="n">25</i>YOU</div>
+        </div>
+      </div>
+      <div class="hint" style="text-align:center;margin-top:10px">Numbers are drawn when the 25th box sells.</div>
+    </div>
+
+    <div class="sect"><b>Payouts</b><span>per quarter</span></div>
+    <table class="tbl">
+      <tr><td class="t2">Q1</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
+      <tr><td class="t2">Q2</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
+      <tr><td class="t2">Q3</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
+      <tr><td class="t2">Q4 · final</td><td class="amt">0.45 SOL</td><td class="t2">—</td></tr>
+    </table>
+  </div>
+  <div class="buybar"><div class="inner"><div class="step"><span>−</span><b>3</b><span>+</span></div><div class="btn">Buy 3 <span class="num">0.15 SOL</span></div></div></div>
+</div>
+
+<!-- ============ 4. POOL (LIVE) ============ -->
+<div class="frame" id="pool-live">
+  <div class="label">4 · Pool — live</div>
+  <div class="top"><div class="back">‹ KC vs BAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>ana.skr</div><span class="t2">⇪</span></div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="t2" style="font-size:13px">25/25 · Pot 1.25 SOL</span></div>
+      <div class="scorestrip">
+        <div class="team"><img class="logo-img sm" src="https://a.espncdn.com/i/teamlogos/nfl/500/kc.png"><span class="s">14</span></div>
+        <div class="team"><img class="logo-img sm" src="https://a.espncdn.com/i/teamlogos/nfl/500/bal.png"><span class="s t2">10</span></div>
+        <div class="clk"><i class="dot"></i>Q2 4:12</div>
+      </div>
+    </div>
+
+    <div class="gridwrap">
+      <div class="teamlbl top"><img class="logo-img sm" src="https://a.espncdn.com/i/teamlogos/nfl/500/kc.png">Chiefs →</div>
+      <div class="axis-top"><span></span><span class="d">0·5</span><span class="d">4·9</span><span class="d">2·7</span><span class="d">1·6</span><span class="d">3·8</span></div>
+      <div class="board"><div class="sidelbl"><span>↓ Ravens</span></div>
+        <div class="axis-side"><span class="d">3·8</span><span class="d">0·5</span><span class="d">1·6</span><span class="d">2·7</span><span class="d">4·9</span></div>
+        <div class="cells">
+          <div class="cell o1"><i class="n">1</i>mike</div><div class="cell o4"><i class="n">2</i>sara</div><div class="cell you won"><i class="n">3</i><i class="tag">Q1 ✓</i>YOU</div><div class="cell you"><i class="n">4</i>YOU</div><div class="cell o2"><i class="n">5</i>jon</div>
+          <div class="cell o3"><i class="n">6</i>a3f9</div><div class="cell o2 lead"><i class="n">7</i><i class="tag">Leading</i>jon</div><div class="cell o1"><i class="n">8</i>mike</div><div class="cell o1"><i class="n">9</i>mike</div><div class="cell o3"><i class="n">10</i>a3f9</div>
+          <div class="cell o4"><i class="n">11</i>sara</div><div class="cell o3"><i class="n">12</i>a3f9</div><div class="cell you"><i class="n">13</i>YOU</div><div class="cell o4"><i class="n">14</i>sara</div><div class="cell o2"><i class="n">15</i>jon</div>
+          <div class="cell o2"><i class="n">16</i>jon</div><div class="cell o4"><i class="n">17</i>sara</div><div class="cell o4"><i class="n">18</i>sara</div><div class="cell o3"><i class="n">19</i>a3f9</div><div class="cell o1"><i class="n">20</i>mike</div>
+          <div class="cell o4"><i class="n">21</i>sara</div><div class="cell o1"><i class="n">22</i>mike</div><div class="cell o2"><i class="n">23</i>jon</div><div class="cell o3"><i class="n">24</i>a3f9</div><div class="cell you"><i class="n">25</i>YOU</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sect"><b>Payouts</b><span>on-chain</span></div>
+    <table class="tbl">
+      <tr><td class="t2">Q1 · 7–3</td><td class="amt win">0.225 SOL</td><td><span style="color:var(--green)">box 3 · YOU</span> <span class="link"></span></td></tr>
+      <tr><td class="t2">Q2</td><td class="amt">0.225 SOL</td><td><span style="color:var(--teal);font-size:13px">Leading · box 7 · jon</span></td></tr>
+      <tr><td class="t2">Q3</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
+      <tr><td class="t2">Q4 · final</td><td class="amt">0.45 SOL</td><td class="t2">—</td></tr>
+    </table>
+
+    <div class="sect"><b>Activity</b></div>
+    <div class="list">
+      <div class="li"><span><span style="color:var(--green)">Q1 paid</span> · 0.225 SOL → ana.skr</span><span class="link">12m</span></div>
+      <div class="li"><span>Numbers drawn</span><span class="link">1h</span></div>
+      <div class="li"><span>Pool locked · 25/25</span><span class="link">1h</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 5. BUY SHEET ============ -->
+<div class="frame" id="buy">
+  <div class="label">5 · Buy sheet</div>
+  <div class="top"><div class="back">‹ KC vs BAL</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill open">Open · locks when full</span><span class="num" style="font-weight:700;font-size:18px">19<span class="t2">/25</span></span></div>
+      <div class="big">0.05 SOL <span class="t2" style="font-size:15px;font-weight:500">/ box</span></div>
+    </div>
+    <div class="gridwrap" style="opacity:.9">
+      <div class="axis-top"><span></span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+      <div class="board"><div class="sidelbl"><span>↓ Ravens</span></div>
+        <div class="axis-side"><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+        <div class="cells">
+          <div class="cell o1"><i class="n">1</i>mike</div><div class="cell"><i class="n">2</i></div><div class="cell you"><i class="n">3</i>YOU</div><div class="cell you"><i class="n">4</i>YOU</div><div class="cell"><i class="n">5</i></div>
+          <div class="cell o3"><i class="n">6</i>a3f9</div><div class="cell o2"><i class="n">7</i>jon</div><div class="cell"><i class="n">8</i></div><div class="cell o1"><i class="n">9</i>mike</div><div class="cell o3"><i class="n">10</i>a3f9</div>
+          <div class="cell o4"><i class="n">11</i>sara</div><div class="cell"><i class="n">12</i></div><div class="cell you"><i class="n">13</i>YOU</div><div class="cell o4"><i class="n">14</i>sara</div><div class="cell o2"><i class="n">15</i>jon</div>
+          <div class="cell o2"><i class="n">16</i>jon</div><div class="cell"><i class="n">17</i></div><div class="cell o4"><i class="n">18</i>sara</div><div class="cell o3"><i class="n">19</i>a3f9</div><div class="cell o1"><i class="n">20</i>mike</div>
+          <div class="cell o4"><i class="n">21</i>sara</div><div class="cell o1"><i class="n">22</i>mike</div><div class="cell o2"><i class="n">23</i>jon</div><div class="cell o3"><i class="n">24</i>a3f9</div><div class="cell you"><i class="n">25</i>YOU</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="scrim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>Buy 3 boxes</h3>
+    <div class="kv"><span class="t2">3 × 0.05 SOL</span><span class="num">0.15 SOL</span></div>
+    <div class="kv"><span class="t2">Network fee</span><span class="num t2" style="font-size:15px">~0.00001 SOL</span></div>
+    <div class="kv"><span class="t2">Your balance</span><span class="num t2" style="font-size:15px">2.31 SOL</span></div>
+    <div class="kv total"><span>Total</span><span class="num">0.15 SOL <span class="t2" style="font:500 13px var(--body)">≈ $27.60</span></span></div>
+    <p class="note">Boxes are assigned at random. All 25 have the same odds until the numbers are drawn.</p>
+    <div class="cta">Confirm in wallet</div>
+  </div>
+</div>
+
+<!-- ============ 6. BUY RESULT ============ -->
+<div class="frame" id="bought">
+  <div class="label">6 · Buy — result</div>
+  <div class="top"><div class="back">‹ KC vs BAL</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill open">Open · locks when full</span><span class="num" style="font-weight:700;font-size:18px">22<span class="t2">/25</span></span></div>
+      <div class="big">0.05 SOL <span class="t2" style="font-size:15px;font-weight:500">/ box</span></div>
+    </div>
+    <div class="gridwrap" style="opacity:.9">
+      <div class="axis-top"><span></span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+      <div class="board"><div class="sidelbl"><span>↓ Ravens</span></div>
+        <div class="axis-side"><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+        <div class="cells">
+          <div class="cell o1"><i class="n">1</i>mike</div><div class="cell you"><i class="n">2</i>YOU</div><div class="cell you"><i class="n">3</i>YOU</div><div class="cell you"><i class="n">4</i>YOU</div><div class="cell"><i class="n">5</i></div>
+          <div class="cell o3"><i class="n">6</i>a3f9</div><div class="cell o2"><i class="n">7</i>jon</div><div class="cell"><i class="n">8</i></div><div class="cell o1"><i class="n">9</i>mike</div><div class="cell o3"><i class="n">10</i>a3f9</div>
+          <div class="cell o4"><i class="n">11</i>sara</div><div class="cell you"><i class="n">12</i>YOU</div><div class="cell you"><i class="n">13</i>YOU</div><div class="cell o4"><i class="n">14</i>sara</div><div class="cell o2"><i class="n">15</i>jon</div>
+          <div class="cell o2"><i class="n">16</i>jon</div><div class="cell"><i class="n">17</i></div><div class="cell o4"><i class="n">18</i>sara</div><div class="cell o3"><i class="n">19</i>a3f9</div><div class="cell o1"><i class="n">20</i>mike</div>
+          <div class="cell o4"><i class="n">21</i>sara</div><div class="cell o1"><i class="n">22</i>mike</div><div class="cell o2"><i class="n">23</i>jon</div><div class="cell you"><i class="n">24</i>YOU</div><div class="cell you"><i class="n">25</i>YOU</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="scrim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="result">
+      <div class="check">✓</div>
+      <h3>You own 3 more boxes</h3>
+      <div class="sqs"><b>2</b><b>12</b><b>24</b></div>
+      <p class="note">Positions are random and every box has the same odds. Numbers are drawn when the pool fills.</p>
+      <div class="actions"><div class="btn ghost">View grid</div><div class="btn">Share pool</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 7. CREATE ============ -->
+<div class="frame" id="create">
+  <div class="label">7 · Create — step 2</div>
+  <div class="top"><div class="back">✕</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="content">
+    <div class="progress"><i class="on"></i><i class="on"></i><i></i></div>
+    <div class="row" style="margin-bottom:4px"><div class="team"><img class="logo-img sm" src="https://a.espncdn.com/i/teamlogos/nfl/500/dal.png"><img class="logo-img sm" src="https://a.espncdn.com/i/teamlogos/nfl/500/phi.png"><b>Cowboys at Eagles</b></div><span class="kick">SUN 1:00</span></div>
+    <h3 class="num" style="font-size:26px;font-weight:700;margin-top:12px">Set up your pool</h3>
+
+    <div class="field"><label>Token</label><div class="seg"><span class="on">SOL</span><span>SKR</span><span>ORE</span></div></div>
+
+    <div class="field"><label>Price per box</label>
+      <div class="input" style="padding:0 6px"><span class="t2" style="width:44px;text-align:center;font-size:22px">−</span><span class="num" style="flex:1;text-align:center">0.05 <span class="unit" style="font-size:14px">SOL</span></span><span class="t2" style="width:44px;text-align:center;font-size:22px">+</span></div>
+      <div class="hint">Steps of 0.05 SOL from 0.05. Full pot <b class="num" style="color:var(--t1)">1.25 SOL</b></div>
+    </div>
+
+    <div class="field"><label>Payout split</label>
+      <div class="radio on"><div><b>20 / 20 / 20 / 40</b><div class="hint" style="margin:2px 0 0">Standard. Final quarter pays double.</div></div><i class="r"></i></div>
+      <div class="radio"><div><b>25 / 25 / 25 / 25</b><div class="hint" style="margin:2px 0 0">Even across all four quarters.</div></div><i class="r"></i></div>
+      <div class="radio"><div><b>Q4 · 100%</b><div class="hint" style="margin:2px 0 0">Winner-take-all on the final score.</div></div><i class="r"></i></div>
+    </div>
+
+    <div class="field"><label>Your earnings</label>
+      <div class="kv" style="border:0;padding:6px 0"><span>5% of the pot, paid with the Q1 prize</span><span class="num" style="color:var(--green)">0.0625 SOL</span></div>
+      <div class="hint" style="margin-top:0">Included in the 10% fee buyers see.</div>
+    </div>
+
+    <div class="field"><label>Extra creator fee</label>
+      <div class="input"><span class="num">0</span><span class="unit">%</span></div>
+      <div class="hint">Optional, 0–5%. Added to the fee shown to buyers.</div>
+    </div>
+
+    <div class="cta">Next · Review</div>
+  </div>
+</div>
+
+<!-- ============ 8. MY BOXES ============ -->
+<div class="frame" id="me">
+  <div class="label">8 · My Boxes</div>
+  <div class="top"><div class="logo">My Bar Pool</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="content">
+    <div class="num" style="font-size:22px;font-weight:700;margin:6px 0 12px">My Boxes</div>
+
+    <div class="sect" style="margin-top:4px"><b>Active</b><span>2 pools</span></div>
+    <div class="card">
+      <div class="row"><span class="pill live"><i class="dot"></i>Q2 4:12</span><span class="num" style="font-weight:700;font-size:18px">KC 14 · BAL 10</span></div>
+      <div class="row" style="margin-top:10px;font-size:14px"><span>3 boxes · <b class="num">3, 4, 13</b></span><span style="color:var(--green)">Won Q1 ✓</span></div>
+      <div class="row" style="margin-top:6px;font-size:13px"><span class="t2">0.05 SOL / box</span><span class="t2">Not leading Q2</span></div>
+    </div>
+    <div class="card">
+      <div class="row"><span class="pill open">Open</span><span class="kick">DAL – PHI · SUN 1:00</span></div>
+      <div class="row" style="margin-top:10px;font-size:14px"><span>1 box · <b class="num">14</b></span><span class="t2 num" style="font-weight:600">19/25 filled</span></div>
+    </div>
+
+    <div class="sect"><b>Won</b><span class="won-total">+1.125 SOL</span></div>
+    <div class="list">
+      <div class="li"><span><span class="t2">Q1</span> · KC–BAL · box 3</span><span class="num" style="color:var(--green)">0.225 SOL <span class="link"></span></span></div>
+      <div class="li"><span><span class="t2">Q4</span> · SF–SEA · box 19</span><span class="num" style="color:var(--green)">0.90 SOL <span class="link"></span></span></div>
+    </div>
+
+    <div class="sect"><b>Pools I created</b><span>2</span></div>
+    <div class="sect" style="margin-top:8px"><b>Returned</b><span>1 · 0.15 SOL back</span></div>
+  </div>
+  <div class="tabs"><a><i class="ic"></i>Games</a><a class="on"><i class="ic"></i>My Boxes</a><a><i class="ic"></i>Create</a></div>
+</div>
+
+<script>
+  // ?screen=<id> renders one frame at phone size for screenshots.
+  const id = new URLSearchParams(location.search).get('screen');
+  if (id) {
+    document.body.className = 'single';
+    document.querySelectorAll('.frame').forEach(f => { if (f.id !== id) f.remove(); });
+  }
+</script>
+</body>
+</html>
