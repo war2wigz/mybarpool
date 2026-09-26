@@ -4,6 +4,12 @@ How the program, the keeper and the clients fit together, and why each rule is t
 
 ## Game rules
 
+### Games
+- Every NFL game on the schedule is playable: all 272 regular-season games across Weeks 1–18 (Thursday, Sunday, Monday and the odd Saturday or holiday slot) and every postseason game through the Super Bowl. Boxes are best known as a Super Bowl tradition, and that Sunday will be the biggest day of the year, but the product is built for the other 21 weeks too; a bar that runs a board on every Sunday game is the design target, not the exception.
+- The scores service publishes the season schedule (from the same two sources it uses for scores) and creates the per-game record when a game is first scheduled, so pools can be created as soon as a week's kickoff times are known, typically several days ahead. Kickoff time changes (flex scheduling, postponements) update the game record and every pool on it.
+- Preseason is off at launch and is a config switch, not a program change. International and neutral-site games are ordinary games.
+- A game is identified by the league's game ID as carried by both score sources; the mapping between the two sources' IDs lives in `packages/shared` so the keeper, the app and third-party clients agree on which game a pool is on.
+
 ### Grid
 - 5×5 = 25 boxes. Columns = home team, rows = away team.
 - Digits 0–9 are shuffled onto each axis independently, two digits per row/column (positions i and i+5 share a lane).
@@ -17,13 +23,13 @@ How the program, the keeper and the clients fit together, and why each rule is t
 - Buyers see their name (or .skr name) on their assigned boxes immediately after purchase.
 - Numbering: boxes are labelled 1–25 everywhere a person sees them (frontend, notifications, keeper logs, on-chain events, API responses). The program may store a 0-based index internally, but the conversion happens once in `packages/shared` and nothing user-facing ever shows 0–24. Box 1 is top-left, numbering runs left to right, then down.
 - Sales close at the scheduled kickoff.
-- Box price: each token has a minimum, a step, and a maximum in platform config. The program rejects any price that isn't `min + k × step` within the cap. Initial values (SOL ≈ $121, ORE ≈ $59, SKR ≈ $0.021 at the time of writing; adjusted by the admin as prices move, no program upgrade needed):
+- Box price: each token has a minimum, a step, and a maximum in platform config. The program rejects any price that isn't `min + k × step` within the cap. Initial values (SOL ≈ $121, ORE ≈ $75, SKR ≈ $0.021 at the time of writing; adjusted by the admin as prices move, no program upgrade needed):
 
 | Token | Min | Step | Max per box | Smallest / largest pool |
 |---|---|---|---|---|
 | SOL | 0.05 | 0.05 | 1 | 1.25 / 25 SOL |
 | SKR | 100 | 100 | 5,000 | 2,500 / 125,000 SKR |
-| ORE | 0.05 | 0.05 | 2 | 1.25 / 50 ORE |
+| ORE | 0.05 | 0.05 | 1 | 1.25 / 25 ORE |
 
 - The per-box cap also bounds the damage of any single wrong-score incident while the keeper builds a track record; it will be raised later.
 - Prices display in each token's natural precision: SKR as whole numbers, SOL and ORE to two decimals.
@@ -53,7 +59,7 @@ The one exception to platform-only control is the abandoned-pool reclaim, a dead
 - What it is not: an outage safeguard. An outage lasting hours delays settlement by hours and the keeper then catches up; the floors and ordering rules are unaffected. Thirty days is far past anything infrastructure can cause. The switch exists so that money in the program never depends on the team continuing to exist, which is the guarantee integrators and auditors will ask for.
 
 ### Pool creation
-- Creation fee: the creator pays the rent for the pool account, the vault, and (first time per game) the open-pool counter, about 0.014 SOL in total (pool ~0.011, SPL vault ~0.002, counter ~0.001). When the pool closes in any outcome, the program reclaims that rent to the platform. It is therefore a non-refundable creation fee, and the app labels it as one ("Creation fee 0.014 SOL, covers account rent"), never as a deposit.
+- Creation fee: the creator pays the rent for the pool account, the vault, and (first time per game) the open-pool counter, about 0.014 SOL in total (pool ~0.011, SPL vault ~0.002, counter ~0.001). When the pool closes in any outcome the program reclaims that rent to the platform, with one exception: a pool closed after an abandoned-pool reclaim sends the rent to the creator, since by definition the platform is no longer operating. It is therefore a non-refundable creation fee, and the app labels it as one ("Creation fee 0.014 SOL, covers account rent"), never as a deposit.
 - Why the platform keeps it: it is simpler than a refund path, it covers the keeper's transaction costs on pools that never earn a fee, and the creator's 5% share (below) is set high enough that the fee is small next to what a filled pool pays. A creator whose pool doesn't fill loses the creation fee and nothing else.
 - Keep the pool account small, since rent is the creation fee: box owners (25 × 32 bytes) dominate; settlement records store only box index and amount (the score lives on the per-game record and the wallet is the box owner); everything else is fixed-width with reserved padding. Target about 1.2 KB, which would bring the fee under 0.012 SOL.
 - The creator may buy boxes in the same transaction as creating the pool (the create flow's stepper starts at 1 and runs 0–5), so rent and any boxes are one signature. Buying is optional: a bar can run a board without betting in it. Their boxes are assigned like everyone else's.
@@ -64,7 +70,7 @@ The one exception to platform-only control is the abandoned-pool reclaim, a dead
 - Creator boxes: a creator may own at most 5 boxes in a pool they created, counted across the create transaction and any later buys. Other wallets have no per-pool or cross-pool limit; a player can buy into as many pools as they like.
 - Both limits are values in platform config, with an optional per-wallet override account (PDA seeded by the wallet) that the admin can create to raise or lower either number for one creator. The program reads the override if it exists, else the config. Changing either is an admin transaction, no program upgrade.
 - Why: the open-pool cap stops list clutter, since an unfilled pool costs its creator only the small creation fee. The box cap keeps a creator from stuffing their own grid to make it look nearly full, and keeps the creator's overall expectation positive: at the 10% base fee a creator's break-even is about 12 boxes (5% × 25 ÷ 10%), so at 5 or fewer, buying in never costs them money in expectation.
-- What these limits are not: a security boundary. Self-buying isn't an exploit. A creator who bought all 25 boxes would pay the platform 5% to play against themselves; every box is worth the same before the draw, so buying early gives no edge; and the refund on an unfilled pool goes to every buyer, not just the creator. Someone determined to hold more boxes can use a second wallet, and the outcome is the same as if they'd bought them as a player.
+- What these limits are not: a security boundary. Self-buying isn't an exploit. A creator who bought all 25 boxes would pay the platform 5% to play against themselves; every box is worth the same before the draw, so buying early gives no edge; and the return on an unfilled pool goes to every buyer, not just the creator. Someone determined to hold more boxes can use a second wallet, and the outcome is the same as if they'd bought them as a player.
 
 ### Payouts
 - The creator picks a payout split at creation from presets stored in platform config. Default: Q1 20% / Q2 20% / Q3 20% / Q4 40%. Other presets include 25/25/25/25 and Q4 100% (winner-take-all on the final score). Splits are shown on the pool.

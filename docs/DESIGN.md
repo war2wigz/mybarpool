@@ -38,6 +38,8 @@ Team colors come from the NFL team palette and are used only inside grid axes an
 ### Voice
 Short, bar-side, no crypto jargon. "Buy 3 boxes" not "Mint 3 positions". "Sent to your wallet" not "Claim disbursed". Show token amounts with symbol and a USD hint in `text-2`.
 
+The pitch is a weekly habit, not a once-a-year party. Most people know boxes from Super Bowl Sunday; the copy and the home screen make it obvious there's a grid for every game, every week. "Every game. Every week." is the line, and the week selector is the first thing on the home screen.
+
 The unit is a **box**, never a square, in every string the user sees and in every identifier in the code (see ARCHITECTURE.md, Grid). Grid cells are boxes; the 5×5 as a whole is the grid or the board.
 
 ## 2. Design principles
@@ -122,7 +124,8 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 ```
 
 - Sorted: live games first, then by kickoff. Finished games drop to the bottom, collapsed.
-- Week selector defaults to the current NFL week.
+- Week selector defaults to the current NFL week and covers the whole season: Weeks 1–18, then Wild Card, Divisional, Conference Championships and the Super Bowl. Every game on the schedule gets a page, Thursday night through Monday night, so the home screen has something to play every week from September to February. The Super Bowl is the biggest boxes day of the year and gets the same screen as a Week 4 Sunday afternoon game, not a special mode.
+- Between weeks (Tuesday and Wednesday), the selector already shows the coming week with kickoff times, so creators can open pools days ahead and share them at the bar.
 - Game card shows team chip (logo or abbreviation on team color), score if live, kickoff if not, and a one-line pool summary. Tapping anywhere opens the game.
 - Live score on the card comes from the scores service and pulses on change.
 
@@ -145,12 +148,12 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 │ └──────────────────────────────────┘ │
 │ ┌──────────────────────────────────┐ │
 │ │ LIVE   1 SOL/box     25/25       │ │
-│ │ Pot 25 SOL · Q4 100%             │ │
-│ │ Q1 won by 0xA3…f9 · 4.75 SOL     │ │
+│ │ Pot 25 SOL · 20/20/20/40         │ │
+│ │ Q1 won by 0xA3…f9 · 4.5 SOL      │ │
 │ └──────────────────────────────────┘ │
 │ ┌──────────────────────────────────┐ │
-│ │ OPEN  50 ORE/box    ▓▓░░░░░ 6/25  │ │
-│ │ Pot 1,250 ORE · 25/25/25/25      │ │
+│ │ OPEN  0.05 ORE/box  ▓▓░░░░░ 6/25  │ │
+│ │ Pot 1.25 ORE · 25/25/25/25       │ │
 │ └──────────────────────────────────┘ │
 └──────────────────────────────────────┘
 ```
@@ -281,7 +284,7 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 │                        │   │ You earn 5% · 0.0625   │   │                        │
 │                        │   │ Extra fee     [ 0 ]%   │   │ Pool won't lock until  │
 │                        │   │                        │   │ all 25 sell. Unsold at │
-│ [Next]                 │   │ [Next]                 │   │ kickoff = full refund. │
+│ [Next]                 │   │ [Next]                 │   │ kickoff = full return. │
 └────────────────────────┘   └────────────────────────┘   │ [Create pool]          │
                                                           └────────────────────────┘
 ```

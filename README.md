@@ -4,6 +4,8 @@
 
 It's the game bars have always run on a paper grid, also known as football squares. Buy a box on a 5×5 grid. Numbers are drawn on-chain once the grid sells out, and the last digit of each team's score at the end of every quarter picks the winner. Prizes are sent straight to the winner's wallet as soon as the quarter is official. Nobody claims anything, nobody disputes anything, and money never leaves the vault without a rule saying so.
 
+**Every game. Every week.** Most people know boxes from Super Bowl Sunday. MyBarPool runs a grid on every NFL game, Thursday night through Monday night, from Week 1 to the Super Bowl: 272 regular-season games plus the playoffs, not one Sunday a year.
+
 - **Mobile:** Solana Seeker (Solana dApp Store), Android first
 - **Web:** [mybarpool.com](https://mybarpool.com), the same app
 - **Status:** design complete, program and app in development. Nothing is deployed to mainnet yet.
@@ -43,10 +45,11 @@ If the grid doesn't sell out by kickoff, or the game is postponed or cancelled, 
 | | |
 |---|---|
 | League | NFL only |
+| Games | Every regular-season and postseason game, Week 1 through the Super Bowl. Pools open as soon as a week's kickoff times are published. Preseason off at launch (config switch) |
 | Grid | 5×5. Boxes numbered 1–25, top-left is 1, left to right then down. Two digits per row and column, so each box covers 4 of the 100 last-digit pairs: 4% per box per quarter, and a full grid always has a winner |
 | Axes | Home team across the top, away team down the side. Each axis is shuffled independently; the same pair can appear on a column and a row, which changes nobody's odds |
 | Tokens | SOL, SKR, ORE — one token per pool |
-| Box price | SOL 0.05–1 in 0.05 steps · SKR 100–5,000 in 100s · ORE 0.05–2 in 0.05s. The program rejects any price off the step. Limits live in platform config and can move with prices without a program upgrade |
+| Box price | SOL 0.05–1 in 0.05 steps · SKR 100–5,000 in 100s · ORE 0.05–1 in 0.05s, the same ladder as SOL. The program rejects any price off the step. Limits live in platform config and can move with prices without a program upgrade |
 | Buying | Any wallet, any number of boxes, any number of pools. Positions are assigned by the program, never chosen. Sales close at the scheduled kickoff |
 | Locking | Only when all 25 boxes are sold. A pool that isn't full at kickoff is returned |
 | Payout split | Chosen by the creator from presets. Default Q1 20 / Q2 20 / Q3 20 / Q4 40. Also 25/25/25/25 and Q4 100% |
