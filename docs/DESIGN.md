@@ -356,6 +356,7 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 - Pool locks while user is on the page: header morphs OPEN → LOCKED, buy bar slides away, draw animation runs, digits flip in.
 - Pool returned while user is on the page: red header, activity row "Returned 0.15 SOL to you ↗".
 - Game delayed: LOCKED with "Delayed · waiting for kickoff", no countdown.
+- Game postponed or cancelled: the pool is returned like any other; header "Game postponed · your 0.15 SOL was returned ↗" (or "cancelled"). The game page keeps the game with its new date, if any, so creators can open fresh pools on it.
 - Overtime: score strip shows `OT`; payouts table's Q4 row reads "Final (incl. OT)".
 - Suspended: header "Game suspended · prizes split", payouts rows replaced by a single "Split" row with per-box amount.
 - Sources disagree (keeper paused): show the live score as usual with a small "Verifying…" tag on the payouts table; never show a winner.
