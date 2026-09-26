@@ -83,7 +83,7 @@
   .cell .n{position:absolute;top:4px;left:6px;font:600 10px var(--num);color:var(--t2)}
   .cell.o1{background:#1a1f3a} .cell.o2{background:#2a1a2a} .cell.o3{background:#1a2a24} .cell.o4{background:#2a2418}
   .cell.you{background:rgba(153,69,255,.28);border-color:var(--purple);font-weight:700}
-  .cell.lead{border:1.5px dashed var(--teal);box-shadow:0 0 0 1px rgba(0,194,255,.2) inset}
+  .cell.lead{border:1.5px dotted var(--teal);box-shadow:0 0 0 1px rgba(0,194,255,.2) inset}
   .cell.lead .tag,.cell.won .tag{position:absolute;top:3px;right:4px;font:700 9px var(--body);letter-spacing:.04em;text-transform:uppercase}
   .cell.lead .tag{color:var(--teal)}
   .cell.won{background:rgba(20,241,149,.18);border-color:var(--green)}
@@ -146,8 +146,8 @@
   .cta{height:52px;border-radius:12px;background:var(--purple);color:#fff;font:600 16px var(--body);display:flex;align-items:center;justify-content:center;margin-top:18px}
   .result{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 6px}
   .check{width:64px;height:64px;border-radius:50%;background:rgba(20,241,149,.14);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:14px;box-shadow:0 0 30px rgba(20,241,149,.25)}
-  .sqs{display:flex;gap:8px;margin:12px 0 4px}
-  .sqs b{width:44px;height:44px;border-radius:10px;background:rgba(153,69,255,.28);border:1px solid var(--purple);display:flex;align-items:center;justify-content:center;font:700 18px var(--num)}
+  .boxids{display:flex;gap:8px;margin:12px 0 4px}
+  .boxids b{width:44px;height:44px;border-radius:10px;background:rgba(153,69,255,.28);border:1px solid var(--purple);display:flex;align-items:center;justify-content:center;font:700 18px var(--num)}
   .actions{display:flex;gap:10px;width:100%;margin-top:16px}
   .actions .btn{height:48px;font-size:15px}
   .list .li{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
@@ -357,7 +357,7 @@
     <div class="kv"><span class="t2">3 × 0.05 SOL</span><span class="num">0.15 SOL</span></div>
     <div class="kv"><span class="t2">Network fee</span><span class="num t2" style="font-size:15px">~0.00001 SOL</span></div>
     <div class="kv"><span class="t2">Your balance</span><span class="num t2" style="font-size:15px">2.31 SOL</span></div>
-    <div class="kv total"><span>Total</span><span class="num">0.15 SOL <span class="t2" style="font:500 13px var(--body)">≈ $27.60</span></span></div>
+    <div class="kv total"><span>Total</span><span class="num">0.15 SOL <span class="t2" style="font:500 13px var(--body)">≈ $18</span></span></div>
     <p class="note">Boxes are assigned at random. All 25 have the same odds until the numbers are drawn.</p>
     <div class="cta">Confirm in wallet</div>
   </div>
@@ -392,7 +392,7 @@
     <div class="result">
       <div class="check">✓</div>
       <h3>You own 3 more boxes</h3>
-      <div class="sqs"><b>2</b><b>12</b><b>24</b></div>
+      <div class="boxids"><b>2</b><b>12</b><b>24</b></div>
       <p class="note">Positions are random and every box has the same odds. Numbers are drawn when the pool fills.</p>
       <div class="actions"><div class="btn ghost">View grid</div><div class="btn">Share pool</div></div>
     </div>
@@ -422,7 +422,7 @@
     </div>
 
     <div class="field"><label>Your earnings</label>
-      <div class="kv" style="border:0;padding:6px 0"><span>5% of the pot, paid with the Q1 prize</span><span class="num" style="color:var(--green)">0.0625 SOL</span></div>
+      <div class="kv" style="border:0;padding:6px 0"><span>5% of the pot, paid with the first prize</span><span class="num" style="color:var(--green)">0.0625 SOL</span></div>
       <div class="hint" style="margin-top:0">Included in the 10% fee buyers see.</div>
     </div>
 
@@ -445,7 +445,7 @@
     <div class="sect" style="margin-top:4px"><b>Active</b><span>2 pools</span></div>
     <div class="card">
       <div class="row"><span class="pill live"><i class="dot"></i>Q2 4:12</span><span class="num" style="font-weight:700;font-size:18px">KC 14 · BAL 10</span></div>
-      <div class="row" style="margin-top:10px;font-size:14px"><span>3 boxes · <b class="num">3, 4, 13</b></span><span style="color:var(--green)">Won Q1 ✓</span></div>
+      <div class="row" style="margin-top:10px;font-size:14px"><span>4 boxes · <b class="num">3, 4, 13, 25</b></span><span style="color:var(--green)">Won Q1 ✓</span></div>
       <div class="row" style="margin-top:6px;font-size:13px"><span class="t2">0.05 SOL / box</span><span class="t2">Not leading Q2</span></div>
     </div>
     <div class="card">

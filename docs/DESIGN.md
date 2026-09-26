@@ -103,7 +103,7 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 │ │ ● LIVE  Q2 4:12                  │ │
 │ │ KC  Chiefs        14             │ │
 │ │ BAL Ravens        10             │ │
-│ │ 6 pools · 2 open · 12.4 SOL pot  │ │
+│ │ 6 pools · 2 open · 38.2 SOL pots │ │
 │ └──────────────────────────────────┘ │
 │ ┌──────────────────────────────────┐ │
 │ │ Sun 1:00 PM                      │ │
@@ -144,12 +144,12 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 │ ┌──────────────────────────────────┐ │
 │ │ OPEN  0.05 SOL/box  ▓▓▓▓▓░░ 19/25 │ │
 │ │ Pot 1.25 SOL · 20/20/20/40       │ │
-│ │ Fee 10% · by mikes.skr           │ │
+│ │ Fee 10% · by mike.skr            │ │
 │ └──────────────────────────────────┘ │
 │ ┌──────────────────────────────────┐ │
 │ │ LIVE   1 SOL/box     25/25       │ │
 │ │ Pot 25 SOL · 20/20/20/40         │ │
-│ │ Q1 won by 0xA3…f9 · 4.5 SOL      │ │
+│ │ Q1 won by a3f9 · 4.5 SOL         │ │
 │ └──────────────────────────────────┘ │
 │ ┌──────────────────────────────────┐ │
 │ │ OPEN  0.05 ORE/box  ▓▓░░░░░ 6/25  │ │
@@ -159,7 +159,7 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 ```
 
 - Pool card: status pill, price, fill bar with count, pot, split, total fee (10% plus any add-on, shown as one number), creator. Live pools show the latest result line.
-- Status pills: `OPEN` purple outline · `LOCKED` amber · `LIVE` teal pulse · `SETTLED` green · `RETURNED` red outline.
+- Status pills: `OPEN` purple outline · `LOCKED` amber · `LIVE` teal pulse · `SETTLED` green · `RETURNED` red outline · `SPLIT` amber outline (suspended game, prizes split). An abandoned pool (30 days unresolved) shows `RETURNED` styling with a "Reclaim your share" button in place of the buy bar; it is the only button in the app that sends a transaction the platform didn't initiate.
 - Sort: open pools first (most filled first, they lock soonest), then live, then settled.
 - Filters (chips): token, price range. Only shown when a game has more than 5 pools.
 
@@ -231,7 +231,7 @@ Header by status:
 
 Payouts table: amount per quarter, then winner + tx link as each one settles. This table is fed only by on-chain events, never by live scores. Quarter amounts are the prize amounts after fees, so the numbers players see add up to what is actually paid.
 
-Fee line: the header shows the total ("Fee 10%"); tapping it, or the pool's details section, shows the breakdown "Platform 5% · Creator 7%" with amounts. Pools created by third-party clients can carry an integrator fee; our app never sets one but must display it when present, as a "Client 2%" line in the same breakdown. To the creator, the same spot reads "You earn 0.0875 SOL when the pool pays Q1" (or "…when the game is final" for Q4 100%), and switches to "Earned 0.0875 SOL ↗" once paid.
+Fee line: the header shows the total ("Fee 12%" for a pool with a 2% add-on); tapping it, or the pool's details section, shows the breakdown "Platform 5% · Creator 7%" with amounts. Pools created by third-party clients can carry an integrator fee; our app never sets one but must display it when present, as a "Client 2%" line in the same breakdown. To the creator, the same spot reads "You earn 0.0875 SOL when the pool pays Q1" (or "…when the game is final" for Q4 100%), and switches to "Earned 0.0875 SOL ↗" once paid.
 
 Activity: purchases, lock, draw, each settlement, returns. The first settlement adds one row alongside the prize: "Fees paid · 0.0625 SOL platform · 0.0875 SOL creator ↗", same transaction link. Every row links to its transaction. This is the "verify on chain" surface; `/pools/{id}/verify` is the same list as a standalone public page.
 
@@ -279,7 +279,7 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 │ Mon 8:15  LAR – MIA  ○ │   │ Payout split           │   │ Your boxes  [− 1 +]    │
 │                        │   │ (●) 20/20/20/40        │   │ 1 × 0.05 SOL           │
 │                        │   │ ( ) 25/25/25/25        │   │ Creation fee  0.014 SOL│
-│                        │   │ ( ) Q4 winner-take-all │   │ ─────────────          │
+│                        │   │ ( ) Q4 100%            │   │ ─────────────          │
 │                        │   │                        │   │ Total          0.064   │
 │                        │   │ You earn 5% · 0.0625   │   │                        │
 │                        │   │ Extra fee     [ 0 ]%   │   │ Pool won't lock until  │
@@ -291,11 +291,11 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 
 - Step 1 lists this week's games not yet kicked off. Live and finished games aren't offered. A game where the creator already has 3 open pools is shown dimmed with a "3 open" tag and can't be selected.
 - Step 2's price is a stepper, not a text field: − / + moves in the token's step (0.05 SOL, 100 SKR, 0.05 ORE) between the token's min and max, so an invalid price can't be typed. Long-press accelerates. "Full pot" recomputes live. At the cap the + button disables with a "Max 1 SOL per box" hint.
-- Creator earnings are shown plainly in step 2: "You earn 5% of the pot (0.0625 SOL), paid when the pool pays its first prize", recomputed with the price. Below it, the optional add-on fee (0–5%, default 0) with the note that it's shown to every buyer and comes out of the pot. With an add-on set, the earnings line shows the combined figure ("7% · 0.0875 SOL"). Never say "when the pool fills": nothing is paid at lock.
+- Creator earnings are shown plainly in step 2: "You earn 5% of the pot (0.0625 SOL), paid with the pool's first prize", recomputed with the price. The same phrase is used everywhere, because "first prize" is Q1 on most splits and the final on Q4 100%; never hard-code "Q1" into creator copy. Below it, the optional add-on fee (0–5%, default 0) with the note that it's shown to every buyer and comes out of the pot. With an add-on set, the earnings line shows the combined figure ("7% · 0.0875 SOL"). Never say "when the pool fills": nothing is paid at lock.
 - Step 3 is the single transaction: the creation fee (account rent, labelled as a fee and never as a refundable deposit) + any boxes the creator wants. Stepper starts at 1 and runs 0–5; at 5 the + button disables with a "Max 5 of your own boxes" hint. The button reads "Create pool" either way.
 - On their own pool page, the creator's buy stepper caps at 5 minus the boxes they already hold, with the same hint. Everyone else's caps at boxes remaining.
 - Success lands on the new pool page with the share sheet pre-opened, since the creator's next job is to get the rest of the grid sold.
-- Later, not v1 app: a "Private" toggle in step 2 creates a link-gated pool (the program supports it from v1, see ARCHITECTURE.md, Private pools). The share sheet then carries the invite link and a printable QR; the pool gets a "Private" pill and is left off the game page. The pool page must handle opening a private pool from its link, including when the user isn't connected yet.
+- Later, not v1 app: a "Private" toggle in step 2 creates a link-gated pool (the program supports it from v1, see ARCHITECTURE.md, Private pools). The share sheet then carries the invite link and a printable QR; the pool gets a "Private" pill and is left off the game page. The pool page must handle opening a private pool from its link, including when the user isn't connected yet. `access_type` is fixed at creation: a private pool can't be made public later or the reverse; the creator makes a new pool instead.
 
 ### 4.6 My Boxes
 
@@ -337,7 +337,7 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 | Component | Notes |
 |---|---|
 | `TeamChip` | Real team logo on team color, 3 sizes. Abbreviation fallback only if the asset fails to load. |
-| `StatusPill` | OPEN / LOCKED / LIVE / SETTLED / RETURNED, colors per section 4.2. |
+| `StatusPill` | OPEN / LOCKED / LIVE / SETTLED / RETURNED / SPLIT, colors per section 4.2. |
 | `FillBar` | 25 segments, not a smooth bar, so "19/25" is countable. |
 | `ScoreStrip` | Team, score, clock; tabular numerals; pulse on change. |
 | `LineScore` | Q1–Q4 (+OT) per team, tabular. |
@@ -349,7 +349,7 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 | `ActivityList` | Rows with tx links. |
 | `WalletChip` | Connect / connected with .skr; menu: copy address, disconnect. |
 | `NeonSign` | The logo in on/off states for header, loading, empty. |
-| `TokenAmount` | Amount + symbol, optional USD hint, never more than 4 decimals in UI. |
+| `TokenAmount` | Amount + symbol, optional USD hint. Box prices in the token's natural precision (SKR whole, SOL/ORE two decimals); prizes and fees to at most 4 decimals, rounded half-up for display, exact amount in the transaction and on tap. |
 
 ## 6. States and edge cases to design, not improvise
 
@@ -390,7 +390,7 @@ Concrete rules, because "don't look AI-generated" isn't actionable.
 
 - Real NFL team logos are used everywhere a team appears: game cards, game header, pool header, grid axes, notifications.
 - Sourcing: the 32 team logos are fetched once, bundled in the app (in the APK on Android, served from the web app's own host on web) and never hot-linked from a third-party host during live traffic. Team logos are the property of the NFL and its clubs; see [TRADEMARKS.md](../TRADEMARKS.md).
-- The API-Sports files are PNGs. Use them at chip and grid-axis size; if the pool header needs a large logo, source higher-resolution or vector versions for those 32 teams separately.
+- The source files are PNGs. Use them at chip and grid-axis size; if the pool header needs a large logo, source higher-resolution or vector versions for those 32 teams separately.
 - `TeamChip` still takes the logo as a prop with an abbreviation-on-team-color fallback, purely for robustness: a missing or slow asset never leaves a blank chip.
 - Team colors and abbreviations come from a static table in `packages/shared`, keyed by the team IDs the scores service uses, so every surface agrees.
 - Fonts: choose open-licensed families (Google Fonts) so the Seeker build has no font licensing issue.

@@ -38,7 +38,7 @@ This repository is the open-source part of MyBarPool: the Solana program that ho
 4. **Play.** After each quarter, the keeper posts the official end-of-quarter score on-chain and the program pays that quarter's winner immediately. Q4 uses the final score, so overtime replaces the end-of-regulation score and Q4 pays when the game is final.
 5. **Verify.** Every payout is recorded on the pool account with the score, winning box, wallet and amount, and linked to its transaction in the app.
 
-If the grid doesn't sell out by kickoff, or the game is postponed or cancelled, every buyer's full purchase is sent back automatically with no fees. If a game is suspended and never finished, unpaid prizes are split equally across all 25 boxes.
+If the grid doesn't sell out by kickoff, or the game is cancelled, every buyer's full purchase is sent back automatically with no fees. A postponed game just moves the pool's kickoff to the new date. If a game is suspended and never finished, unpaid prizes are split equally across all 25 boxes.
 
 ## The rules, precisely
 
@@ -98,10 +98,11 @@ Worked example, 0.05 SOL boxes, 2% add-on, 20/20/20/40: pot 1.25 SOL, fee 12% = 
 |---|---|
 | Grid not full at kickoff | Every purchase returned in full. No fee |
 | Game delayed (weather etc.) | Pool waits |
-| Game postponed or cancelled | Every purchase returned in full, even after lock and draw. No fee, creator earns nothing |
+| Game postponed to a new date | The pool's kickoff moves with it. Open pools keep selling until the new kickoff; locked pools wait |
+| Game cancelled | Every purchase returned in full, even after lock and draw. No fee, creator earns nothing |
 | Game suspended and not finished | Every unpaid prize, including the quarter in progress, split equally across all 25 boxes. Fees already taken stay taken |
 | Score sources disagree or status is unfamiliar | Pool stays locked and the team is alerted. Waiting is always safe because nothing leaves the vault without a decision |
-| Draw can't finalise before kickoff | Pool returned |
+| Draw can't finalise before kickoff | A replacement draw is opened by the multisig (with a public event); if that also fails, the pool is cancelled and returned |
 | The platform stops operating | 30 days after kickoff, any buyer of an unresolved pool can call `reclaim` and take back their own share (purchase price, or `unpaid_prize_pool / 25` after partial settlement). No key or permission needed. This is the only path that isn't platform-controlled, and it can only fire if the platform has stopped |
 
 Returns and splits are executed by the platform keeper. Players and creators never have to claim, request or dispute anything.
@@ -118,8 +119,8 @@ MyBarPool is platform-operated. Every state change after a purchase is performed
 
 | Key | Can do | Held in |
 |---|---|---|
-| Platform admin | Update config (fees within the hard-coded ceilings, price steps, payout presets, creator limits), per-wallet overrides, cancel/return pools, split suspended pools, update kickoff times | Squads multisig |
-| Score authority (keeper) | Post scores, settle quarters, run the Entropy draw, return unfilled pools | Cloud KMS, single purpose |
+| Platform admin | Update config (fees within the hard-coded ceilings, price steps, payout presets, creator limits), per-wallet overrides, mark a game cancelled or suspended (which makes its pools returnable or splittable), cancel a single pool, replace a pool's random variable | Squads multisig |
+| Score authority (keeper) | Post scores and kickoff-time changes, settle quarters, run the Entropy draw, return unfilled pools, execute returns and splits on games the multisig has marked | Cloud KMS, single purpose |
 | Program upgrade authority | Deploy new versions | Squads multisig |
 | Players and creators | Buy boxes, create pools within the limits, rotate the gate key on their own private pools | Their own wallets |
 
@@ -128,7 +129,7 @@ Program-enforced checks on the keeper, so a bug or a stolen score key can't drai
 - Quarters must be posted in order, one per game; scores can only increase.
 - Wall-clock floors on every quarter: Q1 needs at least 15 real minutes after kickoff, each later quarter at least 15 minutes after the previous post. These are sanity checks, not triggers; scores are posted when both feeds report the quarter over.
 - Returns of unfilled pools are only accepted after kickoff.
-- Cancels and splits need the admin key, not the score key.
+- Cancelling a game or pool and marking a game suspended need the admin key; the keeper can only execute the transfers that follow. Kickoff updates must be to a time in the future.
 - Every admin capability is an explicit, documented instruction. There is no privileged path in `buy` or `settle`.
 
 The keeper is closed source and its details are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) only to the extent needed to understand the trust model. The program is what you are trusting; the program is what is published.
