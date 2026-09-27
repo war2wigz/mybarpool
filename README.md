@@ -32,7 +32,7 @@ This repository is the open-source part of MyBarPool: the full design today, and
 
 ## How a pool works
 
-1. **Create a pool.** Pick an NFL game, a token (SOL, SKR or ORE), a box price, an optional add-on fee (0–5%), and a payout split. You pay a creation fee of about 0.014 SOL (account rent) and can buy up to 5 of your own boxes in the same transaction. Every creator earns 5% of the pot automatically, paid with the first prize.
+1. **Create a pool.** Pick an NFL game, a token (SOL, SKR or ORE), a box price and a payout split. As the creator you earn 5% of the pot automatically, paid with the first prize; that 5% is built into the 10% fee every pool carries, so you don't have to set anything to get it. If you want more, you can add up to 5% on top (0–5%, default 0), which is shown to buyers as part of one total fee, 10–15%. You pay a creation fee of about 0.014 SOL (account rent) and can buy up to 5 of your own boxes in the same transaction.
 2. **Sell out the grid.** Anyone can buy any number of boxes in one tap. The program assigns positions at random, since every box has identical odds before the draw. Funds sit in a program-owned vault. Sales close at kickoff.
 3. **Lock and draw.** When the 25th box sells, the pool locks and digits 0–9 are shuffled onto both axes using [Regolith Labs' Entropy](https://github.com/regolith-labs/entropy) (commit-reveal + slothash). Nobody can know the digits while boxes are on sale.
 4. **Play.** After each quarter, the keeper posts the official end-of-quarter score on-chain and the program pays that quarter's winner immediately. Q4 uses the final score, so overtime replaces the end-of-regulation score and Q4 pays when the game is final.

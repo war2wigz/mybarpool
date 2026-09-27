@@ -36,7 +36,7 @@ How the program, the keeper and the clients fit together, and why each rule is t
 - Box prices display in each token's natural precision: SKR as whole numbers, SOL and ORE to two decimals; the price ladder guarantees this is exact. Prizes and fees are shown to at most four decimals, rounded half-up for display only (a 25/25/25/25 quarter on the smallest SOL pool is 0.28125 SOL and displays as 0.2813; the transaction carries the exact amount).
 
 ### Lifecycle
-1. Open — creator picks an NFL game, token (SOL / SKR / ORE), box price, optional creator add-on fee, and payout split. Players buy boxes; funds go to a program-owned vault.
+1. Open — creator picks an NFL game, token (SOL / SKR / ORE), box price and payout split. The creator's 5% share is automatic and part of the 10% base fee; optionally they add up to 5% more on top (the add-on, default 0). Players buy boxes; funds go to a program-owned vault.
 2. Locked — only when all 25 boxes are sold. Every quarter therefore has exactly one winning box that belongs to a player, so there is no rollover logic.
 3. Numbers drawn — randomness (see below) assigns digits to both axes.
 4. Live — after each quarter ends, the keeper posts the official score on-chain and the program pays that quarter's winner immediately. No dispute window. Platform and creator fees are taken in the first settlement transaction, never before. The Q4 prize is paid when the game is final (see Payouts).
