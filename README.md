@@ -57,6 +57,7 @@ If the grid doesn't sell out by kickoff, or the game is postponed or cancelled, 
 | Payouts | Pushed to the winning wallet by the settle instruction. Players never claim. Every payout is recorded on the pool account and emitted as an event |
 | Creator limits | Max 3 open (unfilled) pools per wallet per game. Max 5 boxes in a pool you created. Both are config values with optional per-wallet overrides. Players are unlimited |
 | Private pools | Supported by the program from v1: `link` (gate-key co-signer carried in the invite link or a printable QR) and `allowlist` (Merkle root of wallets). Same fees, draw and settlement as public pools. The first version of the app creates public pools only |
+| Links | Every pool has one URL, `mybarpool.com/pools/{address}`, that reads the pool straight from the chain and needs nothing from MyBarPool's servers; a short form `mybarpool.com/p/{code}` redirects to it. Links open the app on Seeker and the web app anywhere else, with a live grid image as the preview. No referral codes, no tracking parameters |
 | Scores | ESPN and API-Sports, both must agree before anything is posted |
 | Randomness | Regolith Labs Entropy, one variable per pool, no re-rolls |
 | Environments | Localnet and mainnet only. No devnet |
@@ -185,7 +186,7 @@ The app is dark, numbers-first, and calm: a neon-sign logo, condensed numerals f
 
 ![All screens](docs/mockups/png/overview.png)
 
-Design principles, the full information architecture and every flow are in [docs/DESIGN.md](docs/DESIGN.md).
+Design principles, the full information architecture and every flow, including how a pool is shared (link, preview, QR, printable board), are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Toolchain
 

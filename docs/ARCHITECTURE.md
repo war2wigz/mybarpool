@@ -192,6 +192,7 @@ Closed source, run by the platform. Described here so the trust model is complet
 - Keeper — event-driven; runs the Entropy draw, posts scores, settles quarters (pushing payouts to winners), returns unfilled pools, executes returns and splits once the admin has marked a game postponed, cancelled or suspended, and posts kickoff-time changes for ordinary schedule moves. Signing key in a cloud KMS, never in environment variables or on disk.
 - Notifications — push messages for "your box hit" alerts.
 - Web hosting — static hosting behind a CDN for mybarpool.com.
+- Links — short-link resolver, link-preview metadata and the per-pool preview-image renderer for mybarpool.com, fed by the scores service's pool index (see Sharing and links).
 
 ### Clients
 - Seeker first. Most users are expected to arrive through the Solana dApp Store, so the Android app is the primary client and the web app is the second target of the same codebase, not the other way round. No web-view or TWA wrapper.
@@ -201,6 +202,15 @@ Closed source, run by the platform. Described here so the trust model is complet
 - A small wallet abstraction sits between the screens and the two signing paths (MWA on Android, wallet-standard on web) so screens never know which one they're on.
 - Precedent: ORE's app ships web, mobile and Seeker from one codebase (Dioxus, Rust). MyBarPool takes the same approach in TypeScript so the app shares `packages/shared` with the keeper and program tests.
 - If the dApp Store rejects a real-money game, MyBarPool ships as the web app only; nothing in the design depends on the store.
+
+### Sharing and links
+Selling a grid is mostly a creator sending a link, so links are part of the architecture, not a frontend detail. The design (text, sheet, QR, printable board) is in DESIGN.md, Sharing; this is what has to exist underneath it.
+- Canonical pool URL: `https://mybarpool.com/pools/{poolAddress}`, the pool PDA in base58. The web app reads the pool directly from the chain, so a canonical link works with nothing but an RPC and is what the SDK and third-party clients should link to. Nothing on-chain changes for sharing.
+- Short link: `https://mybarpool.com/p/{code}`, `code` = first 8 base58 characters of the pool address (58⁸ ≈ 1.3 × 10¹⁴, so a prefix collision within one program's pools is not a practical concern; the resolver returns "not found" rather than guessing if it ever sees two). Resolved by prefix lookup in the scores service's pool index and answered with a redirect to the canonical URL. It is a convenience layered on the canonical link, never a dependency: if the resolver is down, every canonical link still works.
+- Link previews: pool and game pages are served with Open Graph and Twitter card metadata and a per-pool preview image of the current grid, rendered server-side, cached, and invalidated on every buy, lock, draw and settlement event the scores service already observes. The renderer is the same grid component the app uses, run in a headless renderer on the server, so previews, shared images and printed boards are identical.
+- Android App Links: `https://mybarpool.com/.well-known/assetlinks.json` lists the Seeker app's signing certificate so verified links open the app directly; the same URL opens the web app when the app isn't installed. No custom URL scheme is exposed to users.
+- Private pools: the gate key travels in the URL fragment (`#k=…`), which browsers never send to the server, so it stays out of request logs, the redirect and the preview renderer. The preview for a private pool omits the grid and names.
+- No tracking parameters on shared links and no referral mechanics; the pool address is the only identifier a link carries.
 
 ### Live scores vs. results
 The frontend receives two separate streams and must never confuse them:

@@ -61,6 +61,7 @@ The unit is a **box**, in every string the user sees and in every identifier in 
 /create                 Create a pool (3 steps)
 /me                     My boxes, my pools, history
 /pools/{poolId}/verify  On-chain record (public, linkable)
+/p/{code}               Short share link -> /pools/{poolId} (section 4.8)
 ```
 
 Bottom tab bar on mobile: **Games · My Boxes · Create**. Wallet lives in the top-right as a chip (avatar or .skr name), not a tab.
@@ -239,7 +240,7 @@ Fee line: the header shows the total ("Fee 12%" for a pool with a 2% add-on); ta
 
 Activity: purchases, lock, draw, each settlement, returns. The first settlement adds one row alongside the prize: "Fees paid · 0.0625 SOL platform · 0.0875 SOL creator ↗", same transaction link. Every row links to its transaction. This is the "verify on chain" surface; `/pools/{id}/verify` is the same list as a standalone public page.
 
-Share (⇪): copies a link and, on Seeker, opens the native share sheet with a generated image of the grid.
+Share (⇪): opens the share sheet described in section 4.8.
 
 ### 4.4 Buy flow
 
@@ -336,6 +337,43 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 - "Pool returned" with the amount.
 - Nothing promotional. Notification volume is one of the fastest ways to feel cheap.
 
+### 4.8 Sharing
+
+A creator has to sell 24 more boxes after buying their own, and most of that happens by dropping a link in the bar's group chat. Sharing is therefore a first-class flow, not a button. Every part below is designed so that the person receiving the link sees the actual grid before they've installed anything or connected anything.
+
+**The link**
+- One canonical URL per pool: `https://mybarpool.com/pools/{poolAddress}`. It is the same on web and in the app, it is what the SDK and third-party clients link to, and it works with nothing but an RPC: the page reads the pool straight from the chain.
+- The app shares a short form, `https://mybarpool.com/p/{code}`, where `code` is the first 8 characters of the pool address. It's readable aloud across a bar and fits in a text. The server resolves it by prefix from the indexer and redirects to the canonical URL; if the server were ever down the canonical link still works, which is why the long form is canonical and the short form is a convenience.
+- Game pages share too (`/games/{gameId}`), for "there are three pools on the Eagles game, pick one".
+- Android App Links: `assetlinks.json` on mybarpool.com verifies the app, so tapping a link on a Seeker with the app installed opens the pool page in the app. Without the app it opens the web app in the browser. There is never an interstitial "open in app" page and never a custom URL scheme in anything a user sees.
+- The web pool page works fully without a wallet: grid, names, price, fee, split, kickoff, activity. Connect is only prompted on Buy (section 2, principle 6).
+
+**The preview**
+- Every pool page is server-rendered with Open Graph and Twitter card tags so iMessage, WhatsApp, X, Discord and Telegram show a real preview: title "Eagles vs Cowboys · 0.05 SOL a box · 19/25 sold", description with kickoff, split and total fee, and an image of the actual grid with names filled in. The image is the pitch.
+- The preview image is rendered server-side per pool, cached, and invalidated on every buy, lock, draw and settlement, so a link tapped an hour later shows the current board. Before the draw the axes show `?`; after it they show digits; live it shows the leading box; settled it shows the winners.
+- The same renderer produces the image the share sheet attaches and the printable board, so the preview, the shared image and the sheet on the wall are always the same picture.
+
+**The share sheet**
+- Opens from ⇪ on the pool page, from the post-buy result, from the post-create landing (pre-opened, section 4.5), and from the "Pool locked, numbers drawn" notification.
+- Pre-filled text, live at share time, not just a URL:
+  - Creator: "Grab a box on my Eagles–Cowboys pool · 0.05 SOL a box · 6 left · mybarpool.com/p/7kq2Xf9a"
+  - Buyer, after buying: "I've got boxes 2, 12 and 17 on the Eagles–Cowboys pool · 3 left · mybarpool.com/p/7kq2Xf9a"
+  - Full or live pool: "Eagles–Cowboys boxes · numbers are drawn · mybarpool.com/p/7kq2Xf9a" (nothing to sell, but people screenshot the board).
+- Actions, in this order: **Share** (native sheet on Seeker with the grid image attached; Web Share API in the browser where available, else copy), **Copy link**, **Show QR**, **Save image**, **Print board**.
+- Show QR: full screen, high contrast on white, pool URL printed under it in the display face, big enough to scan from across a table. For holding the phone up or pointing a webcam at.
+- Save image: the grid graphic at 1080×1080 and 1080×1920 (feed and story), with the neon sign small in a corner and the short URL along the bottom. No prices in the image beyond what's on the grid header; the image should still make sense a week later.
+- Print board: one-tap PDF at US Letter and A4 of the grid with names, the QR in a corner and the URL under it, for bars that still tape a sheet to the wall. Before the draw the axes read "Numbers drawn when the grid sells out"; after it, the digits. Re-print after the draw is the expected pattern.
+
+**Private pools** (program supports them from v1; app exposes them later, section 4.5)
+- The invite link carries the gate key in the URL fragment, `https://mybarpool.com/p/{code}#k={key}`, never in the path or query, so it never reaches server logs, the redirect, or the preview renderer. The web app reads it client-side and signs `buy` with it silently.
+- The preview for a private pool shows the game, price and fill count but not the grid or the names.
+- Show QR and Print board carry the full invite link; that is how a bar shares a private pool with the room.
+
+**What sharing is not**
+- No referral codes, invite rewards or "share to earn". They look cheap, and paying people to recruit players is not what a bar's board is. The creator's 5% is already the reason to share.
+- No third-party link shorteners; the short form is ours and resolves to ours.
+- No tracking parameters on shared links. The link is the pool address; that is enough analytics.
+
 ## 5. Components
 
 | Component | Notes |
@@ -352,6 +390,8 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 | `PayoutTable` | Quarter, amount, winner, tx. |
 | `ActivityList` | Rows with tx links. |
 | `WalletChip` | Connect / connected with .skr; menu: copy address, disconnect. |
+| `ShareSheet` | Pre-filled text, Share / Copy link / Show QR / Save image / Print board; knows whether the caller is the creator, a buyer or a viewer (section 4.8). |
+| `GridImage` | The grid rendered as an image (preview, share, story, print). One renderer, run server-side for previews and on-device for the share sheet, from the same component. |
 | `NeonSign` | The logo in on/off states for header, loading, empty. |
 | `TokenAmount` | Amount + symbol, optional USD hint. Box prices in the token's natural precision (SKR whole, SOL/ORE two decimals); prizes and fees to at most 4 decimals, rounded half-up for display, exact amount in the transaction and on tap. |
 
@@ -366,6 +406,9 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 - Sources disagree (keeper paused): show the live score as usual with a small "Verifying…" tag on the payouts table; never show a winner.
 - Creator at a limit: "Create pool" on a game where they already have 3 open reads "3 open pools on this game" and is disabled, with a link to those pools. A creator at 5 boxes in their own pool sees the buy bar replaced by "You hold the max 5 boxes in your pool".
 - Wallet disconnected mid-buy, transaction rejected, insufficient balance, RPC timeout: each has copy and a recovery action.
+- Shared link opened after the pool changed: a full pool shows the grid with "Sold out · numbers drawn" and no buy bar; a returned pool shows the red header and why; a settled pool shows the winners. The link never dead-ends on "pool not available".
+- Short link that doesn't resolve (typo, or the indexer is behind): the page says "We can't find that pool" with a search box for the full address, and never a bare 404.
+- Link opened with no app and no wallet on the phone: the web page renders fully; Buy explains what a wallet is in one line with a link to install one. Browsing is never blocked.
 - Slow network on Seeker: skeletons use the unlit sign; grid renders empty boxes immediately.
 
 ## 7. Inspiration and what to take from it
