@@ -40,7 +40,7 @@ Short, bar-side, no crypto jargon. "Buy 3 boxes" not "Mint 3 positions". "Sent t
 
 The pitch is a weekly habit, not a once-a-year party. Most people know boxes from Super Bowl Sunday; the copy and the home screen make it obvious there's a grid for every game, every week. "Every game. Every week." is the line, and the week selector is the first thing on the home screen.
 
-The unit is a **box**, never a square, in every string the user sees and in every identifier in the code (see ARCHITECTURE.md, Grid). Grid cells are boxes; the 5×5 as a whole is the grid or the board.
+The unit is a **box**, in every string the user sees and in every identifier in the code, and the game's other common name is not used (see ARCHITECTURE.md, Grid). Grid cells are boxes; the 5×5 as a whole is the grid or the board.
 
 ## 2. Design principles
 
@@ -151,7 +151,7 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 │ │ LIVE   1.00 SOL/box   25/25      │ │
 │ │ Pot 25 SOL · 20/20/20/40         │ │
 │ │ Fee 12% · by bigmikes.skr          │ │
-│ │ Q1 won by a3f9 · 4.5 SOL         │ │
+│ │ Q1 won by a3f9 · 4.4 SOL         │ │
 │ └──────────────────────────────────┘ │
 │ ┌──────────────────────────────────┐ │
 │ │ OPEN  0.05 ORE/box  ▓▓░░░░░ 6/25  │ │
@@ -163,7 +163,7 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 
 - Pool card: status pill, price, fill bar with count, pot, split, total fee (10% plus any add-on, shown as one number), creator. Every card shows the fee and the creator without exception. Live pools show the latest result line.
 - Team order is home team first everywhere: cards, headers, the create list ("PHI – DAL" means Philadelphia is home).
-- Status pills: `OPEN` purple outline · `LOCKED` amber · `LIVE` teal pulse · `SETTLED` green · `RETURNED` red outline · `SPLIT` amber outline (suspended game, prizes split). An abandoned pool (30 days unresolved) shows `RETURNED` styling with a "Reclaim your share" button in place of the buy bar; it is the only button in the app that sends a transaction the platform didn't initiate.
+- Status pills: `OPEN` purple outline · `LOCKED` amber · `LIVE` teal pulse · `SETTLED` green · `RETURNED` red outline · `SPLIT` amber outline (suspended game, prizes split). An abandoned pool (unresolved 30 days after the scheduled kickoff) shows `RETURNED` styling with a "Reclaim your share" button in place of the buy bar; it is the only button in the app that sends a transaction the platform didn't initiate.
 - Sort: open pools first (most filled first, they lock soonest), then live, then settled.
 - Filters (chips): token, price range. Only shown when a game has more than 5 pools.
 
@@ -183,19 +183,19 @@ The most important screen. Three zones stacked: header, grid, details. The buy b
 │         ?    ?    ?    ?    ?        │  <- digits hidden until draw
 │   ?  ┌────┬────┬────┬────┬────┐      │
 │   ?  │ 1  │ 2  │ 3  │ 4  │ 5  │      │
-│   ?  │mike│    │ana │ana │    │      │
+│   ?  │mike│    │zoe │zoe │    │      │
 │ B ?  ├────┼────┼────┼────┼────┤      │
 │ A ?  │ 6  │ 7  │ 8  │ 9  │ 10 │      │
 │ L    │ YOU│jon │    │mike│ YOU│      │
 │      ├────┼────┼────┼────┼────┤      │
 │ ↓    │ 11 │ 12 │ 13 │ 14 │ 15 │      │
-│      │    │    │ana │    │jon │      │
+│      │    │    │zoe │    │jon │      │
 │      ├────┼────┼────┼────┼────┤      │
 │      │ 16 │ 17 │ 18 │ 19 │ 20 │      │
 │      │jon │    │    │ YOU│    │      │
 │      ├────┼────┼────┼────┼────┤      │
 │      │ 21 │ 22 │ 23 │ 24 │ 25 │      │
-│      │    │mike│    │    │ana │      │
+│      │    │mike│    │    │zoe │      │
 │      └────┴────┴────┴────┴────┘      │
 │                                      │
 │ Payouts                              │
@@ -211,7 +211,7 @@ The most important screen. Three zones stacked: header, grid, details. The buy b
 │  ...                                 │
 │                                      │
 │ Activity                             │
-│  ana.skr bought 2 boxes   2m  ↗      │
+│  zoe.skr bought 2 boxes   2m  ↗      │
 │  jon bought 1 box        8m  ↗       │
 │  Pool created by mike.skr   1h  ↗    │
 │──────────────────────────────────────│
@@ -235,7 +235,7 @@ Header by status:
 
 Payouts table: amount per quarter, then winner + tx link as each one settles. This table is fed only by on-chain events, never by live scores. Quarter amounts are the prize amounts after fees, so the numbers players see add up to what is actually paid.
 
-Fee line: the header shows the total ("Fee 12%" for a pool with a 2% add-on); tapping it, or the pool's details section, shows the breakdown "Platform 5% · Creator 7%" with amounts. Pools created by third-party clients can carry an integrator fee; our app never sets one but must display it when present, as a "Client 2%" line in the same breakdown. To the creator, the same spot reads "You earn 0.0875 SOL with the pool's first prize" and switches to "Earned 0.0875 SOL ↗" once paid.
+Fee line: the header shows the total ("Fee 12%" for a pool with a 2% add-on); tapping it, or the pool's details section, shows the breakdown "Platform 5% · Creator 7%" with amounts. Pools created by third-party clients can carry an integrator fee; the MyBarPool app never sets one but must display it when present, as a "Client 2%" line in the same breakdown. To the creator, the same spot reads "You earn 0.0875 SOL with the pool's first prize" and switches to "Earned 0.0875 SOL ↗" once paid.
 
 Activity: purchases, lock, draw, each settlement, returns. The first settlement adds one row alongside the prize: "Fees paid · 0.0625 SOL platform · 0.0875 SOL creator ↗", same transaction link. Every row links to its transaction. This is the "verify on chain" surface; `/pools/{id}/verify` is the same list as a standalone public page.
 
@@ -399,11 +399,3 @@ Concrete rules, because "don't look AI-generated" isn't actionable.
 - `TeamChip` still takes the logo as a prop with an abbreviation-on-team-color fallback, purely for robustness: a missing or slow asset never leaves a blank chip.
 - Team colors and abbreviations come from a static table in `packages/shared`, keyed by the team IDs the scores service uses, so every surface agrees.
 - Fonts: choose open-licensed families (Google Fonts) so the Seeker build has no font licensing issue.
-
-## 10. Process
-
-1. Wireframes and mockups (this doc) → 2. Component library in code (`apps/app`, React Native) with a Storybook-style screen of every component in every state, checked on an Android device → 3. Screens assembled from components against mock data → 4. Wire to the program and scores service → 5. Enable the web target and fix desktop layout.
-
-Android is the primary target throughout. Every component is verified on a real Android device (Seeker where possible) before it's considered done; web rendering is checked second.
-
-Nothing gets styled before step 3, and no screen is built before its components exist in every state listed in section 6.

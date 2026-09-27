@@ -26,7 +26,7 @@ Anything that could move, freeze or misdirect funds, or influence a draw or a se
 ## Style
 
 - Plain language. The doc is written for a bar owner who wants to know where the money goes and an integrator who wants to know what the program enforces. Both should be able to read it.
-- The unit is a **box**, never a square, in every user-facing string and every identifier.
+- The unit is a **box**, in every user-facing string and every identifier. The game's other common name appears once, in the README's opening line, and nowhere else.
 - Boxes are labelled 1–25 anywhere a person sees them.
 - Numbers are exact. If you change a fee example, recompute everything that depends on it.
 

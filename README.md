@@ -36,7 +36,7 @@ This repository is the open-source part of MyBarPool: the full design today, and
 2. **Sell out the grid.** Anyone can buy any number of boxes in one tap. The program assigns positions at random, since every box has identical odds before the draw. Funds sit in a program-owned vault. Sales close at kickoff.
 3. **Lock and draw.** When the 25th box sells, the pool locks and digits 0–9 are shuffled onto both axes using [Regolith Labs' Entropy](https://github.com/regolith-labs/entropy) (commit-reveal + slothash). Nobody can know the digits while boxes are on sale.
 4. **Play.** After each quarter, the keeper posts the official end-of-quarter score on-chain and the program pays that quarter's winner immediately. Q4 uses the final score, so overtime replaces the end-of-regulation score and Q4 pays when the game is final.
-5. **Verify.** Every payout is recorded on the pool account with the score, winning box, wallet and amount, and linked to its transaction in the app.
+5. **Verify.** Every payout is recorded on-chain: the pool account keeps the quarter, winning box and amount, and the settle event carries the full detail (score, winning box, wallet, amount). The app links each one to its transaction.
 
 If the grid doesn't sell out by kickoff, or the game is postponed or cancelled, every buyer's full purchase is sent back automatically with no fees. If a game is suspended and never finished, unpaid prizes are split equally across all 25 boxes.
 
@@ -50,9 +50,9 @@ If the grid doesn't sell out by kickoff, or the game is postponed or cancelled, 
 | Axes | Home team across the top, away team down the side. Each axis is shuffled independently; the same pair can appear on a column and a row, which changes nobody's odds |
 | Tokens | SOL, SKR, ORE — one token per pool |
 | Box price | SOL 0.05–1 in 0.05 steps · SKR 100–5,000 in 100s · ORE 0.05–1 in 0.05s, the same ladder as SOL. The program rejects any price off the step. Limits live in platform config and can move with prices without a program upgrade |
-| Buying | Any wallet, any number of boxes, any number of pools. Positions are assigned by the program, never chosen. Sales close at the pool's recorded kickoff, which follows league schedule changes announced before the game |
+| Buying | Any wallet, any number of boxes, any number of pools. Positions are assigned by the program, never chosen. Sales close at the pool's recorded kickoff, which follows league schedule changes announced before the game (the keeper may move it only while it is still in the future, only to a future time, and only within 72 hours of the original schedule) |
 | Locking | Only when all 25 boxes are sold. A pool that isn't full at kickoff is returned |
-| Payout split | Chosen by the creator from presets. Default Q1 20 / Q2 20 / Q3 20 / Q4 40. Also 25/25/25/25 and Q4 100% |
+| Payout split | Chosen by the creator from exactly three presets fixed in the program: Q1 20 / Q2 20 / Q3 20 / Q4 40 (default), 25/25/25/25, and Q4 100%. No other split is accepted |
 | Scoring | Q1–Q3 use the official end-of-quarter line score. Q4 uses the final score after any overtime; the Q4 prize is paid when the game is final |
 | Payouts | Pushed to the winning wallet by the settle instruction. Players never claim. Every payout is recorded on the pool account and emitted as an event |
 | Creator limits | Max 3 open (unfilled) pools per wallet per game. Max 5 boxes in a pool you created. Both are config values with optional per-wallet overrides. Players are unlimited |
@@ -88,7 +88,7 @@ quarter[q]     = floor(prize_pool × split[q] / 100)         // dust to the plat
 
 Worked example, 0.05 SOL boxes, 2% add-on, 20/20/20/40: pot 1.25 SOL, fee 12% = 0.15 SOL (platform 0.0625, creator 0.0875), prize pool 1.1 SOL, quarters 0.22 / 0.22 / 0.22 / 0.44.
 
-**Creation fee.** The creator pays the rent for the pool account, its vault and the per-game counter, about 0.014 SOL. When the pool closes in any outcome the program reclaims that rent to the platform — except after an abandoned-pool reclaim, when it goes to the creator. It is labelled a creation fee, never a deposit.
+**Creation fee.** The creator pays the rent for the pool account, its vault and (first time per game) a per-creator counter, about 0.014 SOL. When the pool closes in any outcome the program reclaims the pool and vault rent to the platform, and the counter's rent goes to the platform when the counter closes at zero open pools. One exception: after an abandoned-pool reclaim, the pool and vault rent (and any rounding dust) go to the creator, since the platform is by then not operating. It is labelled a creation fee, never a deposit.
 
 **Ceilings are hard-coded.** `platform_bps ≤ 500` and `base + add-on ≤ 1500` are constants in the program. Config can lower them, never raise them; raising them would need a program upgrade, which is public, verifiable and announced in advance. No change of any kind touches an existing pool.
 
@@ -98,12 +98,12 @@ Worked example, 0.05 SOL boxes, 2% add-on, 20/20/20/40: pot 1.25 SOL, fee 12% = 
 |---|---|
 | Grid not full at kickoff | Every purchase returned in full. No fee |
 | Game delayed (weather etc.) | Pool waits |
-| Game postponed or cancelled | Every purchase returned in full, even after lock and draw. No fee, creator earns nothing. A postponed game is never carried to its new date; creators open fresh pools on it |
-| Kickoff moved by the league before the game (flex, new slot) | The pool's kickoff moves with it; open pools keep selling until the new time |
+| Game postponed or cancelled | Every purchase returned in full, even after lock and draw. No fee, creator earns nothing. A postponed game is never carried to its new date; the rescheduled game gets a new game record and creators open fresh pools on it |
+| Kickoff moved by the league before the game (flex, new slot) | The pool's kickoff moves with it; open pools keep selling until the new time. Accepted only while the current kickoff is still in the future, to a future time, within 72 hours of the original schedule; anything else is a postponement |
 | Game suspended and not finished | Every unpaid prize, including the quarter in progress, split equally across all 25 boxes. Fees already taken stay taken |
 | Score sources disagree or status is unfamiliar | Pool stays locked and the team is alerted. Waiting is always safe because nothing leaves the vault without a decision |
-| Draw can't finalise before kickoff | A replacement draw is opened by the multisig (with a public event); if that also fails, the pool is cancelled and returned |
-| Pool still unresolved 30 days after kickoff | If a pool is still unresolved 30 days after kickoff, any buyer can call `reclaim` and take back their own share directly from the program (purchase price, or `unpaid_prize_pool / 25` after partial settlement) with no key or permission. Fees already taken stay taken; fees not yet taken are never taken. This is the one path that isn't platform-controlled: your money never depends on MyBarPool continuing to exist |
+| Draw hasn't finalised by the time the first score is posted | A pool that fills in the last minute still gets its draw; the deadline is the first score post, not kickoff, and `settle` refuses a pool with no digits. If the draw is stuck, a replacement draw is opened by the multisig (with a public event); if that also fails before the first score is posted, the pool is cancelled and returned |
+| Pool still unresolved 30 days after kickoff | If a pool is still unresolved 30 days after the game's original scheduled kickoff (never a later keeper update), any buyer can call `reclaim` and take back their own share directly from the program (purchase price, or `unpaid_prize_pool / 25` after partial settlement) with no key or permission. Fees already taken stay taken; fees not yet taken are never taken. This is the one path that isn't platform-controlled: your money never depends on MyBarPool continuing to exist |
 
 Returns and splits are executed by the platform keeper. Players and creators never have to claim, request or dispute anything.
 
@@ -121,11 +121,11 @@ After each quarter ends on the game clock, the official end-of-quarter score is 
 
 What makes that reliable, in plain terms:
 
-- **The money is in a program vault, not in anyone's wallet.** Only the program can move it, and only by the rules written in this repository. Not the team, not the creator, not the keeper.
+- **The money is in a program vault, not in anyone's wallet.** Only the program can move it, by the rules in the deployed program version, which is published here with verifiable builds so anyone can confirm mainnet runs this code. Not the team, not the creator, not the keeper.
 - **Scores come from two independent sources** (ESPN and API-Sports) and are posted only when both agree. If they disagree, nothing is paid until they do.
 - **Quarters go in order and can't be rushed.** Scores are posted one quarter at a time, in order, and can only go up. Because a quarter is 15 minutes of game clock, the program refuses any score posted sooner than 15 minutes after kickoff (Q1) or after the previous post (later quarters) — so a whole game's scores can't be posted in seconds.
 - **The digits are drawn on-chain, after the grid is full,** from a public randomness source ([Regolith Labs' Entropy](https://github.com/regolith-labs/entropy)), and recorded on the pool. Nobody can know them while boxes are on sale, and there are no re-rolls.
-- **Every payout is written on the pool** with the score, the box, the wallet and the amount, and links to its transaction. Anyone can check any result, forever.
+- **Every payout is written on-chain.** The pool account keeps the quarter, the box and the amount; the settle event carries the score, the box, the wallet and the amount; and the app links each one to its transaction. Anyone can check any result against the chain's history.
 - **Nothing about a pool changes after it's created.** Price, split, fees and rules are fixed on the pool account at creation.
 - **Fee ceilings are constants in the program**, not settings: 5% platform, 15% total. Lowering them is a config change; raising them would need a new program version, which is public, verifiable and announced in advance.
 - **If a game isn't played, everyone gets their money back in full.** Fees only ever come out of a pool that has actually paid a prize.
@@ -135,7 +135,7 @@ Who holds which keys:
 | Who | Can do | Can't do |
 |---|---|---|
 | The keeper (MyBarPool's automated service) | Post scores and kickoff changes, run the draw, pay quarters, return unfilled pools, carry out returns and splits the team has approved | Pay anyone but the box that matches the score; skip or reorder a quarter; touch fees, prices or splits; return or split a locked pool without the team's mark (returning an unfilled pool after kickoff needs no mark) |
-| The MyBarPool team (multisig) | Adjust config within the hard-coded ceilings, mark a game postponed, cancelled or suspended, cancel a pool before its first settlement, replace a failed draw (publicly, with an event), publish new program versions | Move money to itself; redirect a payout; change a pool's price, split or fees. It can only stop a pool through the documented cancel/suspend instructions, each of which emits an event |
+| The MyBarPool team (multisig) | Adjust config within the hard-coded ceilings (fee rates, price ladders, the default payout preset, creator limits), mark a game postponed, cancelled or suspended, cancel a pool before its first settlement, replace a failed draw (publicly, with an event), publish new program versions | Move money to itself; redirect a payout; change a pool's price, split or fees. It can only stop a pool through the documented cancel/suspend instructions, each of which emits an event |
 | You | Buy boxes, create pools within the limits, run your own private pools | Nothing that needs asking for: no claims, no disputes, no approvals |
 
 The keeper's code is closed; how it makes decisions is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The program that holds the money and enforces every rule above is what's published here, with verifiable builds, so the keeper's actions can be checked against the program.
@@ -153,7 +153,7 @@ What a client chooses: token, price, split, add-on, integrator fee, public or pr
 
 How a client earns: create pools itself on its own site (5% creator share plus up to 5% add-on, with a per-wallet override for the open-pool limit on request), or let its users create pools and set itself as `integrator` for a share of the add-on budget. A private `link` pool whose gate key is held by the client's server is effectively public on that site and absent from the MyBarPool app; that is an intended use.
 
-Third parties pay for their own RPC. The SDK takes a connection as a parameter and ships with no default endpoint. Pool state is read directly from the chain, so a client needs nothing from MyBarPool's servers to work. A public pools/games listing API will exist as a best-effort convenience, rate-limited and without SLA.
+Third parties pay for their own RPC. The SDK takes a connection as a parameter and ships with no default endpoint. Pool state is read directly from the chain, so a client needs nothing from MyBarPool's servers to work. A public pools/games listing API may be offered as a best-effort convenience, rate-limited and without SLA; nothing in the SDK depends on it.
 
 Clients must show a box as **won** only after the settle event, never from live scores. Live scores may mark a box as **leading**, clearly provisional.
 
