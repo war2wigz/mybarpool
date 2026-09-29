@@ -162,7 +162,7 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 └──────────────────────────────────────┘
 ```
 
-- Pool card: status pill, price, fill bar with count, pot, split, total fee (10% plus any add-on, shown as one number), creator. Every card shows the fee and the creator without exception. Live pools show the latest result line.
+- Pool card: status pill, price, fill bar with count, pot, split, total fee (10% plus any add-on, shown as one number), creator. Every card shows the fee and the creator without exception. Live pools show the latest result line. A sponsored pool adds one line under the pot, "Sponsored by ORE · +1 ORE", with the sponsor's small logo when the sponsor is in the directory (ARCHITECTURE.md, Sponsorship); the pot figure itself stays boxes only, so "Pot" always means the same thing.
 - Team order is home team first everywhere: cards, headers, the create list ("PHI – DAL" means Philadelphia is home).
 - Status pills: `OPEN` purple outline · `LOCKED` amber · `LIVE` teal pulse · `SETTLED` green · `RETURNED` red outline · `SPLIT` amber outline (suspended game, prizes split). An abandoned pool (unresolved 30 days after the scheduled kickoff) shows `RETURNED` styling with a "Reclaim your share" button in place of the buy bar; it is the only button in the app that sends a transaction the platform didn't initiate.
 - Sort: open pools first (most filled first, they lock soonest), then live, then settled.
@@ -238,7 +238,14 @@ Payouts table: amount per quarter, then winner + tx link as each one settles. Th
 
 Fee line: the header shows the total ("Fee 12%" for a pool with a 2% add-on); tapping it, or the pool's details section, shows the breakdown "Platform 5% · Creator 7%" with amounts. Pools created by third-party clients can carry an integrator fee; the MyBarPool app never sets one but must display it when present, as a "Client 2%" line in the same breakdown. To the creator, the same spot reads "You earn 0.0875 SOL with the pool's first prize" and switches to "Earned 0.0875 SOL ↗" once paid.
 
-Activity: purchases, lock, draw, each settlement, returns. The first settlement adds one row alongside the prize: "Fees paid · 0.0625 SOL platform · 0.0875 SOL creator ↗", same transaction link. Every row links to its transaction. This is the "verify on chain" surface; `/pools/{id}/verify` is the same list as a standalone public page.
+Activity: purchases, sponsorships, lock, draw, each settlement, returns. The first settlement adds one row alongside the prize: "Fees paid · 0.0625 SOL platform · 0.0875 SOL creator ↗", same transaction link. Every row links to its transaction. This is the "verify on chain" surface; `/pools/{id}/verify` is the same list as a standalone public page.
+
+Sponsorship (ARCHITECTURE.md, Sponsorship). Most pools have none and show nothing. When a pool has been sponsored:
+- Header gains one line under the pot: "Sponsored by ORE · +1 ORE", with the sponsor's logo from the directory, or "Sponsored by 7kq2…9a" (.skr name if there is one) for a wallet the directory doesn't know. Several sponsors read "Sponsored by ORE and 2 others"; tapping opens the list with amounts and transaction links. The pot line is unchanged, so "Pot 1.25 ORE" is still boxes only and the sponsored amount is always shown as an addition.
+- Payouts table shows the full quarter amounts (boxes plus sponsorship, after fees); its footer reads "Prizes 2.1 ORE = 1.1 from boxes + 1 sponsored" so the arithmetic is on the page.
+- Activity row: "ORE added 1 ORE to the prizes ↗". On a returned pool: "Returned 1 ORE to ORE ↗".
+- The action lives in the details section as a text link, "Add to the prizes", not as a button and never in the buy bar: sponsoring is for a company or a community that has decided to do it, and nothing in the app should read as a nudge for a player to put in more. It opens `SponsorSheet`: amount input in the pool's token (minimum one box price, the per-token cap shown if reached), then three short lines that are always the same: "No fee is taken on this. If the pool doesn't play, it comes back to you. Once the first prize is paid it belongs to the winners." Confirm, sign, result with the transaction link. Hidden once sales have closed.
+- The mockups show unsponsored pools; the header line, the payouts footer and the activity row are the only visible differences on a sponsored one.
 
 Share (⇪): opens the share sheet described in section 4.8.
 
@@ -328,7 +335,7 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 └──────────────────────────────────────┘
 ```
 
-- Active first, sorted live → open → locked. Won list is the personal ledger with tx links. Created and returned pools collapse.
+- Active first, sorted live → open → locked. Won list is the personal ledger with tx links. Created and returned pools collapse. A wallet that has sponsored a pool gets a "Pools I sponsored" group in the same collapsed style, with the amount and whether it was paid out or returned; it only appears when there is something in it.
 - Empty state: unlit neon sign, "No boxes yet", one button to Games.
 
 ### 4.7 Notifications (Seeker)
@@ -349,7 +356,7 @@ A creator has to sell 24 more boxes after buying their own, and most of that hap
 - The web pool page works fully without a wallet: grid, names, price, fee, split, kickoff, activity. Connect is only prompted on Buy (section 2, principle 6).
 
 **The preview**
-- Every pool page is server-rendered with Open Graph and Twitter card tags so iMessage, WhatsApp, X, Discord and Telegram show a real preview: title "Eagles vs Cowboys · 0.05 SOL a box · 19/25 sold", description with kickoff, split and total fee, and an image of the actual grid with names filled in. The image is the pitch.
+- Every pool page is server-rendered with Open Graph and Twitter card tags so iMessage, WhatsApp, X, Discord and Telegram show a real preview: title "Eagles vs Cowboys · 0.05 SOL a box · 19/25 sold", description with kickoff, split and total fee (and "Sponsored by ORE · +1 ORE" when a pool is sponsored), and an image of the actual grid with names filled in. The image is the pitch.
 - The preview image is rendered server-side per pool, cached, and invalidated on every buy, lock, draw and settlement, so a link tapped an hour later shows the current board. Before the draw the axes show `?`; after it they show digits; live it shows the leading box; settled it shows the winners.
 - The same renderer produces the image the share sheet attaches and the printable board, so the preview, the shared image and the sheet on the wall are always the same picture.
 
@@ -392,6 +399,8 @@ A creator has to sell 24 more boxes after buying their own, and most of that hap
 | `WalletChip` | Connect / connected with .skr; menu: copy address, disconnect. |
 | `ShareSheet` | Pre-filled text, Share / Copy link / Show QR / Save image / Print board; knows whether the caller is the creator, a buyer or a viewer (section 4.8). |
 | `GridImage` | The grid rendered as an image (preview, share, story, print). One renderer, run server-side for previews and on-device for the share sheet, from the same component. |
+| `SponsorLine` | "Sponsored by …" with logo from the sponsor directory or a shortened address; single or "and N others"; tap for the list. Used on pool cards, the pool header and the link preview. |
+| `SponsorSheet` | Amount in the pool's token, the three fixed lines about fee, return and commitment, confirm, result (section 4.3). |
 | `NeonSign` | The logo in on/off states for header, loading, empty. |
 | `TokenAmount` | Amount + symbol, optional USD hint. Box prices in the token's natural precision (SKR whole, SOL/ORE two decimals); prizes and fees to at most 4 decimals, rounded half-up for display, exact amount in the transaction and on tap. |
 
@@ -402,7 +411,9 @@ A creator has to sell 24 more boxes after buying their own, and most of that hap
 - Game delayed: LOCKED with "Delayed · waiting for kickoff", no countdown.
 - Game postponed or cancelled: the pool is returned like any other; header "Game postponed · your 0.15 SOL was returned ↗" (or "cancelled"). The game page keeps the game with its new date, if any, as a fresh game record, so creators can open new pools on it.
 - Overtime: score strip shows `OT`; payouts table's Q4 row reads "Final (incl. OT)".
-- Suspended: header "Game suspended · prizes split", payouts rows replaced by a single "Split" row with per-box amount.
+- Suspended: header "Game suspended · prizes split", payouts rows replaced by a single "Split" row with per-box amount. On a sponsored pool the split includes the sponsorship if a prize had already been paid; if none had, the sponsorship shows as returned to the sponsor in the activity list.
+- Sponsored pool returned (unfilled, postponed, cancelled): the sponsor line stays on the header so the record is honest, and the activity list shows "Returned 1 ORE to ORE ↗" next to the buyers' returns. A sponsor viewing their own sponsorship sees "Your 1 ORE was returned ↗" in the same place a buyer sees their return.
+- Sponsor wallet not in the directory: shortened address or .skr name, never a blank, never a placeholder logo.
 - Sources disagree (keeper paused): show the live score as usual with a small "Verifying…" tag on the payouts table; never show a winner.
 - Creator at a limit: "Create pool" on a game where they already have 3 open reads "3 open pools on this game" and is disabled, with a link to those pools. A creator at 5 boxes in their own pool sees the buy bar replaced by "You hold the max 5 boxes in your pool".
 - Wallet disconnected mid-buy, transaction rejected, insufficient balance, RPC timeout: each has copy and a recovery action.
