@@ -32,13 +32,13 @@ This repository is the open-source part of MyBarPool: the full design today, and
 
 ## How a pool works
 
-1. **Create a pool.** Pick an NFL game, a token (SOL, SKR or ORE), a box price and a payout split. As the creator you earn 5% of the pot automatically, paid with the first prize; that 5% is built into the 10% fee every pool carries, so you don't have to set anything to get it. If you want more, you can add up to 5% on top (0–5%, default 0), which is shown to buyers as part of one total fee, 10–15%. You pay a creation fee of about 0.014 SOL (account rent) and can buy up to 5 of your own boxes in the same transaction.
+1. **Create a pool.** Pick an NFL game, a token (SOL, SKR or ORE), a box price and a payout split. As the creator you earn 5% of the pot automatically, paid with the first prize; that 5% is built into the 10% fee every pool carries, so you don't have to set anything to get it. If you want more, you can add up to 5% on top (0–5%, default 0), which is shown to buyers as part of one total fee, 10–15%. You pay a creation fee of about 0.014 SOL (account rent) that is kept whether or not the pool fills, and you can buy up to 5 of your own boxes in the same transaction.
 2. **Sell out the grid.** Anyone can buy any number of boxes in one tap. The program assigns positions at random, since every box has identical odds before the draw. Funds sit in a program-owned vault. Sales close at kickoff. Until then anyone can also add to the prizes as a sponsor ("Sponsored by ORE · +1 ORE"): no fee is taken on it, it goes to the winners in full, and it comes back to the sponsor if the pool doesn't play.
 3. **Lock and draw.** When the 25th box sells, the pool locks and digits 0–9 are shuffled onto both axes using [Regolith Labs' Entropy](https://github.com/regolith-labs/entropy) (commit-reveal + slothash). Nobody can know the digits while boxes are on sale.
 4. **Play.** After each quarter, the keeper posts the official end-of-quarter score on-chain and the program pays that quarter's winner immediately. Q4 uses the final score, so overtime replaces the end-of-regulation score and Q4 pays when the game is final.
 5. **Verify.** Every payout is recorded on-chain: the pool account keeps the quarter, winning box and amount, and the settle event carries the full detail (score, winning box, wallet, amount). The app links each one to its transaction.
 
-If the grid doesn't sell out by kickoff, or the game is postponed or cancelled, every buyer's full purchase (and every sponsorship) is sent back automatically with no fees. If a game is suspended and never finished, unpaid prizes are split equally across all 25 boxes.
+If the grid doesn't sell out by kickoff, or the game is postponed or cancelled, every buyer's full purchase (and every sponsorship) is sent back automatically with nothing taken out. The creator's creation fee is the one thing that is not returned: it paid for the accounts, and a pool that didn't fill still used them. If a game is suspended and never finished, unpaid prizes are split equally across all 25 boxes.
 
 ## The rules, precisely
 
@@ -90,7 +90,7 @@ quarter[q]     = floor(prize_pool × split[q] / 100)         // dust to the plat
 
 Worked example, 0.05 SOL boxes, 2% add-on, 20/20/20/40: pot 1.25 SOL, fee 12% = 0.15 SOL (platform 0.0625, creator 0.0875), prize pool 1.1 SOL, quarters 0.22 / 0.22 / 0.22 / 0.44. With a 1 SOL sponsorship added before kickoff: fees unchanged, prize pool 2.1 SOL, quarters 0.42 / 0.42 / 0.42 / 0.84.
 
-**Creation fee.** The creator pays the rent for the pool account, its vault and (first time per game) a per-creator counter, about 0.014 SOL. When the pool closes in any outcome the program reclaims the pool and vault rent to the platform, and the counter's rent goes to the platform when the counter closes at zero open pools. One exception: after an abandoned-pool reclaim, the pool and vault rent (and any rounding dust) go to the creator, since the platform is by then not operating. It is labelled a creation fee, never a deposit.
+**Creation fee.** The creator pays the rent for the pool account, its vault and (first time per game) a per-creator counter, about 0.014 SOL. It is a fee, not a deposit: the platform keeps it in every outcome, whether the pool filled, was returned unfilled, or was postponed. Mechanically, the pool and vault rent go to the platform when the pool closes, and the counter's rent when the counter closes at zero open pools. One exception: after an abandoned-pool reclaim (the platform stopped running for 30 days), the pool and vault rent and any rounding dust go to the creator instead, since the platform is by then not operating.
 
 **Ceilings are hard-coded.** `platform_bps ≤ 500` and `base + add-on ≤ 1500` are constants in the program. Config can lower them, never raise them; raising them would need a program upgrade, which is public, verifiable and announced in advance. No change of any kind touches an existing pool.
 
@@ -98,9 +98,9 @@ Worked example, 0.05 SOL boxes, 2% add-on, 20/20/20/40: pot 1.25 SOL, fee 12% = 
 
 | Situation | What the program does |
 |---|---|
-| Grid not full at kickoff | Every purchase returned in full, and every sponsorship back to its sponsor. No fee |
+| Grid not full at kickoff | Every purchase returned in full, and every sponsorship back to its sponsor. Nothing taken out; the creator's creation fee is not returned |
 | Game delayed (weather etc.) | Pool waits |
-| Game postponed or cancelled | Every purchase and every sponsorship returned in full, even after lock and draw. No fee, creator earns nothing. A postponed game is never carried to its new date; the rescheduled game gets a new game record and creators open fresh pools on it |
+| Game postponed or cancelled | Every purchase and every sponsorship returned in full, even after lock and draw. Nothing taken out; the creator earns nothing and the creation fee is not returned. A postponed game is never carried to its new date; the rescheduled game gets a new game record and creators open fresh pools on it |
 | Kickoff moved by the league before the game (flex, new slot) | The pool's kickoff moves with it; open pools keep selling until the new time. Accepted only while the current kickoff is still in the future, to a future time, within 72 hours of the original schedule; anything else is a postponement |
 | Game suspended and not finished | Every unpaid prize, including the quarter in progress, split equally across all 25 boxes. Fees already taken stay taken, and so does a sponsorship once a prize has been paid; before that it goes back to the sponsor |
 | Score sources disagree or status is unfamiliar | Pool stays locked and the team is alerted. Waiting is always safe because nothing leaves the vault without a decision |
