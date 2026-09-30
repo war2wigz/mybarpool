@@ -455,3 +455,149 @@ Concrete rules, because "don't look AI-generated" isn't actionable.
 - `TeamChip` still takes the logo as a prop with an abbreviation-on-team-color fallback, purely for robustness: a missing or slow asset never leaves a blank chip.
 - Team colors and abbreviations come from a static table in `packages/shared`, keyed by the team IDs the scores service uses, so every surface agrees.
 - Fonts: choose open-licensed families (Google Fonts) so the Seeker build has no font licensing issue.
+
+## 10. Build specification
+
+What the screens above need underneath them, written so the app can be built without guessing. Rules come from [ARCHITECTURE.md](ARCHITECTURE.md); account layouts, events and algorithms from [PROGRAM.md](PROGRAM.md). Where a string is quoted here it is the string; where a number is given it is the number.
+
+### 10.1 Data the app reads
+
+Two kinds, never mixed:
+
+| Kind | Source | Used for | Freshness |
+|---|---|---|---|
+| Chain state | Pool, game, config and sponsorship accounts via the SDK; program events via log subscription | Everything with money in it: ownership, status, prizes, fees, results, activity | Account subscription per open pool page; SDK poll every 30 s elsewhere |
+| Live state | Scores WebSocket (`game`, `leading`, `pool`, `event` messages) | Scores, clocks, "Leading", fill counts before the account subscription catches up | Push |
+
+The app also reads a public REST listing (schedule, pools per game, wallet views) as a convenience. If it is unavailable the same lists are built from `getProgramAccounts` through the SDK, slower; no screen depends on the REST layer to function, only to be fast.
+
+Results (`won`, payouts, returns) come only from decoded program events or from account state that reflects them. The `leading` message and any locally computed leading box are display-only, teal, dotted, labelled.
+
+### 10.2 Derived states
+
+`PoolStatus` on-chain is `Open, Locked, Drawn, Settled, Returned, Split`. The app derives what it shows:
+
+| Shown | Condition |
+|---|---|
+| `OPEN` | `Open` |
+| `LOCKED` "Drawing numbers…" | `Locked` and not drawn |
+| `LOCKED` "Locked · waiting for kickoff" | `Drawn` and `now < recorded_kickoff` |
+| `LIVE` | `Drawn` and `now ≥ recorded_kickoff` and game not `Final` |
+| `SETTLED` | `Settled` |
+| `RETURNED` | `Returned` (header copy depends on why: unfilled, postponed, cancelled, cancelled by the team) |
+| `SPLIT` | `Split` |
+| Abandoned ("Reclaim your share") | any of `Open, Locked, Drawn` and `now ≥ scheduled_kickoff + 30 d`; or `Returned`/`Split` with `abandoned` and the wallet still holding an unreturned box |
+| "Delayed" | game live window reached, scores feed says `delayed` |
+| "Verifying…" tag on payouts | live feed marked `standby` or the game is halted (no `leading` message for 2 minutes while live) |
+
+"Why returned" comes from the game record status (`Postponed`, `Cancelled`), `cancelled_by_admin`, or neither (unfilled).
+
+### 10.3 Formatting
+
+- Token amounts: `TokenAmount` takes base units and the token index. Box prices in natural precision (SOL/ORE two decimals, SKR whole). Prizes and fees to four decimals, half-up, trailing zeros trimmed to at least two decimals for SOL/ORE ("0.45 SOL", "0.2813 SOL") and none for SKR ("2,250 SKR"). Tap shows the exact base-unit amount. Thousands separators always. The USD hint is optional, in `text-2`, and only when a price feed is available; never in shared images.
+- Percentages: integers ("Fee 12%"); the breakdown uses integers too ("Platform 5% · Creator 7%").
+- Times: kickoff in the device time zone with zone label on hover/tap ("Sun 1:00 PM"); relative for activity under 24 h ("2m", "1h"); dates beyond that ("Sep 28").
+- Scores: tabular numerals; home first everywhere ("KC 14 · BAL 10"); the clock as the feed gives it.
+- Wallets: `.skr` name if resolvable, else first 4 characters ("a3f9"); the connected wallet is always "YOU" on the grid and "You" in sentences.
+- Box labels: 1–25, from `packages/shared` only. No file in `apps/app` adds 1 to an index.
+
+### 10.4 Wallet and transactions
+
+- Android: Mobile Wallet Adapter (`@solana-mobile/mobile-wallet-adapter-protocol-web3js`). `authorize` on first Connect with the app identity (name, icon, `https://mybarpool.com`), cached auth token reused; `reauthorize` silently; on failure fall back to `authorize`. Seed Vault appears as a wallet like any other.
+- Web: wallet-standard through the Solana wallet adapter; Phantom, Solflare and Backpack tested, anything wallet-standard accepted.
+- Both behind one `useWallet()` that exposes `publicKey`, `connect`, `disconnect`, `signAndSend(tx)`. Screens never import either adapter.
+- Every transaction: built by the SDK, simulated first (surface the program error name if simulation fails, before the wallet opens), then `signAndSend`, then confirmed at `confirmed`, then the affected accounts are re-read. Priority fee: a small fixed micro-lamport price adjusted by the recent-fee API, capped; shown as "Network fee ~0.00001 SOL" and never itemised further.
+- Buy and create include the SlotHashes sysvar and, for the creator, the override account when it exists (the SDK derives and checks existence). SPL pools include the buyer's ATA; if it doesn't exist the buy fails before the wallet opens with "You don't have any SKR in this wallet yet".
+- Error mapping, program error name → copy (the full list is in PROGRAM.md §8; these are the ones a user can reach):
+  - `SalesClosed` → "Sales closed at kickoff"
+  - `NothingToBuy` / `TooManyBoxes` → "Only N left" (recomputed from the fresh pool)
+  - `OwnBoxLimit` → "You hold the max 5 boxes in your pool"
+  - `OpenPoolLimit` → "3 open pools on this game"
+  - `PriceOffLadder` → never shown (the stepper makes it impossible); logged
+  - `Paused` → "MyBarPool is paused for maintenance. Nothing has moved; try again shortly"
+  - `SponsorshipTooSmall` / `SponsorshipCapExceeded` → "At least 0.05 SOL" / "This pool can take up to N more"
+  - `ReclaimTooEarly` → not reachable (button hidden before the date); logged
+  - wallet rejection → "Cancelled in wallet" with a retry
+  - insufficient lamports/tokens → "You need 0.15 SOL and have 0.12" (exact shortfall)
+  - RPC timeout after send → "Still confirming…" with the explorer link; the app keeps polling the signature for 90 s, then "We couldn't confirm this yet. Check the link before trying again", never a second automatic send.
+- Idempotence in the UI: the Confirm button disables from tap until confirmation or failure; a sheet that loses its network connection mid-flight keeps the signature and resumes polling when it returns.
+
+### 10.5 Live connection
+
+- One WebSocket for the app, opened on the first live screen, closed after 60 s in background. Subscribes to the games on the visible week and the pool on the open pool page; unsubscribes on navigation.
+- Reconnect with backoff (1 s → 30 s). While disconnected for more than 10 s on a live screen, a thin amber bar "Reconnecting…" at the top; scores freeze in place and the pulse stops. Never show a stale score with a live pulse.
+- `leading` messages update the grid highlight; a leading box that disappears (score changed) loses the tag on the next message. If no `leading` message arrives for a live pool for 2 minutes, the tag is cleared and the payouts table shows "Verifying…".
+- Fill counts on the game page update from `pool` messages; the pool page trusts the account subscription over the socket when they disagree, since the account is the truth.
+
+### 10.6 Notifications (Android)
+
+- Firebase Cloud Messaging, registered after the first Connect (not on install), token posted to the notifications service with the wallet address; re-posted on wallet change. The service subscribes each wallet to the events that matter to it from the indexer.
+- Payloads (title / body / deep link):
+  - Won: "Q2 · KC–BAL" / "You won 0.225 SOL" / `mybarpool.com/pools/{address}`
+  - Locked: "Pool locked" / "Numbers are drawn on the KC–BAL pool" / pool link
+  - Returned: "Pool returned" / "Your 0.15 SOL is back in your wallet" (reason appended for postponed/cancelled) / pool link
+  - Split: "Game suspended" / "Prizes were split · you received 0.044 SOL" / pool link
+  - Sponsor (to the sponsor only): "Your 1 ORE was returned" or "Your sponsorship was paid out" / pool link
+- No marketing, no "pools are filling up", no weekly digests. One channel, default importance, no sound override.
+- Tapping opens the pool page in the app through the App Link; if the app was uninstalled the link opens the web page.
+
+### 10.7 Links and routing
+
+- Routes as in section 3. Every route renders without a wallet. `/p/{code}` is handled server-side; the app never resolves short codes itself.
+- App Links: `assetlinks.json` served at the well-known path with the release signing certificate's SHA-256; `intent-filter` with `autoVerify` for `https://mybarpool.com/pools/*`, `/games/*`, `/p/*`.
+- Fragment handling: on web, `#k=` is read into memory, removed from the address bar with `history.replaceState`, and never sent anywhere. On Android the App Link delivers the full URL to the app, which does the same.
+- Outbound links (explorer, sponsor site, dApp Store) open externally with `Linking.openURL`, after `canOpenURL` for custom schemes. Explorer defaults to Solscan with the signature; the choice is a setting.
+
+### 10.8 Screen data contracts
+
+| Screen | Needs | From |
+|---|---|---|
+| Games | schedule for week; per game: status, score, clock, pool counts, "in pots" sum | REST schedule + live socket; fallback SDK `listGames(week)` + `listPoolsForGame` |
+| Game | game record, line score, live state, pools (decoded), sponsor resolution | SDK `getGame`, `listPoolsForGame`; socket `game`, `pool`; directory |
+| Pool | pool account (subscribed), game record, events history, sponsors, live state, leading | SDK `getPool` + subscription, `getEvents(pool)`, `listSponsors`; socket |
+| Buy sheet | pool (fresh), wallet balance in the pool's token, remaining, creator cap | SDK + RPC balance |
+| Create | week's games not kicked off, creator's open counts per game, config (ladders, presets, caps, default preset, paused) | SDK `getConfig`, counters via PDA reads |
+| My Boxes | wallet's boxes across pools, won ledger, created pools, sponsorships, returns | REST wallet view; fallback `getProgramAccounts` with owner filter is too broad — the SDK provides `listPoolsForWallet` via a memcmp on each of the 25 owner slots, batched |
+| Verify page | events with signatures for one pool | SDK `getEvents` |
+| Share sheet | pool summary, role of the caller, grid image | local render of `GridImage` |
+
+### 10.9 Grid rendering
+
+- `BoxGrid` is pure: props in, pixels out; no fetching. Props: `axes?: {home: number[]; away: number[]}`, `owners: (string | null)[25]`, `labels: string[25]` (already resolved names), `mine: boolean[25]`, `won: ({quarter, amount} | null)[25]`, `leading?: number`, `ownerColors: Map<owner, colorIndex>`.
+- Axis digits render `?` until `axes` is set; the flip animation runs once when it changes from undefined to defined and never again (a re-mount must not replay it: keep a "hasAnimated" ref keyed by pool address).
+- Owner colours: the 8-colour set assigned in order of first purchase (event order), stable for the pool's life; `mine` overrides with purple.
+- Minimum tap target 44 dp per box on phones; the grid is square, width = screen width − 32 dp, axes outside it.
+- Accessibility: each box is a button with `accessibilityLabel` "Box 10, owned by you, digits 3 and 7" (or "unsold", or "digits not drawn yet"); axes are labelled "Home digits 3 and 7 in column 2".
+- `GridImage` renders the same component to 1080×1080 and 1080×1920 with the header (teams, price, fill or result), the short URL, and the sponsor line when present; on the server the same code runs in a headless browser.
+
+### 10.10 Copy catalogue
+
+Strings that appear in more than one place live in one file, `apps/app/src/copy.ts`, keyed, so the audit can check them against this document. The fixed ones:
+
+- Fee line: "Fee {total}%"; breakdown "Platform {p}% · Creator {c}%" (+ " · Client {i}%" when set).
+- Creator earnings: "You earn {pct}% of the pot ({amount}), paid with the pool's first prize"; after payment "Earned {amount} ↗". Never "Q1", never "when the pool fills".
+- Buy sheet note: "Boxes are assigned at random. All 25 have the same odds until the draw."
+- Create review note: "Pool won't lock until all 25 sell. Unsold at kickoff = full return."
+- Creation fee label: "Creation fee {amount}, covers account rent".
+- Returned headers: "Pool didn't fill · your {amount} was returned ↗" / "Game postponed · your {amount} was returned ↗" / "Game cancelled · …" / "Pool cancelled by the team · …".
+- Suspended: "Game suspended · prizes split".
+- Sponsor: "Sponsored by {name} · +{amount}"; "Sponsored by {name} and {n} others"; "Add to the prizes"; the three lines "No fee is taken on this. If the pool doesn't play, it comes back to you. Once the first prize is paid it belongs to the winners."; activity "{name} added {amount} to the prizes ↗"; "Returned {amount} to {name} ↗".
+- Abandoned: "Reclaim your share"; explanation "This pool wasn't settled within 30 days of kickoff. You can take back your {amount} directly from the program."
+- Empty states: "No boxes yet" / "No pools yet · Create one →" / "We can't find that pool".
+- Paused: as in 10.4.
+- Never in any string: the game's other common name, "refund", "deposit", "claim" (as something a player does), "bet", "wager", "gamble", "odds boost", exclamation marks, emoji.
+
+### 10.11 Configuration and environments
+
+- Build-time config: program ID, config PDA, RPC URL(s), scores API base, explorer base, FCM sender ID, and the error-reporting endpoint on the MyBarPool API (crashes and program errors only, no analytics, no third-party SDK). Two profiles: `local` (localnet, file signer for test tooling, fixture scores) and `production`. No `devnet` profile exists.
+- Feature flags read from the on-chain config where they are rules (`paused`, `preseason_enabled`, `default_preset`, ladders) and from build config where they are app-only (private pools UI, USD hint).
+- Team assets bundled: 32 logos at two sizes, colours and abbreviations from `packages/shared`.
+- Localisation: English only in v1; all strings still go through the copy file so a second language is a file, not a refactor.
+
+### 10.12 Performance and quality bars
+
+- Cold start to the games list under 2 s on a Seeker with cached schedule; first paint shows skeletons (unlit sign) within 300 ms.
+- Pool page renders the grid from cache immediately and reconciles with the subscription; no spinner over the grid, ever.
+- Bundle: web initial load under 400 KB gzipped; images lazy.
+- Every screen has a Storybook-style story per state in section 6; every component in section 5 has one per variant. The audit checks stories against the mockups.
+- No analytics SDK, no ads SDK, no third-party fonts at runtime (bundled), no third-party requests from the app except RPC, the MyBarPool API, FCM and the explorer link the user taps.

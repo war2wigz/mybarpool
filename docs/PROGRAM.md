@@ -1,0 +1,484 @@
+# MyBarPool program specification
+
+The mechanical specification of the on-chain program: every account, seed, field, instruction, check, state transition, event and error, plus the exact algorithms for box assignment, the digit draw and the winner. [ARCHITECTURE.md](ARCHITECTURE.md) says what the rules are and why; this file says precisely how the program implements them. Where the two seem to differ, the rule in ARCHITECTURE is the intent and this file has a bug: fix this file, and say so in the commit.
+
+Conventions: all times are Unix seconds (`i64`) read from the Clock sysvar. All amounts are integer base units of the pool's token (`u64`). All arithmetic is checked; overflow is an error, never a wrap. Box indices are `0–24` inside the program and on-chain; every label a person sees is `index + 1`, converted once in `packages/shared`. Byte layouts are little-endian. PDAs use the seeds given; bumps are stored on the account.
+
+## 1. Constants
+
+Hard-coded in the program. Changing any of these is a program upgrade.
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `BOXES` | 25 | Boxes per pool |
+| `LANES` | 5 | Positions per axis; lane `l` holds digits at positions `l` and `l + 5` |
+| `QUARTERS` | 4 | Settlement periods; the fourth is the final score |
+| `PLATFORM_BPS_MAX` | 500 | Ceiling on the platform share |
+| `CREATOR_BPS_MAX` | 500 | Ceiling on the creator base share |
+| `ADDON_BUDGET_BPS_MAX` | 500 | Ceiling on `creator_addon_bps + integrator_bps` |
+| `TOTAL_BPS_MAX` | 1500 | Ceiling on platform + creator base + add-on budget |
+| `MIN_QUARTER_SECONDS` | 900 | A quarter's worth of football takes at least this long in real time |
+| `KICKOFF_UPDATE_BOUND` | 259 200 | 72 hours; how far a recorded kickoff may move from the scheduled one |
+| `RECLAIM_DELAY` | 2 592 000 | 30 days; abandoned-pool reclaim opens this long after the scheduled kickoff |
+| `MAX_OWN_BOXES_ABSOLUTE` | 25 | Upper bound on any configured creator box cap |
+| `ENTROPY_PROGRAM` | `3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X` | Regolith Entropy |
+
+Payout presets, an enum with exactly three values. The program rejects any other discriminant.
+
+| Preset | Discriminant | Q1 | Q2 | Q3 | Final |
+|---|---|---|---|---|---|
+| `Standard` | 0 | 20 | 20 | 20 | 40 |
+| `Even` | 1 | 25 | 25 | 25 | 25 |
+| `FinalOnly` | 2 | 0 | 0 | 0 | 100 |
+
+## 2. Identifiers
+
+### Game key
+A game is identified on-chain by a canonical key, not by any source's ID, so the record does not depend on ESPN, API-Sports or Sportradar numbering:
+
+```
+GameKey { season: u16, week: u8, home: u8, away: u8 }
+```
+
+- `season`: the year the regular season starts in (2026 for the 2026–27 season).
+- `week`: 1–18 regular season; 19 Wild Card, 20 Divisional, 21 Conference Championships, 22 Super Bowl. Preseason, if ever enabled, is 101–103 so it can never collide.
+- `home`, `away`: index 0–31 into the team table in `packages/shared`, which is sorted by abbreviation and frozen; adding a team is a table change and a shared-package major version.
+
+The mapping from each source's IDs to a `GameKey` lives in `packages/shared` and in the scores service. A rescheduled game keeps its key but gets a new `scheduled_kickoff`, so it gets a new record (below).
+
+### Team table order
+`ARI, ATL, BAL, BUF, CAR, CHI, CIN, CLE, DAL, DEN, DET, GB, HOU, IND, JAX, KC, LAC, LAR, LV, MIA, MIN, NE, NO, NYG, NYJ, PHI, PIT, SEA, SF, TB, TEN, WAS` = indices 0–31.
+
+### Token index
+`0` = SOL (native), `1` = SKR, `2` = ORE. The config holds one `TokenRule` per index; a pool stores the index and the mint.
+
+## 3. Accounts
+
+Every account has an 8-byte Anchor discriminator, the fields below in order, and `reserved` padding at the end so fields can be appended without a migration. Sizes are the serialized sizes; rent follows from them.
+
+### 3.1 `PlatformConfig` — seeds `["config"]`
+
+One per deployment.
+
+| Field | Type | Notes |
+|---|---|---|
+| `admin` | Pubkey | The Squads vault on mainnet |
+| `score_authority` | Pubkey | The keeper's KMS key |
+| `fee_wallet` | Pubkey | Platform fee destination (SOL directly; SPL to its ATA) |
+| `platform_bps` | u16 | ≤ `PLATFORM_BPS_MAX`; initial 500 |
+| `creator_bps` | u16 | ≤ `CREATOR_BPS_MAX`; initial 500 |
+| `addon_budget_bps` | u16 | ≤ `ADDON_BUDGET_BPS_MAX`; initial 500 |
+| `default_preset` | u8 | Which preset clients pre-select; initial 0 |
+| `max_open_pools` | u8 | Per creator per game; initial 3 |
+| `max_own_boxes` | u8 | Creator's boxes in own pool; initial 5 |
+| `preseason_enabled` | bool | Initial false; `create_game` rejects weeks ≥ 101 when false |
+| `paused` | bool | When true, `create_pool`, `buy` and `sponsor` fail; nothing else is affected |
+| `tokens` | [TokenRule; 3] | Indexed by token index |
+| `bump` | u8 | |
+| `reserved` | [u8; 256] | |
+
+`TokenRule`:
+
+| Field | Type | Notes |
+|---|---|---|
+| `enabled` | bool | |
+| `mint` | Pubkey | `Pubkey::default()` for SOL |
+| `token_program` | Pubkey | Token or Token-2022; `Pubkey::default()` for SOL |
+| `decimals` | u8 | 9 SOL, 11 ORE, SKR per mint |
+| `min_price` | u64 | Base units |
+| `step` | u64 | Base units |
+| `max_price` | u64 | Base units |
+| `max_sponsorship` | u64 | Per pool, base units; initial `25 × max_price` |
+
+Invariants enforced on every write: `platform_bps + creator_bps + addon_budget_bps ≤ TOTAL_BPS_MAX`; `min_price ≥ 1`; `step ≥ 1`; `min_price ≤ max_price`; `(max_price − min_price) % step == 0`; `max_open_pools ≥ 1`; `1 ≤ max_own_boxes ≤ MAX_OWN_BOXES_ABSOLUTE`.
+
+Initial ladders: SOL `0.05 / 0.05 / 1`; SKR `100 / 100 / 5 000`; ORE `0.05 / 0.05 / 1` (in whole tokens; stored in base units).
+
+### 3.2 `GameRecord` — seeds `["game", season u16, week u8, home u8, away u8, scheduled_kickoff i64]`
+
+One per scheduled game. Created and rent-paid by the platform. Never closed.
+
+| Field | Type | Notes |
+|---|---|---|
+| `key` | GameKey | |
+| `scheduled_kickoff` | i64 | Seed value; never changes |
+| `recorded_kickoff` | i64 | Starts equal to `scheduled_kickoff`; moved by `update_kickoff` |
+| `status` | u8 | `GameStatus` |
+| `quarters_posted` | u8 | 0–4 |
+| `home_score` | [u16; 4] | Cumulative home score at the end of Q1..Q3 and final |
+| `away_score` | [u16; 4] | Same for away |
+| `posted_at` | [i64; 4] | When each post landed |
+| `final_had_overtime` | bool | Informational, set on the final post |
+| `marked_at` | i64 | When `mark_game` last ran; 0 if never |
+| `bump` | u8 | |
+| `reserved` | [u8; 64] | |
+
+`GameStatus`: `Scheduled = 0`, `Postponed = 1`, `Cancelled = 2`, `Suspended = 3`, `Final = 4`.
+
+### 3.3 `Pool` — seeds `["pool", game_record, creator, nonce u64]`
+
+`nonce` is chosen by the client (random `u64`); the PDA must not already exist. It exists only to let one creator have several pools on one game with no shared counter in the seed.
+
+| Field | Type | Notes |
+|---|---|---|
+| `game` | Pubkey | The `GameRecord` |
+| `creator` | Pubkey | |
+| `nonce` | u64 | |
+| `token` | u8 | Token index |
+| `mint` | Pubkey | Copied from config at creation |
+| `token_program` | Pubkey | Copied from config at creation |
+| `vault` | Pubkey | The vault account (3.4) |
+| `price` | u64 | Per box |
+| `preset` | u8 | Payout preset |
+| `access_type` | u8 | `Public = 0`, `Link = 1`, `Allowlist = 2` |
+| `gate_key` | Pubkey | Required co-signer when `access_type == Link`; else default |
+| `allowlist_root` | [u8; 32] | Merkle root when `access_type == Allowlist`; else zero |
+| `creator_addon_bps` | u16 | 0–500 |
+| `integrator` | Pubkey | Default when unset |
+| `integrator_bps` | u16 | 0–500; 0 when unset |
+| `platform_fee` | u64 | Fixed at creation (§5.1) |
+| `creator_fee` | u64 | Fixed at creation; base + add-on |
+| `integrator_fee` | u64 | Fixed at creation |
+| `status` | u8 | `PoolStatus` |
+| `sold` | u8 | Boxes sold, 0–25 |
+| `owners` | [Pubkey; 25] | `Pubkey::default()` = unsold |
+| `creator_boxes` | u8 | Boxes the creator holds in this pool |
+| `sponsored_total` | u64 | Sum of all sponsorships |
+| `sponsor_count` | u16 | Distinct sponsor wallets ever |
+| `sponsorships_open` | u16 | `Sponsorship` accounts not yet closed |
+| `var` | Pubkey | Entropy `Var` recorded at lock; default until then |
+| `sampled_slot` | u64 | Slot at which this program's `sample_var` ran; 0 until then |
+| `drawn` | bool | |
+| `home_axis` | [u8; 10] | Shuffled digits; lane `l` = positions `l`, `l+5` |
+| `away_axis` | [u8; 10] | |
+| `prize_pool` | u64 | Fixed at the first settlement; 0 before |
+| `quarter_prize` | [u64; 4] | Fixed at the first settlement |
+| `quarters_settled` | u8 | 0–4 |
+| `winning_box` | [u8; 4] | Per quarter; 255 until settled |
+| `fees_paid` | bool | True once the first non-zero prize has been paid |
+| `unpaid_prize_pool` | u64 | `prize_pool` minus prizes paid so far |
+| `returned` | u32 | Bitmap over boxes: returned, split or reclaimed |
+| `split_amount` | u64 | Per-box amount fixed when the pool enters `Split` or is first reclaimed after a payout |
+| `cancelled_by_admin` | bool | |
+| `abandoned` | bool | Set by the first `reclaim` or `reclaim_sponsorship` |
+| `created_at` | i64 | |
+| `locked_at` | i64 | 0 until locked |
+| `bump` | u8 | |
+| `vault_bump` | u8 | |
+| `reserved` | [u8; 128] | |
+
+`PoolStatus`: `Open = 0`, `Locked = 1`, `Drawn = 2`, `Settled = 3`, `Returned = 4`, `Split = 5`. "Live" is not a program state: clients derive it as `Drawn` with `now ≥ game.recorded_kickoff`.
+
+Approximate size: 8 (discriminator) + 800 (owners) + ~465 (the other fields: 8 pubkeys, 10 u64s, the arrays and flags) + 128 (reserved) ≈ 1.4 KB. Rent ≈ 0.011 SOL. The vault adds ≈ 0.0009 SOL (system account) or ≈ 0.002 SOL (token account); the counter ≈ 0.001 SOL. Measured values are recorded in the Step 4 `NOTES.md`; the app's "Creation fee" label uses the measured total.
+
+### 3.4 Vault — seeds `["vault", pool]`
+
+- SOL pools: a system-program-owned account at the PDA, holding lamports. Transfers out are `system_program::transfer` signed with the vault seeds. It must hold its own rent-exempt minimum at all times; that minimum is paid by the creator at creation and is part of the creation fee, and it is what closes to the rent destination at `close_pool`.
+- SPL pools: a token account at the PDA for the pool's mint, `owner = pool` PDA. Transfers out are `transfer_checked` signed with the pool seeds. The mint's own token program (Token or Token-2022, from `TokenRule.token_program`) is used throughout.
+
+Vault balance invariants, checked in tests, not enforced by the program: while `Open`/`Locked`/`Drawn` before the first settlement, `sold × price + sponsored_total`; after the first settlement, `unpaid_prize_pool + dust` where `dust = prize_pool − Σ quarter_prize`.
+
+### 3.5 `CreatorCounter` — seeds `["counter", creator, game_record]`
+
+| Field | Type | Notes |
+|---|---|---|
+| `creator` | Pubkey | |
+| `game` | Pubkey | |
+| `open_count` | u8 | Pools in `Open` |
+| `bump` | u8 | |
+
+Created by `create_pool` when absent (creator pays rent), incremented there, decremented whenever one of the creator's pools on that game leaves `Open` (lock, first return call, admin cancel, first reclaim). Closed by `close_counter` when `open_count == 0`; rent to `fee_wallet`.
+
+### 3.6 `WalletOverride` — seeds `["override", wallet]`
+
+| Field | Type | Notes |
+|---|---|---|
+| `wallet` | Pubkey | |
+| `max_open_pools` | u8 | |
+| `max_own_boxes` | u8 | ≤ `MAX_OWN_BOXES_ABSOLUTE` |
+| `bump` | u8 | |
+
+Admin-created. When present it replaces both config values for that wallet. Passed as an optional account to `create_pool` and `buy`; if the account at the derived address exists, it must be passed, and the program checks the address, so a client cannot omit it to escape a lower limit.
+
+### 3.7 `Sponsorship` — seeds `["sponsorship", pool, wallet]`
+
+| Field | Type | Notes |
+|---|---|---|
+| `pool` | Pubkey | |
+| `wallet` | Pubkey | The sponsor; the only possible return destination |
+| `amount` | u64 | Cumulative |
+| `bump` | u8 | |
+
+Created by the first `sponsor` from that wallet (sponsor pays rent), topped up by later ones, closed by `return_sponsorship` (return path) or `close_sponsorship` (committed path), rent to `wallet` in both cases.
+
+## 4. Instructions
+
+Each entry: who signs, what is checked, what changes, what is emitted. "Admin" is `config.admin`; "keeper" is `config.score_authority`. Every instruction that touches a pool also takes `config` and the pool's `game` unless stated. Every error is one from §8.
+
+### 4.1 Administration
+
+**`initialize(params)`** — signer: the deploying key, which becomes `admin` until changed.
+Creates `PlatformConfig` with the given fields; enforces the §3.1 invariants. Emits `ConfigUpdated`.
+
+**`update_config(params)`** — signer: admin.
+Any subset of: `admin`, `score_authority`, `fee_wallet`, `platform_bps`, `creator_bps`, `addon_budget_bps`, `default_preset`, `max_open_pools`, `max_own_boxes`, `preseason_enabled`, `paused`, and any `TokenRule`. Enforces the §3.1 invariants; bps may go down or up but never above the constants. Emits `ConfigUpdated` with the full new config. Existing pools are untouched: their fee amounts and price are on their own account.
+
+**`set_wallet_override(wallet, max_open_pools, max_own_boxes)`** — signer: admin. Creates or updates `WalletOverride`. Emits `OverrideSet`.
+
+**`close_wallet_override(wallet)`** — signer: admin. Closes it; rent to admin. Emits `OverrideClosed`.
+
+### 4.2 Games
+
+**`create_game(key, scheduled_kickoff)`** — signer: keeper; payer: keeper.
+Checks: `scheduled_kickoff > now`; `key.week` is 1–22, or 101–103 with `preseason_enabled`; `home != away`; both < 32. Creates `GameRecord` with `recorded_kickoff = scheduled_kickoff`, `status = Scheduled`. Emits `GameCreated`.
+
+**`update_kickoff(new_time)`** — signer: keeper.
+Checks, all required: `status == Scheduled`; `quarters_posted == 0`; `now < recorded_kickoff`; `new_time > now`; `new_time ≤ scheduled_kickoff + KICKOFF_UPDATE_BOUND`. Sets `recorded_kickoff = new_time`. Emits `KickoffUpdated { old, new }`. Earlier moves are allowed under the same checks.
+
+**`post_scores(quarter, home, away, is_final, had_overtime)`** — signer: keeper. `quarter` is 1–4; `had_overtime` must be `false` unless `is_final`.
+Checks: `status == Scheduled`; `quarter == quarters_posted + 1`; if `quarter == 1`, `now ≥ recorded_kickoff + MIN_QUARTER_SECONDS`, else `now ≥ posted_at[quarter − 2] + MIN_QUARTER_SECONDS`; `home ≥ home_score[quarter − 2]` and `away ≥ away_score[quarter − 2]` when `quarter > 1`; `is_final` must be `true` when `quarter == 4` and `false` otherwise (the fourth post is the final score, after any overtime; the keeper waits for the sources to report final). Sets the scores and `posted_at`, increments `quarters_posted`; when `quarter == 4` sets `status = Final` and `final_had_overtime = had_overtime`. Emits `ScoresPosted`.
+
+**`mark_game(new_status)`** — signer: admin. `new_status ∈ {Postponed, Cancelled, Suspended}`.
+Checks: `status == Scheduled`; for `Postponed` and `Cancelled`, `quarters_posted == 0`. Sets status and `marked_at`. Emits `GameMarked`. Irreversible; a game marked in error stays marked and its pools are returned; the corrected game is a new record.
+
+### 4.3 Pool creation and buying
+
+**`create_pool(nonce, token, price, preset, access_type, gate_key, allowlist_root, creator_addon_bps, integrator, integrator_bps, initial_boxes)`** — signer: creator; payer: creator. Accounts: config, game, pool (init), vault (init), counter (init if needed), optional override, creator's token account for SPL, token program, system program, and the SlotHashes sysvar when `initial_boxes > 0`.
+Checks: `!config.paused`; `game.status == Scheduled`; `now < game.recorded_kickoff`; `tokens[token].enabled`; `price == min_price + k × step` for some integer `k` and `price ≤ max_price`; `preset` is a valid discriminant; `access_type` valid, with `gate_key != default` iff `Link` and `allowlist_root != 0` iff `Allowlist`; `creator_addon_bps + integrator_bps ≤ config.addon_budget_bps`; `integrator_bps == 0` iff `integrator == default`; `counter.open_count < limit.max_open_pools`; `initial_boxes ≤ limit.max_own_boxes`.
+Effects: computes and stores fee amounts (§5.1); writes every field; `status = Open`; `winning_box = [255; 4]`; increments `counter.open_count`; if `initial_boxes > 0`, runs the `buy` logic (below) for the creator in the same instruction. Emits `PoolCreated`, then `BoxesBought` if boxes were bought.
+
+**`buy(count)`** — signer: buyer; payer: buyer. Accounts: config, game, pool, vault, optional override (required if the buyer is the creator and an override exists), buyer's token account for SPL, token program, system program, SlotHashes sysvar, plus `gate_key` as a co-signer when `access_type == Link`, plus a Merkle proof argument when `Allowlist`.
+Checks: `!config.paused`; `status == Open`; `now < game.recorded_kickoff`; `game.status == Scheduled`; `1 ≤ count ≤ 25 − sold`; if buyer is creator, `creator_boxes + count ≤ limit.max_own_boxes`; gating satisfied.
+Effects: transfers `count × price` from buyer to vault; assigns boxes (§6.1); `sold += count`; if buyer is creator, `creator_boxes += count`; if `sold == 25`: `status = Locked`, `locked_at = now`, counter decremented. Emits `BoxesBought { buyer, boxes[], count }` and, on lock, `PoolLocked`.
+
+**`sponsor(amount)`** — signer: sponsor; payer: sponsor. Accounts: config, game, pool, vault, sponsorship (init if needed), sponsor's token account for SPL, programs.
+Checks: `!config.paused`; `status ∈ {Open, Locked, Drawn}` (a full pool is usually drawn well before kickoff and can still be sponsored); `now < game.recorded_kickoff`; `game.status == Scheduled`; `amount ≥ price`; `sponsored_total + amount ≤ tokens[token].max_sponsorship`.
+Effects: transfers `amount` to the vault; creates `Sponsorship` (increment `sponsor_count`, `sponsorships_open`) or adds to it; `sponsored_total += amount`. Emits `Sponsored { sponsor, amount, sponsored_total }`.
+
+**`rotate_gate_key(new_key)`** — signer: creator. Checks `access_type == Link`, `new_key != default`. Emits `GateKeyRotated` (the new key is public information; only signatures from it matter).
+
+### 4.4 Draw
+
+Entropy flow, in order: keeper opens a `Var` with the Entropy program (authority = keeper, end slot ≈ 150 slots ahead); keeper calls `set_var`; after the end slot, keeper calls `sample_var` (this program CPIs Entropy `Sample`); provider reveals; keeper calls `draw`; then closes the `Var` through Entropy to recover its rent.
+
+**`set_var(var)`** — signer: keeper.
+Checks: `status == Locked`; `pool.var == default`; `var` is owned by `ENTROPY_PROGRAM`; the `Var`'s commit is set and its value is not yet revealed. Sets `pool.var`. Emits `VarSet`. One call per pool; the admin's `replace_var` is the only way to change it.
+
+**`sample_var()`** — signer: keeper. Accounts: pool, the recorded `var`, Entropy program and whatever `Sample` needs.
+Checks: `status == Locked`; `pool.var != default`; `sampled_slot == 0`; `Clock.slot > var.end_slot`. CPIs Entropy `Sample`; on success sets `sampled_slot = Clock.slot`. Emits `VarSampled`. If `Sample` fails because the `Var` was already sampled by someone else, this instruction fails and `draw` will refuse (below): a value this program did not sample inside the window is never used.
+
+**`draw()`** — signer: keeper. Accounts: pool, the recorded `var`.
+Checks: `status == Locked`; `!drawn`; `var == pool.var`; the `Var` is revealed; `sampled_slot != 0` and the `Var`'s recorded sample slot equals `sampled_slot` (confirmed against the live `Var` layout in Step 5; if the layout does not expose the sample slot, the check is `sampled_slot != 0` plus `sampled_slot ≤ var.end_slot + 512`, and `set_var` additionally requires that the `Var` has not been sampled).
+Effects: derives both axes (§6.2); `drawn = true`; `status = Drawn`. Emits `DigitsDrawn { home_axis, away_axis, var, value }`.
+
+**`replace_var(new_var)`** — signer: admin.
+Checks: `status == Locked`; `!drawn`; `new_var` owned by Entropy, committed, unrevealed. Sets `pool.var = new_var`, `sampled_slot = 0`. Emits `VarReplaced { old, new }`. Never callable by the keeper.
+
+### 4.5 Settlement
+
+**`settle(quarter)`** — signer: keeper. `quarter` 1–4. Accounts: config, game, pool, vault, winner wallet (and ATA for SPL), `fee_wallet` (and ATA), creator (and ATA), integrator (and ATA) when set, token program, associated-token program, system program. The keeper is the payer for any ATA creation.
+Checks: `status == Drawn`; `quarter == quarters_settled + 1`; `game.quarters_posted ≥ quarter`; the passed winner account equals `owners[winning box]` (§6.3), so the winner is computed in the program and the passed account is only verified against it; the fee, creator and integrator accounts match the pool and config.
+Effects, in one transaction:
+1. If `quarters_settled == 0`: `prize_pool = 25 × price − platform_fee − creator_fee − integrator_fee + sponsored_total`; `quarter_prize[q] = floor(prize_pool × split[q] / 100)` for all four; `unpaid_prize_pool = prize_pool`.
+2. `winning_box[quarter − 1] = box`.
+3. If `quarter_prize[quarter − 1] > 0`: transfer it to the winner; `unpaid_prize_pool −= it`. If additionally `!fees_paid`: transfer `platform_fee` to `fee_wallet`, `creator_fee` to `creator`, `integrator_fee` to `integrator` (skipped when zero), and set `fees_paid = true`.
+4. `quarters_settled += 1`; if it reaches 4, `status = Settled`.
+Emits `QuarterSettled { quarter, home, away, box, winner, amount, fees_paid_now: bool, platform_fee, creator_fee, integrator_fee }`. A zero-share quarter (Q1–Q3 on `FinalOnly`) still records the winning box and emits the event with `amount = 0`; it moves no funds and does not pay fees.
+
+Idempotency: a repeated `settle` for the same quarter fails on the ordering check, so the keeper can retry blindly after a timeout.
+
+**`close_pool()`** — permissionless. Accounts: pool, vault, game, counter (if it exists), `fee_wallet`, creator, config.
+Checks: `status ∈ {Settled, Returned, Split}`; `sponsorships_open == 0`; if `Returned` or `Split`, every sold box has its `returned` bit set. Effects: transfers the vault's remaining balance (dust, and for SOL the vault's rent) and the pool account's rent to the destination: `creator` if `abandoned`, else `fee_wallet`. Closes the vault (SPL: `close_account` after the token balance is swept) and the pool. Emits `PoolClosed { destination, dust }`.
+
+**`close_counter()`** — permissionless. Checks `open_count == 0`. Rent to `fee_wallet`.
+
+### 4.6 Returns, splits, cancellation, reclaim
+
+Returns are executed per owner set so a full pool fits in a few transactions. All of them are idempotent through the `returned` bitmap.
+
+**`return_boxes()`** — signer: keeper. Remaining accounts: a list of owner wallets (each followed by its ATA for SPL). Payer for ATA creation: keeper.
+Precondition, one of:
+- unfilled: `status == Open` and `now ≥ game.recorded_kickoff`;
+- marked: `game.status ∈ {Postponed, Cancelled}` and `!fees_paid`;
+- suspended before any payout: `game.status == Suspended` and `!fees_paid`;
+- cancelled: `cancelled_by_admin`;
+- already returning: `status == Returned` and `!fees_paid` (continuation calls).
+Effects: on the first call (`status != Returned`): if `status == Open` decrement the counter; set `status = Returned`. Then for every box `b` with `owners[b]` in the passed set and bit `b` clear: transfer `price`, set bit `b`. One transfer per owner (sum of their boxes). Emits `BoxesReturned { owner, boxes[], amount }` per owner.
+
+**`return_sponsorship()`** — signer: keeper. Accounts: pool, vault, sponsorship, `sponsorship.wallet` (and ATA).
+Checks: `status == Returned` and `!fees_paid`; the destination account equals `sponsorship.wallet`. Effects: transfer `amount`; close the `Sponsorship` with rent to the wallet; `sponsorships_open −= 1`. Emits `SponsorshipReturned`.
+
+**`cancel_pool()`** — signer: admin. Checks: `status ∈ {Open, Locked, Drawn}`; `!fees_paid`. Effects: `cancelled_by_admin = true`; if `Open`, decrement counter; `status = Returned`. Emits `PoolCancelled`. The keeper then runs `return_boxes` and `return_sponsorship`.
+
+**`split()`** — signer: keeper. Remaining accounts as for `return_boxes`.
+Checks: `game.status == Suspended`; `fees_paid`; `status ∈ {Drawn, Split}`. Effects: on the first call, `split_amount = floor(unpaid_prize_pool / 25)`, `status = Split`. For each unreturned box owned by a passed owner: transfer `split_amount`, set the bit. Emits `BoxesSplit { owner, boxes[], amount }`. Sponsorships are inside `unpaid_prize_pool` and go with it; `return_sponsorship` fails because `fees_paid`.
+
+**`reclaim()`** — signer: the box owner. Accounts: pool, vault, game, owner (and ATA), counter if the pool is `Open`.
+Checks: `status != Settled`; `now ≥ game.scheduled_kickoff + RECLAIM_DELAY`; the signer owns at least one unreturned box. (A pool already in `Returned` or `Split` whose keeper never finished the batches is covered too: after 30 days the owner takes what the pool already owes them, at the amount the pool already fixed.)
+Effects: if `status ∈ {Open, Locked, Drawn}` (the pool was never resolved): `abandoned = true`; if `status == Open` decrement the counter; if `!fees_paid`, `status = Returned`, else `status = Split` and `split_amount = floor(unpaid_prize_pool / 25)`. Then for every unreturned box the signer owns: transfer `price` (if `!fees_paid`) or `split_amount`, set the bit. Emits `BoxesReclaimed`.
+
+**`reclaim_sponsorship()`** — signer: the sponsor. Checks: `!fees_paid`; `now ≥ scheduled_kickoff + RECLAIM_DELAY`; `status != Settled`. Effects: as the unresolved-pool step above if needed; transfer `amount` to `sponsorship.wallet`; close the account to the wallet; `sponsorships_open −= 1`. Emits `SponsorshipReturned`.
+
+**`close_sponsorship()`** — permissionless. Checks: `status ∈ {Settled, Split}` (the sponsorship is committed and the pool is terminal). Closes the account with rent to `sponsorship.wallet`; `sponsorships_open −= 1`. Emits `SponsorshipClosed`.
+
+## 5. Money
+
+### 5.1 Fee amounts, fixed at creation
+
+```
+P              = 25 × price
+platform_fee   = floor(P × config.platform_bps / 10_000)
+creator_fee    = floor(P × (config.creator_bps + creator_addon_bps) / 10_000)
+integrator_fee = floor(P × integrator_bps / 10_000)      // 0 when unset
+```
+
+Stored on the pool; config changes later never touch them.
+
+### 5.2 Prizes, fixed at the first settlement
+
+```
+prize_pool       = P − platform_fee − creator_fee − integrator_fee + sponsored_total
+quarter_prize[q] = floor(prize_pool × split[q] / 100)
+dust             = prize_pool − Σ quarter_prize      // ≤ 3 base units on any preset
+```
+
+`sponsored_total` cannot change after kickoff (`sponsor` requires `now < recorded_kickoff`) and the first settlement cannot happen before kickoff + 15 minutes, so computing prizes at the first settlement is well defined.
+
+### 5.3 Where money goes, by outcome
+
+| Outcome | Buyers | Sponsors | Platform | Creator | Integrator |
+|---|---|---|---|---|---|
+| Settled | Prizes to winners | In the prizes | `platform_fee` + dust + pool/vault rent at close | `creator_fee` | `integrator_fee` |
+| Returned before any payout | `price` per box | Full amount + account rent | Pool/vault rent at close; counter rent | Nothing | Nothing |
+| Suspended after a payout (Split) | Paid prizes stay; `unpaid_prize_pool / 25` per box | Committed (inside the split) | Fees already taken + dust + rent | Fee already taken | Fee already taken |
+| Abandoned, never paid | `price` per box via `reclaim` | Full amount via `reclaim_sponsorship` | Counter rent only | Pool/vault rent + dust at close | Nothing |
+| Abandoned, partly paid | `unpaid_prize_pool / 25` via `reclaim` | Committed | Fees already taken; counter rent | Fee already taken; pool/vault rent + dust | Fee already taken |
+
+Worked numbers (SOL, 0.05 per box, 2% creator add-on, `Standard`): `P` 1.25; fees 0.0625 / 0.0875 / 0; prize pool 1.1; quarters 0.22 / 0.22 / 0.22 / 0.44; vault 1.25 → 0.88 after Q1. With a 1 SOL sponsorship: prize pool 2.1; quarters 0.42 / 0.42 / 0.42 / 0.84; vault 2.25 → 1.68 after Q1. Smallest possible quarter prize: 0.05 SOL boxes, 15% total fee, 20% share = 0.2125 SOL.
+
+### 5.4 Token transfers
+
+- SOL: `system_program::transfer` from the vault PDA (signed with vault seeds) to the recipient wallet. Recipient accounts are plain system accounts; no ATA logic.
+- SPL: `transfer_checked` from the vault token account (authority = pool PDA, signed with pool seeds) to the recipient's associated token account for the pool's mint, created idempotently in the same instruction when missing, with the transaction payer covering its rent. Token-2022 mints are handled through the same interface; the program never assumes the legacy Token program. Mints with transfer fees or transfer hooks are not supported: `update_config` rejects a `TokenRule` whose mint has either extension.
+
+## 6. Algorithms
+
+Reference implementations live in `packages/shared` and are cross-tested against the program with shared vector files. `sha256` is the Solana `hashv` syscall.
+
+### 6.1 Box assignment
+
+Inputs: `slothash` = the 32-byte hash of the most recent entry in the SlotHashes sysvar; `buyer` (32 bytes); `sold` (u8, before this purchase); `count` (u8).
+
+```
+seed      = sha256(slothash || buyer || [sold] || [count])
+remaining = [b for b in 0..25 if owners[b] == default]    // ascending
+for k in 0..count:
+    r   = sha256(seed || [k])
+    idx = u64_le(r[0..8]) mod len(remaining)
+    box = remaining.remove(idx)                              // removes and shifts
+    owners[box] = buyer
+```
+
+Deterministic given the inputs; `packages/shared` can reproduce a purchase from the transaction's slot for tests. Predictability is harmless: positions carry no value before the draw.
+
+### 6.2 Axis shuffle
+
+Inputs: `value` = the 32-byte revealed Entropy value.
+
+```
+fn axis(value, label):                 // label = b"home" or b"away"
+    seed = sha256(value || label)
+    a = [0,1,2,3,4,5,6,7,8,9]
+    for i in 9 down to 1:
+        r = sha256(seed || [i])
+        j = u64_le(r[0..8]) mod (i + 1)
+        swap(a[i], a[j])
+    return a
+home_axis = axis(value, b"home"); away_axis = axis(value, b"away")
+```
+
+Lane `l` (0–4) of an axis covers digits `a[l]` and `a[l + 5]`. Each lane covers exactly two digits and the five lanes partition 0–9.
+
+### 6.3 Winner
+
+Inputs: `home`, `away` cumulative scores for the quarter (u16), both axes.
+
+```
+hd = home mod 10; ad = away mod 10
+col = the l in 0..5 with hd in {home_axis[l], home_axis[l+5]}
+row = the l in 0..5 with ad in {away_axis[l], away_axis[l+5]}
+box = row × 5 + col          // 0–24; label = box + 1
+```
+
+Columns are the home team (across the top), rows the away team (down the side). Exactly one box matches for any pair of scores.
+
+## 7. Events
+
+All events are additive: fields are appended, never removed or reordered. Every event carries `pool` (or `game` for game events) and the Unix time.
+
+| Event | Fields |
+|---|---|
+| `ConfigUpdated` | full config snapshot |
+| `OverrideSet` / `OverrideClosed` | wallet, values |
+| `GameCreated` | game, key, scheduled_kickoff |
+| `KickoffUpdated` | game, old, new |
+| `ScoresPosted` | game, quarter, home, away, is_final, had_overtime |
+| `GameMarked` | game, status |
+| `PoolCreated` | pool, game, creator, token, mint, price, preset, access_type, creator_addon_bps, integrator, integrator_bps, platform_fee, creator_fee, integrator_fee |
+| `BoxesBought` | pool, buyer, boxes (0-based indices), count, sold_after |
+| `PoolLocked` | pool, locked_at |
+| `Sponsored` | pool, sponsor, amount, sponsored_total |
+| `GateKeyRotated` | pool |
+| `VarSet` / `VarReplaced` / `VarSampled` | pool, var (old/new), slot |
+| `DigitsDrawn` | pool, var, value, home_axis, away_axis |
+| `QuarterSettled` | pool, quarter, home, away, box, winner, amount, fees_paid_now, platform_fee, creator_fee, integrator_fee |
+| `PoolCancelled` | pool |
+| `BoxesReturned` / `BoxesSplit` / `BoxesReclaimed` | pool, owner, boxes, amount |
+| `SponsorshipReturned` / `SponsorshipClosed` | pool, sponsor, amount |
+| `PoolClosed` | pool, destination, dust |
+
+Clients show a box as **won** only on `QuarterSettled`; nothing else is a result.
+
+## 8. Errors
+
+Numbered from 6000 (Anchor custom errors). Names are the contract; numbers follow declaration order and are frozen once the program ships.
+
+`Unauthorized`, `Paused`, `GameNotScheduled`, `GameAlreadyMarked`, `SalesClosed`, `KickoffInPast`, `KickoffOutOfBounds`, `KickoffUpdateTooLate`, `QuarterOutOfOrder`, `QuarterTooSoon`, `ScoreDecreased`, `FinalFlagMismatch`, `TokenDisabled`, `PriceOffLadder`, `InvalidPreset`, `InvalidAccessType`, `GateKeyMissing`, `GateKeyNotSigner`, `AllowlistProofInvalid`, `AddonBudgetExceeded`, `IntegratorMismatch`, `OpenPoolLimit`, `OwnBoxLimit`, `OverrideRequired`, `NothingToBuy`, `TooManyBoxes`, `PoolNotOpen`, `PoolNotLocked`, `PoolNotDrawn`, `SponsorshipTooSmall`, `SponsorshipCapExceeded`, `VarAlreadySet`, `VarNotSet`, `VarMismatch`, `VarNotEntropy`, `VarNotRevealed`, `VarNotSampledHere`, `SampleWindowMissed`, `AlreadyDrawn`, `ScoresNotPosted`, `WinnerMismatch`, `FeeAccountMismatch`, `NotReturnable`, `FeesAlreadyPaid`, `NotSuspended`, `NotSplittable`, `ReclaimTooEarly`, `NotOwner`, `NothingToReturn`, `SponsorshipsStillOpen`, `BoxesStillOutstanding`, `PoolNotTerminal`, `CounterNotEmpty`, `UnsupportedMintExtension`, `MathOverflow`.
+
+## 9. State machines
+
+### Game
+
+```
+Scheduled --mark--> Postponed | Cancelled      (only while quarters_posted == 0)
+Scheduled --mark--> Suspended                  (any time before Final)
+Scheduled --post_scores(4)--> Final
+```
+
+Terminal: `Postponed`, `Cancelled`, `Suspended`, `Final`.
+
+### Pool
+
+```
+Open   --buy (25th)-------------> Locked
+Open   --return_boxes (kickoff passed) | cancel_pool | return_boxes (game marked) | reclaim--> Returned
+Locked --set_var, sample_var, draw--> Drawn
+Locked --cancel_pool | return_boxes (game marked / suspended, no payout) | reclaim--> Returned
+Drawn  --settle × 4--> Settled
+Drawn  --cancel_pool | return_boxes (game marked / suspended, no payout) | reclaim (no payout)--> Returned
+Drawn  --split (suspended, after payout) | reclaim (after payout)--> Split
+Settled | Returned | Split --close_pool--> (account closed)
+```
+
+Terminal: `Settled`, `Returned`, `Split`. `sponsor` is allowed in `Open`, `Locked` and `Drawn` while `now < recorded_kickoff`.
+
+## 10. Invariants the test suite must prove
+
+- Money: at every point, vault balance = the §3.4 invariant; total out over a pool's life = total in; no instruction can move funds to an account other than a box owner, a sponsor's recorded wallet, `fee_wallet`, `creator`, or `integrator`.
+- Ordering: quarters settle in order; scores post in order and never decrease; no settlement without a draw; no draw without a sampled, revealed `Var` recorded on the pool.
+- Timing: no `buy`/`sponsor` at or after `recorded_kickoff`; no `return_boxes` (unfilled) before it; no `update_kickoff` once it has passed; no `reclaim` before `scheduled_kickoff + 30 d` regardless of `update_kickoff`.
+- Authority: every admin instruction fails with the keeper's key and vice versa; `replace_var` and `mark_game` and `cancel_pool` are admin-only; the keeper never supplies a destination the program doesn't verify.
+- Limits: price ladder, presets, add-on budget, open-pool and own-box caps with override precedence, sponsorship minimum and cap.
+- Fees: independent of `sponsored_total`; paid exactly once; never paid on a returned pool; `FinalOnly` pays them with the final.
+- Rent: every closable account closes to the specified destination; nothing is left un-closable in any terminal state.
+- Layout: a snapshot test freezes account byte offsets and event schemas after Step 8; changes are additive only.

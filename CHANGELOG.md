@@ -5,4 +5,5 @@ Every mainnet deploy of the program is listed here with its commit, the verified
 ## Unreleased
 
 - Design published: rules, fees, lifecycle, randomness, trust model, private pools, screens.
+- Program specification published (`docs/PROGRAM.md`): accounts, instructions, events, errors, algorithms. Sponsorship (add to a pool's prizes before kickoff, no fee) added to the rules.
 - Program and SDK: in development. No mainnet deployment yet.

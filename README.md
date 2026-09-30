@@ -160,7 +160,7 @@ Third parties pay for their own RPC. The SDK takes a connection as a parameter a
 
 Clients must show a box as **won** only after the settle event, never from live scores. Live scores may mark a box as **leading**, clearly provisional.
 
-Integration guide, SDK reference and the official program ID and config PDA will be published here when the program is deployed. Check the program ID against this repo before trusting a deployment; forks are possible and will not be served by the keeper.
+The program specification, [docs/PROGRAM.md](docs/PROGRAM.md), is the contract: every account and its fields, every instruction with its checks, every event and error, and the exact box-assignment, shuffle and winner algorithms. It is what the program is built and audited against, and what an integrator's own verification can be built against. Integration guide, SDK reference and the official program ID and config PDA will be published here when the program is deployed. Check the program ID against this repo before trusting a deployment; forks are possible and will not be served by the keeper.
 
 ## What is in this repo
 
@@ -170,7 +170,10 @@ packages/shared/      TypeScript SDK: types, instruction builders, PDAs,
                       grid and payout math, 1–25 box labelling, team table — Apache-2.0   (coming)
 docs/ARCHITECTURE.md  The full design: rules, lifecycle, fees, randomness, trust model,
                       program accounts, private pools, decisions log
-docs/DESIGN.md        Brand, design system, information architecture, screen wireframes, flows
+docs/PROGRAM.md       Program specification: accounts, seeds, instructions, checks, events,
+                      errors, state machines, algorithms
+docs/DESIGN.md        Brand, design system, information architecture, screen wireframes, flows,
+                      app build specification
 docs/mockups/         High-fidelity HTML mockups of every screen and rendered PNGs
 docs/brand/           Logo concept
 LICENSE               Apache-2.0
