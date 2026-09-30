@@ -189,9 +189,13 @@ The app (Expo, one codebase for Seeker Android and mybarpool.com), the keeper, t
 
 The app is dark, numbers-first, and calm: a neon-sign logo, condensed numerals for scores and prices, one accent per meaning (purple actions, teal "leading", green "won", amber waiting, red returned). Every screen is mocked up in [docs/mockups/screens.html](docs/mockups/screens.html); rendered frames are in [docs/mockups/png/](docs/mockups/png/).
 
-![All screens](docs/mockups/png/overview.png)
+<table>
+<tr><td align="center"><img src="docs/mockups/png/games.png" width="390" alt="Games"><br><sub>Games, the home screen</sub></td><td align="center"><img src="docs/mockups/png/pool-open.png" width="390" alt="Pool open"><br><sub>A pool selling boxes</sub></td></tr>
+<tr><td align="center"><img src="docs/mockups/png/pool-live.png" width="390" alt="Pool live"><br><sub>The same pool live: Q1 paid, Q2 leading</sub></td><td align="center"><img src="docs/mockups/png/buy.png" width="390" alt="Buy sheet"><br><sub>Buying three boxes</sub></td></tr>
+<tr><td align="center"><img src="docs/mockups/png/create.png" width="390" alt="Create"><br><sub>Creating a pool</sub></td><td align="center"><img src="docs/mockups/png/pool-sponsored.png" width="390" alt="Pool sponsored"><br><sub>A sponsored pool</sub></td></tr>
+</table>
 
-Design principles, the full information architecture and every flow, including how a pool is shared (link, preview, QR, printable board), are in [docs/DESIGN.md](docs/DESIGN.md).
+All eleven frames, including the share sheet, the sponsor sheet and My Boxes, are in [docs/DESIGN.md](docs/DESIGN.md#rendered-mockups). Design principles, the full information architecture and every flow, including how a pool is shared (link, preview, QR, printable board), are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Toolchain
 

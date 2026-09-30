@@ -71,14 +71,16 @@ Bottom tab bar on mobile: **Games · My Boxes · Create**. Wallet lives in the t
 ### Rendered mockups
 High-fidelity mockups of the screens below are built in HTML/CSS with the real palette and type, at [mockups/screens.html](mockups/screens.html), and rendered to PNG at 390×844 (2×) in [mockups/png/](mockups/png/). Open the HTML in a browser to see all frames side by side, or add `?screen=<id>` (`games`, `game`, `pool-open`, `pool-live`, `buy`, `bought`, `create`, `me`, `pool-sponsored`, `sponsor`, `share`) to view one at phone size. Team logos in the mockup are hot-linked from ESPN's CDN for preview only; production uses self-hosted assets (section 9).
 
-![All screens](mockups/png/overview.png)
+All eleven frames side by side: [overview.png](mockups/png/overview.png) (wide; open it at full size rather than inline).
 
-| | | |
-|---|---|---|
-| ![Games](mockups/png/games.png) | ![Game](mockups/png/game.png) | ![Pool open](mockups/png/pool-open.png) |
-| ![Pool live](mockups/png/pool-live.png) | ![Buy](mockups/png/buy.png) | ![Bought](mockups/png/bought.png) |
-| ![Create](mockups/png/create.png) | ![My Boxes](mockups/png/me.png) | ![Pool sponsored](mockups/png/pool-sponsored.png) |
-| ![Sponsor sheet](mockups/png/sponsor.png) | ![Share sheet](mockups/png/share.png) | |
+<table>
+<tr><td align="center"><img src="mockups/png/games.png" width="390" alt="Games"><br><sub>1 · Games (home)</sub></td><td align="center"><img src="mockups/png/game.png" width="390" alt="Game"><br><sub>2 · Game</sub></td></tr>
+<tr><td align="center"><img src="mockups/png/pool-open.png" width="390" alt="Pool open"><br><sub>3 · Pool, open</sub></td><td align="center"><img src="mockups/png/pool-live.png" width="390" alt="Pool live"><br><sub>4 · Pool, live</sub></td></tr>
+<tr><td align="center"><img src="mockups/png/buy.png" width="390" alt="Buy sheet"><br><sub>5 · Buy sheet</sub></td><td align="center"><img src="mockups/png/bought.png" width="390" alt="Buy result"><br><sub>6 · Buy result</sub></td></tr>
+<tr><td align="center"><img src="mockups/png/create.png" width="390" alt="Create"><br><sub>7 · Create, step 2</sub></td><td align="center"><img src="mockups/png/me.png" width="390" alt="My Boxes"><br><sub>8 · My Boxes</sub></td></tr>
+<tr><td align="center"><img src="mockups/png/pool-sponsored.png" width="390" alt="Pool sponsored"><br><sub>9 · Pool, sponsored</sub></td><td align="center"><img src="mockups/png/sponsor.png" width="390" alt="Sponsor sheet"><br><sub>10 · Sponsor sheet</sub></td></tr>
+<tr><td align="center"><img src="mockups/png/share.png" width="390" alt="Share sheet"><br><sub>11 · Share sheet</sub></td><td></td></tr>
+</table>
 
 To re-render after editing the HTML:
 
