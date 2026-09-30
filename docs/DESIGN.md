@@ -69,7 +69,7 @@ Bottom tab bar on mobile: **Games · My Boxes · Create**. Wallet lives in the t
 ## 4. Screens
 
 ### Rendered mockups
-High-fidelity mockups of the screens below are built in HTML/CSS with the real palette and type, at [mockups/screens.html](mockups/screens.html), and rendered to PNG at 390×844 (2×) in [mockups/png/](mockups/png/). Open the HTML in a browser to see all frames side by side, or add `?screen=<id>` (`games`, `game`, `pool-open`, `pool-live`, `buy`, `bought`, `create`, `me`) to view one at phone size. Team logos in the mockup are hot-linked from ESPN's CDN for preview only; production uses self-hosted assets (section 9).
+High-fidelity mockups of the screens below are built in HTML/CSS with the real palette and type, at [mockups/screens.html](mockups/screens.html), and rendered to PNG at 390×844 (2×) in [mockups/png/](mockups/png/). Open the HTML in a browser to see all frames side by side, or add `?screen=<id>` (`games`, `game`, `pool-open`, `pool-live`, `buy`, `bought`, `create`, `me`, `pool-sponsored`, `sponsor`, `share`) to view one at phone size. Team logos in the mockup are hot-linked from ESPN's CDN for preview only; production uses self-hosted assets (section 9).
 
 ![All screens](mockups/png/overview.png)
 
@@ -77,17 +77,22 @@ High-fidelity mockups of the screens below are built in HTML/CSS with the real p
 |---|---|---|
 | ![Games](mockups/png/games.png) | ![Game](mockups/png/game.png) | ![Pool open](mockups/png/pool-open.png) |
 | ![Pool live](mockups/png/pool-live.png) | ![Buy](mockups/png/buy.png) | ![Bought](mockups/png/bought.png) |
-| ![Create](mockups/png/create.png) | ![My Boxes](mockups/png/me.png) | |
+| ![Create](mockups/png/create.png) | ![My Boxes](mockups/png/me.png) | ![Pool sponsored](mockups/png/pool-sponsored.png) |
+| ![Sponsor sheet](mockups/png/sponsor.png) | ![Share sheet](mockups/png/share.png) | |
 
 To re-render after editing the HTML:
 
 ```bash
 cd docs/mockups
-for s in games game pool-open pool-live buy bought create me; do
+for s in games game pool-open pool-live buy bought create me pool-sponsored sponsor share; do
   chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=390,844 \
     --virtual-time-budget=8000 --screenshot=png/$s.png "file://$PWD/screens.html?screen=$s"
 done
+chrome --headless=new --hide-scrollbars --window-size=4690,930 --virtual-time-budget=8000 \
+  --screenshot=png/overview.png "file://$PWD/screens.html"
 ```
+
+The overview is 11 frames × 390 px plus gaps and padding; widen it by 422 px per frame added.
 
 ### Wireframes
 Wireframes are mobile (390px) since that is the primary target. Desktop is the same content in a two-column layout: list on the left, detail on the right.
@@ -246,7 +251,7 @@ Sponsorship (ARCHITECTURE.md, Sponsorship). Most pools have none and show nothin
 - Payouts table shows the full quarter amounts (boxes plus sponsorship, after fees); its footer reads "Prizes 2.1 ORE = 1.1 from boxes + 1 sponsored" so the arithmetic is on the page.
 - Activity row: "ORE added 1 ORE to the prizes ↗". On a returned pool: "Returned 1 ORE to ORE ↗".
 - The action lives in the details section as a text link, "Add to the prizes", not as a button and never in the buy bar: sponsoring is for a company or a community that has decided to do it, and nothing in the app should read as a nudge for a player to put in more. It opens `SponsorSheet`: amount input in the pool's token (minimum one box price, the per-token cap shown if reached), then three short lines that are always the same: "No fee is taken on this. If the pool doesn't play, it comes back to you. Once the first prize is paid it belongs to the winners." Confirm, sign, result with the transaction link. Hidden once sales have closed.
-- The mockups show unsponsored pools; the header line, the payouts footer and the activity row are the only visible differences on a sponsored one.
+- Mockup frame 9 shows a sponsored pool (locked, ORE) and frame 10 the `SponsorSheet`; the header line, the payouts footer, the "Sponsored" details row and the activity row are the only visible differences from an unsponsored pool. Frame 11 is the share sheet from section 4.8.
 
 Share (⇪): opens the share sheet described in section 4.8.
 

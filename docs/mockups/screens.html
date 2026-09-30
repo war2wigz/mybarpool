@@ -81,7 +81,7 @@
   .boxes{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:4px;aspect-ratio:1}
   .box{background:var(--bg2);border:1px solid var(--line);border-radius:8px;position:relative;padding:6px;font-size:11px;font-weight:500;display:flex;align-items:flex-end;overflow:hidden;color:var(--t1)}
   .box .n{position:absolute;top:4px;left:6px;font:600 10px var(--num);color:var(--t2)}
-  .box.o1{background:#1a1f3a} .box.o2{background:#2a1a2a} .box.o3{background:#1a2a24} .box.o4{background:#2a2418}
+  .box.o1{background:#1a1f3a} .box.o2{background:#2a1a2a} .box.o3{background:#1a2a24} .box.o4{background:#2a2418} .box.o5{background:#241a3a}
   .box.you{background:rgba(153,69,255,.28);border-color:var(--purple);font-weight:700}
   .box.lead{border:1.5px dotted var(--teal);box-shadow:0 0 0 1px rgba(0,194,255,.2) inset}
   .box.lead .tag,.box.won .tag{position:absolute;top:3px;right:4px;font:700 9px var(--body);letter-spacing:.04em;text-transform:uppercase}
@@ -156,6 +156,26 @@
   .sw{width:10px;height:10px;border-radius:3px}
   .won-total{color:var(--green);font:700 16px var(--num)}
   .neon-off{text-align:center;color:var(--line);font:400 34px Pacifico,cursive;margin:60px 0 8px}
+
+  /* sponsorship & sharing */
+  .sponsor{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--t2)}
+  .sponsor b{color:var(--t1);font:600 14px var(--num);letter-spacing:.02em}
+  .slogo{width:20px;height:20px;border-radius:50%;background:#1C1C26;border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font:700 8px var(--num);color:var(--t1);letter-spacing:.02em;flex:none}
+  .slogo.lg{width:44px;height:44px;font-size:14px}
+  .tbl tr.foot td{border-bottom:0;padding-top:8px;color:var(--t2);font-size:12px;text-align:left}
+  .textlink{color:var(--purple);font-size:14px;font-weight:500}
+  .sheet .kv .t1{color:var(--t1)}
+  .acts{margin-top:8px}
+  .acts .a{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font-size:15px;font-weight:500}
+  .acts .a:last-child{border-bottom:0}
+  .acts .a .t2{font-size:12px;font-weight:400}
+  .shareprev{display:flex;gap:12px;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:12px}
+  .shareprev .thumb{width:54px;height:54px;border-radius:8px;background:var(--bg0);border:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:5px;flex:none}
+  .shareprev .thumb i{background:var(--line);border-radius:1px}
+  .shareprev .thumb i.y{background:var(--purple)} .shareprev .thumb i.o{background:#2a2a45}
+  .shareprev p{font-size:13px;line-height:1.4;color:var(--t1)}
+  .shareprev p .t2{font-size:12px}
+  .sbtn{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:10px;background:var(--bg2);border:1px solid var(--line);font-size:14px;font-weight:500;margin-top:10px}
 </style>
 </head>
 <body class="overview">
@@ -465,6 +485,138 @@
     <div class="sect" style="margin-top:8px"><b>Returned</b><span>1 · 0.15 SOL back</span></div>
   </div>
   <div class="tabs"><a><i class="ic"></i>Games</a><a class="on"><i class="ic"></i>My Boxes</a><a><i class="ic"></i>Create</a></div>
+</div>
+
+<!-- ============ 9. POOL (SPONSORED, LOCKED) ============ -->
+<div class="frame" id="pool-sponsored">
+  <div class="label">9 · Pool — sponsored</div>
+  <div class="top"><div class="back">‹ PHI vs DAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>ana.skr</div><span class="t2">⇪</span></div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill locked">Locked · kickoff Sun 1:00</span><span class="num" style="font-weight:700;font-size:18px">25<span class="t2">/25</span></span></div>
+      <div class="big">0.05 ORE <span class="t2" style="font-size:15px;font-weight:500">/ box</span> <span style="margin-left:10px">Pot 1.25 ORE</span></div>
+      <div class="sponsor"><i class="slogo">ORE</i>Sponsored by ORE · <b>+1 ORE</b><span style="margin-left:auto">Split 20/20/20/40</span></div>
+    </div>
+
+    <div class="gridwrap" style="margin-top:8px">
+      <div class="teamlbl top"><img class="logo-img sm" src="https://a.espncdn.com/i/teamlogos/nfl/500/phi.png">Eagles →</div>
+      <div class="axis-top"><span></span><span class="d">4·0</span><span class="d">7·1</span><span class="d">3·8</span><span class="d">6·2</span><span class="d">9·5</span></div>
+      <div class="board"><div class="sidelbl"><span>↓ Cowboys</span></div>
+        <div class="axis-side"><span class="d">1·6</span><span class="d">8·3</span><span class="d">0·7</span><span class="d">5·2</span><span class="d">9·4</span></div>
+        <div class="boxes">
+          <div class="box o1"><i class="n">1</i>mike</div><div class="box o2"><i class="n">2</i>jon</div><div class="box you"><i class="n">3</i>YOU</div><div class="box o4"><i class="n">4</i>sara</div><div class="box o3"><i class="n">5</i>a3f9</div>
+          <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o1"><i class="n">7</i>mike</div><div class="box o2"><i class="n">8</i>jon</div><div class="box o1"><i class="n">9</i>mike</div><div class="box you"><i class="n">10</i>YOU</div>
+          <div class="box o4"><i class="n">11</i>sara</div><div class="box o2"><i class="n">12</i>jon</div><div class="box o3"><i class="n">13</i>a3f9</div><div class="box o4"><i class="n">14</i>sara</div><div class="box o1"><i class="n">15</i>mike</div>
+          <div class="box o2"><i class="n">16</i>jon</div><div class="box o4"><i class="n">17</i>sara</div><div class="box o3"><i class="n">18</i>a3f9</div><div class="box you"><i class="n">19</i>YOU</div><div class="box o1"><i class="n">20</i>mike</div>
+          <div class="box o3"><i class="n">21</i>a3f9</div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o4"><i class="n">24</i>sara</div><div class="box o2"><i class="n">25</i>jon</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sect" style="margin-top:12px"><b>Payouts</b><span>per quarter</span></div>
+    <table class="tbl">
+      <tr><td class="t2">Q1</td><td class="amt">0.425 ORE</td><td class="t2">—</td></tr>
+      <tr><td class="t2">Q2</td><td class="amt">0.425 ORE</td><td class="t2">—</td></tr>
+      <tr><td class="t2">Q3</td><td class="amt">0.425 ORE</td><td class="t2">—</td></tr>
+      <tr><td class="t2">Q4 · final</td><td class="amt">0.85 ORE</td><td class="t2">—</td></tr>
+      <tr class="foot"><td colspan="3">Prizes <b class="num" style="color:var(--t1)">2.125 ORE</b> = 1.125 from boxes + 1 sponsored</td></tr>
+    </table>
+
+    <div class="sect"><b>Details</b></div>
+    <div class="list">
+      <div class="li"><span class="t2">Fee 10%</span><span>Platform 5% · Creator 5%</span></div>
+      <div class="li"><span class="t2">Sponsored</span><span><span class="slogo" style="vertical-align:middle;margin-right:6px">ORE</span>ORE · +1 ORE <span class="link"></span></span></div>
+      <div class="li"><span class="textlink">Add to the prizes</span><span class="t2" style="font-size:12px">until kickoff</span></div>
+    </div>
+
+    <div class="sect"><b>Activity</b></div>
+    <div class="list">
+      <div class="li"><span>ORE added 1 ORE to the prizes</span><span class="link">2h</span></div>
+      <div class="li"><span>Numbers drawn</span><span class="link">3h</span></div>
+      <div class="li"><span>Pool locked · 25/25</span><span class="link">3h</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 10. SPONSOR SHEET ============ -->
+<div class="frame" id="sponsor">
+  <div class="label">10 · Sponsor sheet</div>
+  <div class="top"><div class="back">‹ PHI vs DAL</div><div class="wallet"><i class="avatar"></i>ore.skr</div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill locked">Locked · kickoff Sun 1:00</span><span class="num" style="font-weight:700;font-size:18px">25<span class="t2">/25</span></span></div>
+      <div class="big">0.05 ORE <span class="t2" style="font-size:15px;font-weight:500">/ box</span> <span style="margin-left:10px">Pot 1.25 ORE</span></div>
+      <div class="meta"><span>Split 20 / 20 / 20 / 40</span><span>Fee 10%</span><span>by mike.skr</span></div>
+    </div>
+    <div class="gridwrap" style="opacity:.9">
+      <div class="axis-top"><span></span><span class="d">4·0</span><span class="d">7·1</span><span class="d">3·8</span><span class="d">6·2</span><span class="d">9·5</span></div>
+      <div class="board"><div class="sidelbl"><span>↓ Cowboys</span></div>
+        <div class="axis-side"><span class="d">1·6</span><span class="d">8·3</span><span class="d">0·7</span><span class="d">5·2</span><span class="d">9·4</span></div>
+        <div class="boxes">
+          <div class="box o1"><i class="n">1</i>mike</div><div class="box o2"><i class="n">2</i>jon</div><div class="box o5"><i class="n">3</i>ana</div><div class="box o4"><i class="n">4</i>sara</div><div class="box o3"><i class="n">5</i>a3f9</div>
+          <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o1"><i class="n">7</i>mike</div><div class="box o2"><i class="n">8</i>jon</div><div class="box o1"><i class="n">9</i>mike</div><div class="box o5"><i class="n">10</i>ana</div>
+          <div class="box o4"><i class="n">11</i>sara</div><div class="box o2"><i class="n">12</i>jon</div><div class="box o3"><i class="n">13</i>a3f9</div><div class="box o4"><i class="n">14</i>sara</div><div class="box o1"><i class="n">15</i>mike</div>
+          <div class="box o2"><i class="n">16</i>jon</div><div class="box o4"><i class="n">17</i>sara</div><div class="box o3"><i class="n">18</i>a3f9</div><div class="box o5"><i class="n">19</i>ana</div><div class="box o1"><i class="n">20</i>mike</div>
+          <div class="box o3"><i class="n">21</i>a3f9</div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o4"><i class="n">24</i>sara</div><div class="box o2"><i class="n">25</i>jon</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="scrim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>Add to the prizes</h3>
+    <div class="field" style="margin-top:12px"><label>Amount</label>
+      <div class="input"><span class="num">1</span><span class="unit">ORE</span></div>
+      <div class="hint">At least 0.05 ORE (one box). This pool can take up to 25 ORE.</div>
+    </div>
+    <div class="kv" style="margin-top:8px"><span class="t2">Prizes now</span><span class="num t2" style="font-size:15px">1.125 ORE</span></div>
+    <div class="kv"><span class="t2">Prizes after</span><span class="num" style="color:var(--green)">2.125 ORE</span></div>
+    <div class="kv"><span class="t2">Shown as</span><span><span class="slogo" style="vertical-align:middle;margin-right:6px">ORE</span>Sponsored by ORE</span></div>
+    <p class="note">No fee is taken on this. If the pool doesn't play, it comes back to you. Once the first prize is paid it belongs to the winners.</p>
+    <div class="cta">Confirm in wallet</div>
+  </div>
+</div>
+
+<!-- ============ 11. SHARE SHEET ============ -->
+<div class="frame" id="share">
+  <div class="label">11 · Share sheet</div>
+  <div class="top"><div class="back">‹ KC vs BAL</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill open">Open · locks when full</span><span class="num" style="font-weight:700;font-size:18px">19<span class="t2">/25</span></span></div>
+      <div class="big">0.05 SOL <span class="t2" style="font-size:15px;font-weight:500">/ box</span> <span style="margin-left:10px">Pot 1.25 SOL</span></div>
+    </div>
+    <div class="gridwrap" style="opacity:.9">
+      <div class="axis-top"><span></span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+      <div class="board"><div class="sidelbl"><span>↓ Ravens</span></div>
+        <div class="axis-side"><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+        <div class="boxes">
+          <div class="box o1"><i class="n">1</i>mike</div><div class="box"><i class="n">2</i></div><div class="box you"><i class="n">3</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box"><i class="n">5</i></div>
+          <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2"><i class="n">7</i>jon</div><div class="box"><i class="n">8</i></div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
+          <div class="box o4"><i class="n">11</i>sara</div><div class="box"><i class="n">12</i></div><div class="box you"><i class="n">13</i>YOU</div><div class="box o4"><i class="n">14</i>sara</div><div class="box o2"><i class="n">15</i>jon</div>
+          <div class="box o2"><i class="n">16</i>jon</div><div class="box"><i class="n">17</i></div><div class="box o4"><i class="n">18</i>sara</div><div class="box o3"><i class="n">19</i>a3f9</div><div class="box o1"><i class="n">20</i>mike</div>
+          <div class="box"><i class="n">21</i></div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o3"><i class="n">24</i>a3f9</div><div class="box you"><i class="n">25</i>YOU</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="scrim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>Share this pool</h3>
+    <div class="shareprev">
+      <div class="thumb"><i class="o"></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i class="y"></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i class="y"></i></div>
+      <p>I've got boxes 3, 4, 13 and 25 on the Chiefs–Ravens pool · 6 left<br><span class="t2">mybarpool.com/p/7kq2Xf9a · grid image attached</span></p>
+    </div>
+    <div class="cta" style="margin-top:12px">Share</div>
+    <div class="acts">
+      <div class="a"><span>Copy link</span><span class="t2">mybarpool.com/p/7kq2Xf9a</span></div>
+      <div class="a"><span>Show QR</span><span class="t2">for the table</span></div>
+      <div class="a"><span>Save image</span><span class="t2">1080 × 1080 · story</span></div>
+      <div class="a"><span>Print board</span><span class="t2">Letter · A4</span></div>
+    </div>
+  </div>
 </div>
 
 <script>
