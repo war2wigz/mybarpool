@@ -85,7 +85,8 @@
   .box.you{background:rgba(153,69,255,.28);border-color:var(--purple);font-weight:700}
   .box.lead{border:1.5px dotted var(--teal);box-shadow:0 0 0 1px rgba(0,194,255,.2) inset}
   .box.lead .tag,.box.won .tag{position:absolute;top:3px;right:4px;font:700 9px var(--body);letter-spacing:.04em;text-transform:uppercase}
-  .box.lead .tag{color:var(--teal)}
+  .box .star{position:absolute;top:1px;right:4px;font:15px/1 var(--body);color:var(--amber);text-shadow:0 0 6px rgba(255,176,32,.55)}
+  .box.won .star{right:34px}
   .box.won{background:rgba(20,241,149,.18);border-color:var(--green)}
   .box.won .tag{color:var(--green)}
   .teamlbl{display:flex;align-items:center;gap:6px;font:600 12px var(--body);color:var(--t2);letter-spacing:.06em;text-transform:uppercase}
@@ -322,7 +323,7 @@
         <div class="axis-side"><span class="d">3·9</span><span class="d">0·6</span><span class="d">7·4</span><span class="d">8·1</span><span class="d">2·5</span></div>
         <div class="boxes">
           <div class="box o1"><i class="n">1</i>mike</div><div class="box you"><i class="n">2</i>YOU</div><div class="box you won"><i class="n">3</i><i class="tag">Q1 ✓</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box o2"><i class="n">5</i>jon</div>
-          <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2 lead"><i class="n">7</i><i class="tag">Leading</i>jon</div><div class="box o1"><i class="n">8</i>mike</div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
+          <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2 lead"><i class="n">7</i><i class="star" aria-label="Leading at the current score">★</i>jon</div><div class="box o1"><i class="n">8</i>mike</div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
           <div class="box o4"><i class="n">11</i>sara</div><div class="box you"><i class="n">12</i>YOU</div><div class="box you"><i class="n">13</i>YOU</div><div class="box o4"><i class="n">14</i>sara</div><div class="box o2"><i class="n">15</i>jon</div>
           <div class="box o2"><i class="n">16</i>jon</div><div class="box you"><i class="n">17</i>YOU</div><div class="box o4"><i class="n">18</i>sara</div><div class="box o3"><i class="n">19</i>a3f9</div><div class="box o1"><i class="n">20</i>mike</div>
           <div class="box o4"><i class="n">21</i>sara</div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o3"><i class="n">24</i>a3f9</div><div class="box you"><i class="n">25</i>YOU</div>
@@ -333,7 +334,7 @@
     <div class="sect"><b>Payouts</b><span>on-chain</span></div>
     <table class="tbl">
       <tr><td class="t2">Q1 · 7–3</td><td class="amt win">0.225 SOL</td><td><span style="color:var(--green)">box 3 · YOU</span> <span class="link"></span></td></tr>
-      <tr><td class="t2">Q2</td><td class="amt">0.225 SOL</td><td><span style="color:var(--teal);font-size:13px">Leading · box 7 · jon</span></td></tr>
+      <tr><td class="t2">Q2</td><td class="amt">0.225 SOL</td><td><span style="color:var(--teal);font-size:13px"><span style="color:var(--amber)">★</span> Leading · box 7 · jon</span></td></tr>
       <tr><td class="t2">Q3</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
       <tr><td class="t2">Q4 · final</td><td class="amt">0.45 SOL</td><td class="t2">—</td></tr>
     </table>

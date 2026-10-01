@@ -23,8 +23,8 @@ Dark by default. Bars are dark, sportsbooks are dark, and neon only works on dar
 | `text-2` | `#9A9AAE` | Secondary text |
 | `purple` | `#9945FF` | Brand, links, focus rings |
 | `green` | `#14F195` | Money in, wins, confirmed |
-| `teal` | `#00C2FF` | Live indicators, provisional "leading" |
-| `amber` | `#FFB020` | Locked, waiting, attention |
+| `teal` | `#00C2FF` | Live indicators, provisional "leading" (border and text) |
+| `amber` | `#FFB020` | Locked, waiting, attention; the leading star on the grid |
 | `red` | `#FF4D6D` | Errors, returned pools |
 
 Team colors come from the NFL team palette and are used only inside grid axes and team chips, never as page chrome, so the app stays consistent across games.
@@ -48,7 +48,7 @@ The unit is a **box**, in every string the user sees and in every identifier in 
 2. **One primary action per screen.** Game list: pick a game. Game: pick a pool. Pool: buy. Nothing competes with it.
 3. **Casino-sportsbook density, not SaaS whitespace.** Cards are tight, information-rich, and stacked. Think a DraftKings game card, not a landing page hero.
 4. **Live means live.** Anything real-time pulses in `teal`. Anything settled is `green` with a checkmark and a transaction link. The two never share a color.
-5. **Provisional is labelled.** A box that would win at the current score is "Leading", in teal, with a dotted border. A paid box is "Won", green, solid. This is a hard rule (see ARCHITECTURE.md, live scores vs. results).
+5. **Provisional is labelled.** A box that would win at the current score is marked leading: a dotted teal border and a gold star (`amber`) in its corner, which moves to a different box whenever the score changes. The word "Leading" appears in the payouts table beside the same star, never inside the box, where it doesn't fit. A paid box is "Won", green, solid, with a checkmark. A star never means paid and a checkmark never means provisional. This is a hard rule (see ARCHITECTURE.md, live scores vs. results).
 6. **Wallet is invisible until needed.** Browse everything without connecting. The connect prompt appears only when tapping Buy or Create.
 7. **Built by hand.** See section 8 for what to avoid.
 
@@ -231,7 +231,7 @@ Grid rules:
 - Boxes numbered 1–25, top-left to bottom-right, number in the corner of each box in `text-2`.
 - Owner shown as .skr name, else first 4 chars of the wallet. The connected wallet's boxes say YOU on a purple fill. Multiple boxes by one owner share a subtle owner color (from a fixed 8-color set) so "4 boxes by ana" reads at a glance.
 - Axis digits render as `?` until the draw, then flip in with a short animation. Home team across the top, away down the side, with team chip and arrow. The two axes are shuffled independently on-chain (see ARCHITECTURE.md, Randomness), so the same pair may appear on both a column and a row; the UI shows whatever the program recorded and never re-derives digits itself.
-- Live: the leading box gets a dotted teal border and a small "Leading" tag. Won boxes get a solid green fill with the quarter label (Q1) and a checkmark. A box can be both (won Q1, leading Q3). On Q4 100% pools there is only the final prize, so the tag reads "Leading · final" from the current score all game.
+- Live: the leading box gets a dotted teal border and a gold star (★, `amber`, 15px) in the top-right corner, with a soft glow and a slow pulse while the game is live. No text inside the box: at grid size a word collided with the box number. The star moves with every score update and disappears when the quarter pays. Won boxes get a solid green fill with the quarter label (Q1) and a checkmark. A box can be both (won Q1, leading Q3): the Q1 ✓ label shifts left to make room and the star keeps the corner. The payouts table carries the word: "★ Leading · box 7 · jon" on the live quarter's row, in teal with the gold star, so the star is explained on the same screen. On Q4 100% pools there is only the final prize, so the row reads "★ Leading · final" from the current score all game.
 - Tapping a box opens a small sheet: owner, digits it covers (after draw), quarters won, transaction links.
 
 Header by status:
@@ -399,7 +399,7 @@ A creator has to sell 24 more boxes after buying their own, and most of that hap
 | `FillBar` | 25 segments, not a smooth bar, so "19/25" is countable. |
 | `ScoreStrip` | Team, score, clock; tabular numerals; pulse on change. |
 | `LineScore` | Q1–Q4 (+OT) per team, tabular. |
-| `BoxGrid` | The 5×5 with axes; props for digits, owners, leading, won, highlight-mine. Fully keyboard and screen-reader navigable (each box is a button with a label like "Box 10, owned by you, digits 3 and 7"). |
+| `BoxGrid` | The 5×5 with axes; props for digits, owners, leading (gold star + dotted teal border), won (green, Q label, checkmark), highlight-mine. Fully keyboard and screen-reader navigable (each box is a button with a label like "Box 10, owned by you, digits 3 and 7"). |
 | `BoxSheet` | Box detail popover. |
 | `BuySheet` | Stepper, cost breakdown, wallet state, confirm, result. |
 | `CreateSheet` | Three steps. |
@@ -478,7 +478,7 @@ Two kinds, never mixed:
 
 The app also reads a public REST listing (schedule, pools per game, wallet views) as a convenience. If it is unavailable the same lists are built from `getProgramAccounts` through the SDK, slower; no screen depends on the REST layer to function, only to be fast.
 
-Results (`won`, payouts, returns) come only from decoded program events or from account state that reflects them. The `leading` message and any locally computed leading box are display-only, teal, dotted, labelled.
+Results (`won`, payouts, returns) come only from decoded program events or from account state that reflects them. The `leading` message and any locally computed leading box are display-only: dotted teal border, gold star, the word "Leading" only in the payouts table.
 
 ### 10.2 Derived states
 
@@ -577,7 +577,8 @@ Results (`won`, payouts, returns) come only from decoded program events or from 
 - Axis digits render `?` until `axes` is set; the flip animation runs once when it changes from undefined to defined and never again (a re-mount must not replay it: keep a "hasAnimated" ref keyed by pool address).
 - Owner colours: the 8-colour set assigned in order of first purchase (event order), stable for the pool's life; `mine` overrides with purple.
 - Minimum tap target 44 dp per box on phones; the grid is square, width = screen width − 32 dp, axes outside it.
-- Accessibility: each box is a button with `accessibilityLabel` "Box 10, owned by you, digits 3 and 7" (or "unsold", or "digits not drawn yet"); axes are labelled "Home digits 3 and 7 in column 2".
+- Leading star: a single `★` glyph in `amber` at 15 px in the box's top-right corner (`position: absolute`), with a 6 px glow and a 2 s opacity pulse between 0.7 and 1 while the game is live; the pulse stops with the live socket. The star is a view with `accessibilityLabel` "Leading at the current score" and `importantForAccessibility: no` on the glyph itself so it isn't read twice. When the same box also has a won label, the label moves left by the star's width; nothing overlaps the box number, ever (the audit measures it at 320 dp width). No text tag is rendered inside a box for leading in any state.
+- Accessibility: each box is a button with `accessibilityLabel` "Box 10, owned by you, digits 3 and 7" (or "unsold", or "digits not drawn yet"), with ", leading at the current score" appended for the starred box and ", won Q1" for paid ones; axes are labelled "Home digits 3 and 7 in column 2".
 - `GridImage` renders the same component to 1080×1080 and 1080×1920 with the header (teams, price, fill or result), the short URL, and the sponsor line when present; on the server the same code runs in a headless browser.
 
 ### 10.10 Copy catalogue
