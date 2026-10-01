@@ -482,3 +482,4 @@ Terminal: `Settled`, `Returned`, `Split`. `sponsor` is allowed in `Open`, `Locke
 - Fees: independent of `sponsored_total`; paid exactly once; never paid on a returned pool; `FinalOnly` pays them with the final.
 - Rent: every closable account closes to the specified destination; nothing is left un-closable in any terminal state.
 - Layout: a snapshot test freezes account byte offsets and event schemas after Step 8; changes are additive only.
+- Composability: no instruction reads the instructions sysvar or depends on its position in the transaction or on its neighbours. Wallets add instructions of their own — Seed Vault Wallet appends Lighthouse assertion instructions after the dApp's — so the test suite runs every user-facing instruction with unrelated instructions before and after it (a memo, a compute-budget change, a Lighthouse-style assertion against the signer's balance) and expects identical results.
