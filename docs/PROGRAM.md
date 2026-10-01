@@ -64,6 +64,7 @@ One per deployment.
 |---|---|---|
 | `admin` | Pubkey | The Squads vault on mainnet |
 | `score_authority` | Pubkey | The keeper's KMS key |
+| `entropy_provider` | Pubkey | The Entropy provider whose commits `set_var` accepts (Regolith's provider key, read from a live ORE `Var` in Step 5); changeable by `update_config` |
 | `fee_wallet` | Pubkey | Platform fee destination (SOL directly; SPL to its ATA) |
 | `platform_bps` | u16 | ≤ `PLATFORM_BPS_MAX`; initial 500 |
 | `creator_bps` | u16 | ≤ `CREATOR_BPS_MAX`; initial 500 |
@@ -147,7 +148,10 @@ One per scheduled game. Created and rent-paid by the platform. Never closed.
 | `sponsor_count` | u16 | Distinct sponsor wallets ever |
 | `sponsorships_open` | u16 | `Sponsorship` accounts not yet closed |
 | `var` | Pubkey | Entropy `Var` recorded at lock; default until then |
+| `var_end_at` | u64 | The `Var`'s `end_at` as recorded by `set_var`; 0 until then |
 | `sampled_slot` | u64 | Slot at which this program's `sample_var` ran; 0 until then |
+| `sampled_hash` | [u8; 32] | The slot hash `sample_var` verified against `SlotHashes`; `draw` requires the `Var` still carries it |
+| `var_replacements` | u8 | Admin `replace_var` calls so far; max 2 |
 | `drawn` | bool | |
 | `home_axis` | [u8; 10] | Shuffled digits; lane `l` = positions `l`, `l+5` |
 | `away_axis` | [u8; 10] | |
@@ -259,20 +263,28 @@ Effects: transfers `amount` to the vault; creates `Sponsorship` (increment `spon
 
 ### 4.4 Draw
 
-Entropy flow, in order: keeper opens a `Var` with the Entropy program (authority = keeper, end slot ≈ 150 slots ahead); keeper calls `set_var`; after the end slot, keeper calls `sample_var` (this program CPIs Entropy `Sample`); provider reveals; keeper calls `draw`; then closes the `Var` through Entropy to recover its rent.
+What Entropy actually is (read from `regolith-labs/entropy`, program `3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X`, and from how ORE's `reset` consumes it; Step 5 confirms the deployed bytecode matches this source):
+
+- `Var` layout, in order: `authority: Pubkey`, `id: u64`, `provider: Pubkey`, `commit: [u8;32]`, `seed: [u8;32]`, `slot_hash: [u8;32]`, `value: [u8;32]`, `samples: u64`, `is_auto: u64`, `start_at: u64`, `end_at: u64`. PDA seeds `["var", authority, id]`. There is no field recording when or by whom it was sampled.
+- `Open(id, commit, is_auto, samples, end_at)`: signers are the authority and the payer; the provider is **not** required to sign, so the program does not prove the commit came from the provider — our `set_var` does (below). `end_at` must be in the future.
+- `Sample`: any signer, once `Clock.slot ≥ end_at`; silent no-op if already sampled. Reads the `SlotHashes` sysvar for `end_at`. **If that slot is no longer in the sysvar (older than 512 slots, about 3.4 minutes), it records `keccak(end_at.to_le_bytes())` instead** — a value anyone could compute at `Open`. A `Var` sampled that way is not random and must never be drawn on.
+- `Reveal(seed)`: any signer, after sampling; requires `keccak(seed) == commit`; sets `value = keccak(slot_hash ‖ seed ‖ samples.to_le_bytes())`.
+- `Next`: authority only; rolls `commit = seed` and clears the rest for the next value. `Close`: authority.
+
+Entropy flow, in order: the keeper requests a commit from the Entropy API for the provider in `config.entropy_provider`, opens a `Var` (authority = keeper, `samples = 1`, `is_auto = 0`, `end_at` ≈ 150 slots ahead); keeper calls `set_var`; at `end_at` the keeper calls `sample_var` (this program CPIs `Sample` and verifies the hash); the keeper fetches the seed from the Entropy API and calls Entropy `Reveal` directly (any signer may); keeper calls `draw`; then closes the `Var` through Entropy to recover its rent. `Sample` and `Reveal` are permissionless, so the SDK exposes both and the public verify page offers them: if the keeper is down, anyone can keep a pool's draw honest by sampling in the window.
 
 **`set_var(var)`** — signer: keeper.
-Checks: `status == Locked`; `pool.var == default`; `var` is owned by `ENTROPY_PROGRAM`; the `Var`'s commit is set and its value is not yet revealed. Sets `pool.var`. Emits `VarSet`. One call per pool; the admin's `replace_var` is the only way to change it.
+Checks: `status == Locked`; `pool.var == default`; `var` is owned by `ENTROPY_PROGRAM`; `var.provider == config.entropy_provider` (else `VarProviderMismatch`; this is a label the opener sets, not a proof the provider issued the commit, because Entropy's `Open` does not require the provider's signature — it keeps the verify page honest and lets an auditor check commits against the provider's API, while the properties that make a self-made commit useless are the ones below: the slot hash is unknown until after sales close, the fallback is rejected, re-rolls are capped); `var.commit != 0`; `var.seed == 0`, `var.slot_hash == 0`, `var.value == 0` (committed, unsampled, unrevealed); `var.samples == 1`; `var.is_auto == 0`; `var.end_at > Clock.slot`. Sets `pool.var`, `var_end_at = var.end_at`. Emits `VarSet`. One call per pool; the admin's `replace_var` is the only way to change it.
 
-**`sample_var()`** — signer: keeper. Accounts: pool, the recorded `var`, Entropy program and whatever `Sample` needs.
-Checks: `status == Locked`; `pool.var != default`; `sampled_slot == 0`; `Clock.slot > var.end_slot`. CPIs Entropy `Sample`; on success sets `sampled_slot = Clock.slot`. Emits `VarSampled`. If `Sample` fails because the `Var` was already sampled by someone else, this instruction fails and `draw` will refuse (below): a value this program did not sample inside the window is never used.
+**`sample_var()`** — signer: keeper. Accounts: pool, the recorded `var`, `SlotHashes` sysvar, Entropy program.
+Checks: `status == Locked`; `pool.var != default`; `sampled_slot == 0`; `Clock.slot ≥ var.end_at`. If `var.slot_hash == 0`, CPIs Entropy `Sample`. Then, whether this call sampled or someone else did, reads `SlotHashes` itself and requires that it still contains `var.end_at` and that `var.slot_hash` equals that entry (else `SampleWindowMissed`); this is what proves the recorded hash is the real slot hash and not the `keccak(end_at)` fallback. Sets `sampled_slot = Clock.slot`, `sampled_hash = var.slot_hash`. Emits `VarSampled`.
 
 **`draw()`** — signer: keeper. Accounts: pool, the recorded `var`.
-Checks: `status == Locked`; `!drawn`; `var == pool.var`; the `Var` is revealed; `sampled_slot != 0` and the `Var`'s recorded sample slot equals `sampled_slot` (confirmed against the live `Var` layout in Step 5; if the layout does not expose the sample slot, the check is `sampled_slot != 0` plus `sampled_slot ≤ var.end_slot + 512`, and `set_var` additionally requires that the `Var` has not been sampled).
-Effects: derives both axes (§6.2); `drawn = true`; `status = Drawn`. Emits `DigitsDrawn { home_axis, away_axis, var, value }`.
+Checks: `status == Locked`; `!drawn`; `var == pool.var`; `sampled_slot != 0`; `var.slot_hash == pool.sampled_hash` (the `Var` has not been rolled with `Next` or re-opened); `var.slot_hash != keccak(var.end_at.to_le_bytes())` (defence in depth against the fallback, `VarFallbackHash`); `var.seed != 0` and `var.value != 0` (revealed); `var.value == keccak(var.slot_hash ‖ var.seed ‖ var.samples.to_le_bytes())` (recomputed, `VarNotRevealed` if not).
+Effects: derives both axes (§6.2) from `var.value`; `drawn = true`; `status = Drawn`. Emits `DigitsDrawn { home_axis, away_axis, var, value }`.
 
 **`replace_var(new_var)`** — signer: admin.
-Checks: `status == Locked`; `!drawn`; `new_var` owned by Entropy, committed, unrevealed. Sets `pool.var = new_var`, `sampled_slot = 0`. Emits `VarReplaced { old, new }`. Never callable by the keeper.
+Checks: `status == Locked`; `!drawn`; `var_replacements < 2` (else `TooManyVarReplacements`); `new_var` passes every `set_var` check. Sets `pool.var = new_var`, `var_end_at`, `sampled_slot = 0`, `sampled_hash = 0`, `var_replacements += 1`. Emits `VarReplaced { old, new }`. Never callable by the keeper. Why a cap: a `Var` only ever needs replacing when the sample window was missed or the provider never revealed; a third miss is an incident, not bad luck, and the admin's remaining move is `cancel_pool` (full return). Without a cap, a party who knew a seed and could delay sampling could re-roll until a value suited them; with it, that party gets at most three tries, and every try is an event on a public verify page.
 
 ### 4.5 Settlement
 
@@ -416,6 +428,8 @@ Columns are the home team (across the top), rows the away team (down the side). 
 
 All events are additive: fields are appended, never removed or reordered. Every event carries `pool` (or `game` for game events) and the Unix time.
 
+Events are emitted with Anchor's `emit_cpi!` (a self-CPI whose instruction data is the event), not `emit!` (program logs). Logs are truncated by the runtime when a transaction logs too much, and the indexer, the app and third parties treat `QuarterSettled` as the only proof of a result, so a result must never be lost to truncation. ORE does the same with its `Log` instruction for the same reason. `emit_cpi!` adds the event-authority PDA and the program itself to every emitting instruction's account list; the SDK supplies them.
+
 | Event | Fields |
 |---|---|
 | `ConfigUpdated` | full config snapshot |
@@ -443,7 +457,7 @@ Clients show a box as **won** only on `QuarterSettled`; nothing else is a result
 
 Numbered from 6000 (Anchor custom errors). Names are the contract; numbers follow declaration order and are frozen once the program ships.
 
-`Unauthorized`, `Paused`, `GameNotScheduled`, `GameAlreadyMarked`, `SalesClosed`, `KickoffInPast`, `KickoffOutOfBounds`, `KickoffUpdateTooLate`, `QuarterOutOfOrder`, `QuarterTooSoon`, `ScoreDecreased`, `FinalFlagMismatch`, `TokenDisabled`, `PriceOffLadder`, `InvalidPreset`, `InvalidAccessType`, `GateKeyMissing`, `GateKeyNotSigner`, `AllowlistProofInvalid`, `AddonBudgetExceeded`, `IntegratorMismatch`, `OpenPoolLimit`, `OwnBoxLimit`, `OverrideRequired`, `NothingToBuy`, `TooManyBoxes`, `PoolNotOpen`, `PoolNotLocked`, `PoolNotDrawn`, `SponsorshipTooSmall`, `SponsorshipCapExceeded`, `VarAlreadySet`, `VarNotSet`, `VarMismatch`, `VarNotEntropy`, `VarNotRevealed`, `VarNotSampledHere`, `SampleWindowMissed`, `AlreadyDrawn`, `ScoresNotPosted`, `WinnerMismatch`, `FeeAccountMismatch`, `NotReturnable`, `FeesAlreadyPaid`, `NotSuspended`, `NotSplittable`, `ReclaimTooEarly`, `NotOwner`, `NothingToReturn`, `SponsorshipsStillOpen`, `BoxesStillOutstanding`, `PoolNotTerminal`, `CounterNotEmpty`, `UnsupportedMintExtension`, `MathOverflow`.
+`Unauthorized`, `Paused`, `GameNotScheduled`, `GameAlreadyMarked`, `SalesClosed`, `KickoffInPast`, `KickoffOutOfBounds`, `KickoffUpdateTooLate`, `QuarterOutOfOrder`, `QuarterTooSoon`, `ScoreDecreased`, `FinalFlagMismatch`, `TokenDisabled`, `PriceOffLadder`, `InvalidPreset`, `InvalidAccessType`, `GateKeyMissing`, `GateKeyNotSigner`, `AllowlistProofInvalid`, `AddonBudgetExceeded`, `IntegratorMismatch`, `OpenPoolLimit`, `OwnBoxLimit`, `OverrideRequired`, `NothingToBuy`, `TooManyBoxes`, `PoolNotOpen`, `PoolNotLocked`, `PoolNotDrawn`, `SponsorshipTooSmall`, `SponsorshipCapExceeded`, `VarAlreadySet`, `VarNotSet`, `VarMismatch`, `VarNotEntropy`, `VarProviderMismatch`, `VarNotFresh`, `VarNotRevealed`, `VarNotSampledHere`, `SampleWindowMissed`, `VarFallbackHash`, `TooManyVarReplacements`, `AlreadyDrawn`, `ScoresNotPosted`, `WinnerMismatch`, `FeeAccountMismatch`, `NotReturnable`, `FeesAlreadyPaid`, `NotSuspended`, `NotSplittable`, `ReclaimTooEarly`, `NotOwner`, `NothingToReturn`, `SponsorshipsStillOpen`, `BoxesStillOutstanding`, `PoolNotTerminal`, `CounterNotEmpty`, `UnsupportedMintExtension`, `MathOverflow`.
 
 ## 9. State machines
 
