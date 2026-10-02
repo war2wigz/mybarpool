@@ -601,7 +601,7 @@ Strings that appear in more than one place live in one file, `apps/app/src/copy.
 
 ### 10.11 Configuration and environments
 
-- Build-time config: program ID, config PDA, RPC URL(s), scores API base, explorer base, FCM sender ID, and the error-reporting endpoint on the MyBarPool API (crashes and program errors only, no analytics, no third-party SDK). Two profiles: `local` (localnet, file signer for test tooling, fixture scores) and `production`. No `devnet` profile exists.
+- Build-time config: program ID, config PDA, RPC URL(s) — the Android build and the web build each carry their own provider key, distinct from each other and from the server's, per ARCHITECTURE › Unit economics (RPC keys); the key's exposure in a bundle is accepted and bounded by the provider's per-key limits — scores API base, explorer base, FCM sender ID, and the error-reporting endpoint on the MyBarPool API (crashes and program errors only, no analytics, no third-party SDK). Two profiles: `local` (localnet, file signer for test tooling, fixture scores) and `production`. No `devnet` profile exists.
 - Feature flags read from the on-chain config where they are rules (`paused`, `preseason_enabled`, `default_preset`, ladders) and from build config where they are app-only (private pools UI, USD hint).
 - Team assets bundled: 32 logos at two sizes, colours and abbreviations from `packages/shared`.
 - Localisation: English only in v1; all strings still go through the copy file so a second language is a file, not a refactor.
