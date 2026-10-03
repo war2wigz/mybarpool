@@ -1,0 +1,42 @@
+{
+  "name": "@mybarpool/shared",
+  "version": "0.0.0",
+  "description": "MyBarPool client SDK: box labelling, grid and payout math, team table, account types and instruction builders for the MyBarPool program.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/war2wigz/mybarpool.git",
+    "directory": "packages/shared"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@solana/kit": "^8.4.0"
+  },
+  "devDependencies": {
+    "@solana/kit": "8.4.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3"
+  }
+}

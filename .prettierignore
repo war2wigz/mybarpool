@@ -1,0 +1,9 @@
+node_modules/
+dist/
+target/
+.anchor/
+.surfpool/
+package-lock.json
+# Prose and the generated table are kept as written.
+docs/
+*.md

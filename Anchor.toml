@@ -1,0 +1,33 @@
+[toolchain]
+anchor_version = "1.2.0"
+solana_version = "4.3.0"
+package_manager = "npm"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+mybarpool = "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "npx vitest run --root tests"
+
+# Localnet is Surfpool forking mainnet (ARCHITECTURE › Environments): Entropy,
+# the ORE and SKR mints and any other mainnet account are fetched on first use,
+# so there is no clone script. 200 ms slots so timing tests run at mainnet's
+# pace from epoch 1052; Surfpool's own default is 400 ms. Surfpool is Anchor
+# 1.2's default validator; `ANCHOR_TEST_VALIDATOR=legacy` is never used here.
+[surfpool]
+rpc_port = 8899
+ws_port = 8900
+online = true
+datasource_rpc_url = "https://api.mainnet-beta.solana.com"
+slot_time = 200
+log_level = "info"
+startup_wait = 30000
+shutdown_wait = 5000

@@ -1,0 +1,141 @@
+name: CI
+
+# Program and SDK tests on every push and pull request (build plan Step 0).
+# Three jobs, each one a gate:
+#   program  — `anchor build --arch v3`, the SBPFv3 header check, Mollusk
+#              unit tests, the compute-unit table (diff shown, never a failure),
+#              and the Surfpool localnet suite forking mainnet.
+#   sdk      — packages/shared build, tests and typecheck; the lockfile must
+#              carry exactly one @solana/kit major and no @solana/web3.js.
+#   lints    — OtterSec anchor-lints via cargo dylint (lints.yml).
+# Pinned versions come from rust-toolchain.toml, Anchor.toml and package.json.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  SOLANA_VERSION: "4.3.0"
+  ANCHOR_VERSION: "1.2.0"
+  SURFPOOL_VERSION: "1.6.0"
+
+jobs:
+  program:
+    name: Program (build v3, Mollusk, Surfpool)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install Rust (rust-toolchain.toml)
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.cargo/bin/rustup" show active-toolchain
+
+      - name: Install Solana ${{ env.SOLANA_VERSION }}, Anchor ${{ env.ANCHOR_VERSION }}, Surfpool ${{ env.SURFPOOL_VERSION }}
+        run: |
+          set -euo pipefail
+          sh -c "$(curl -sSfL "https://release.anza.xyz/v${SOLANA_VERSION}/install")"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+          curl -sSfL -o "$HOME/.cargo/bin/anchor" \
+            "https://github.com/coral-xyz/anchor/releases/download/v${ANCHOR_VERSION}/anchor-${ANCHOR_VERSION}-x86_64-unknown-linux-gnu"
+          chmod +x "$HOME/.cargo/bin/anchor"
+          curl -sSfL -o /tmp/surfpool.tar.gz \
+            "https://github.com/txtx/surfpool/releases/download/v${SURFPOOL_VERSION}/surfpool-linux-x64.tar.gz"
+          tar -xzf /tmp/surfpool.tar.gz -C /tmp
+          install -m 755 "$(find /tmp -name surfpool -type f | head -1)" "$HOME/.cargo/bin/surfpool"
+
+      - name: Versions
+        run: |
+          rustc --version && cargo --version
+          solana --version && cargo-build-sbf --version
+          anchor --version && surfpool --version && node --version
+
+      - name: Local wallet for the test provider
+        run: solana-keygen new --no-bip39-passphrase --silent -o "$HOME/.config/solana/id.json"
+
+      - name: Program keypair and declared id
+        # The program keypair is never committed. CI generates one and syncs
+        # declare_id!/Anchor.toml to it so the deployed id matches the binary.
+        run: |
+          set -euo pipefail
+          mkdir -p target/deploy
+          solana-keygen new --no-bip39-passphrase --silent -o target/deploy/mybarpool-keypair.json
+          anchor keys sync
+          grep -n 'mybarpool = ' Anchor.toml
+
+      - name: anchor build --arch v3
+        run: anchor build --arch v3
+
+      - name: SBPFv3 header check
+        # An unflagged ELF is v0 and a bug (ARCHITECTURE › Toolchain).
+        run: |
+          set -euo pipefail
+          readelf -h target/deploy/mybarpool.so | tee /dev/stderr | grep -q 'Flags:\s*0x3'
+
+      - name: Mollusk unit tests
+        run: cargo test -p mybarpool --locked
+
+      - name: Compute-unit table
+        # Regenerated every run; a changed row is a review item, not a failure.
+        run: |
+          set -euo pipefail
+          cargo bench -p mybarpool --locked
+          git --no-pager diff --stat -- programs/mybarpool/compute_units.md || true
+          git --no-pager diff -- programs/mybarpool/compute_units.md || true
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Localnet suite (Surfpool, mainnet fork)
+        # The suite reads the program id from the synced Anchor.toml, so it
+        # asserts whatever id CI generated is deployed and executable.
+        run: anchor test --skip-build
+
+      - name: Surfpool logs on failure
+        if: failure()
+        run: tail -n 200 .surfpool/logs/*.log || true
+
+  sdk:
+    name: SDK (packages/shared)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: One Kit major, no web3.js (ARCHITECTURE › Clients)
+        run: |
+          set -euo pipefail
+          if grep -q '"node_modules/@solana/web3.js"' package-lock.json; then
+            echo "@solana/web3.js is in the lockfile"; exit 1
+          fi
+          majors=$(node -e 'const l=require("./package-lock.json");const s=new Set();for(const [k,v] of Object.entries(l.packages)){if(k.endsWith("node_modules/@solana/kit"))s.add(v.version.split(".")[0])}console.log([...s].join(" "))')
+          echo "@solana/kit majors: $majors"
+          test "$(echo "$majors" | wc -w)" = "1"
+
+      - run: npm run build
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run format

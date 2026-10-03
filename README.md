@@ -199,7 +199,17 @@ All eleven frames, including the share sheet, the sponsor sheet and My Boxes, ar
 
 ## Toolchain
 
-Latest stable Solana tooling only, pinned in-repo, verifiable builds. At the time of writing: Agave/Solana CLI 4.3.0, Anchor 1.2.0, platform-tools v1.57. The deployed program will be verified with `solana-verify` so anyone can confirm mainnet runs the code in this repo. Localnet tests run against the real Entropy program and the real SKR and ORE mints cloned from mainnet.
+Latest stable Solana tooling only, pinned in-repo, verifiable builds. Pinned today: Agave/Solana CLI 4.3.0, Anchor 1.2.0, platform-tools v1.57, Surfpool 1.6.0, Mollusk 0.15.1, `solana-verify` 0.5.2, `@solana/kit` 8.4.0, Node 22. The program is built as SBPFv3 (`anchor build --arch v3`; CI fails unless the ELF header says so), and the deployed program will be verified with `solana-verify` so anyone can confirm mainnet runs the code in this repo. Localnet tests run against the real Entropy program and the real SKR and ORE mints, fetched from mainnet by Surfpool on first use.
+
+To build and test locally with the pins: install Rust (`rust-toolchain.toml` picks the version), the Solana CLI 4.3.0, Anchor 1.2.0 and Surfpool 1.6.0, then
+
+```bash
+anchor build --arch v3        # program + IDL; readelf -h target/deploy/mybarpool.so shows Flags: 0x3
+cargo test -p mybarpool       # Mollusk unit tests
+cargo bench -p mybarpool      # rewrites programs/mybarpool/compute_units.md
+npm ci && npm test            # packages/shared
+anchor test --skip-build      # Surfpool localnet suite, forking mainnet
+```
 
 ## Licence, trademarks, security
 

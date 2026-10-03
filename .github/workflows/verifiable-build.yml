@@ -1,0 +1,79 @@
+name: Verifiable build
+
+# The Solana Foundation's reusable build-verify-deploy workflow, pinned to a
+# tag, with deploy, IDL upload and Squads wired but OFF until Step 14 of the
+# build plan. It produces the verifiable-build hash on every push to main.
+#
+# Its `build-verified` action has no SBPF arch input and builds v0, so the
+# `sbpf-v3` job below runs `solana-verify build --arch v3` itself and fails
+# unless the ELF header reports `Flags: 0x3` (ARCHITECTURE › Toolchain,
+# SIMD-0500). When the reusable workflow gains an arch input, switch to it and
+# keep the readelf check.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy after build (Step 14 only; needs the mainnet secrets)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  SOLANA_VERIFY_VERSION: "0.5.2"
+  # Placeholder until the mainnet program id exists (Step 14). It must be a
+  # valid pubkey for the reusable workflow's input; verification is off.
+  PROGRAM_ID: "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw"
+
+jobs:
+  foundation-build:
+    name: Foundation reusable build (hash only)
+    uses: solana-foundation/github-workflows/.github/workflows/reusable-build.yaml@757c3917783064cbdd76f71c6b23e38e7b440dcb # v0.5.2
+    with:
+      program: mybarpool
+      program-id: "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw"
+      network: mainnet
+      deploy: false
+      upload_idl: false
+      verify: false
+      use-squads: false
+      squads-export: false
+      use-program-metadata-idl: true
+    # Secrets are intentionally not passed: nothing here deploys. Step 14 adds
+    # MAINNET_DEPLOYER_KEYPAIR, MAINNET_MULTISIG and MAINNET_MULTISIG_VAULT and
+    # flips deploy/upload_idl/verify/use-squads/squads-export to true.
+
+  sbpf-v3:
+    name: solana-verify build --arch v3 + readelf
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Install Rust (rust-toolchain.toml)
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Install solana-verify ${{ env.SOLANA_VERIFY_VERSION }}
+        run: cargo install solana-verify --version "$SOLANA_VERIFY_VERSION" --locked
+
+      - name: solana-verify build --arch v3
+        # Docker-based reproducible build, the same command Step 14's runbook
+        # and `solana-verify remote submit-job --arch v3` use.
+        run: solana-verify build --arch v3 --library-name mybarpool
+
+      - name: SBPFv3 header check
+        run: |
+          set -euo pipefail
+          readelf -h target/deploy/mybarpool.so | tee /dev/stderr | grep -q 'Flags:\s*0x3'
+
+      - name: Executable hash
+        run: solana-verify get-executable-hash target/deploy/mybarpool.so

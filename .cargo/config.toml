@@ -1,0 +1,4 @@
+# Where Mollusk and the compute-unit bench find the built program.
+# Build first: `anchor build --arch v3` (or `cargo build-sbf --arch v3`).
+[env]
+SBF_OUT_DIR = { value = "target/deploy", relative = true }

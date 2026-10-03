@@ -1,0 +1,37 @@
+[workspace]
+members = ["programs/*"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+# Minimum the crate accepts; platform-tools v1.57 compiles SBF with rustc
+# 1.95-dev, so this must stay ≤ 1.95. The host toolchain (rust-toolchain.toml)
+# is newer because Mollusk's Agave crates need it.
+rust-version = "1.89.0"
+license = "Apache-2.0"
+repository = "https://github.com/war2wigz/mybarpool"
+
+# Pinned exactly (ARCHITECTURE › Toolchain). Bumps happen in their own commit
+# with the test suite green before and after.
+[workspace.dependencies]
+anchor-lang = "=1.2.0"
+anchor-spl = "=1.2.0"
+mollusk-svm = "=0.15.1"
+mollusk-svm-bencher = "=0.15.1"
+solana-security-txt = "=1.1.3"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1
+
+# OtterSec anchor-lints (ARCHITECTURE › Toolchain). Pinned to a commit; the
+# `lints` job in CI runs `cargo dylint --all`.
+[workspace.metadata.dylint]
+libraries = [
+    { git = "https://github.com/otter-sec/anchor-lints", rev = "d8116dd619414c1b4dd9d17cd66458e66f699c0a", pattern = "lints" },
+]
