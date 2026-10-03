@@ -33,5 +33,5 @@ codegen-units = 1
 # `lints` job in CI runs `cargo dylint --all`.
 [workspace.metadata.dylint]
 libraries = [
-    { git = "https://github.com/otter-sec/anchor-lints", rev = "d8116dd619414c1b4dd9d17cd66458e66f699c0a", pattern = "lints" },
+    { git = "https://github.com/otter-sec/anchor-lints", rev = "d8116dd619414c1b4dd9d17cd66458e66f699c0a", pattern = "lints/*" },
 ]

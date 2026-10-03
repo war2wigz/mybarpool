@@ -1,0 +1,71 @@
+name: Audit dependency updates
+
+# Anza's audit-dep-update skill (anza-xyz/claude-skills) reviews every
+# Dependabot PR and comments a NO CONCERN / CONCERN verdict. A CONCERN
+# blocks merge until a person has read it; the full findings go to the
+# private security repo named in the SECURITY_REPO variable, not to the PR.
+#
+# Secrets and variables the owner sets on this repository:
+#   ANTHROPIC_API_KEY  (secret)   runs the audit
+#   SECURITY_TOKEN     (secret)   fine-grained PAT with Issues: write on SECURITY_REPO
+#   SECURITY_REPO      (variable) owner/repo that receives CONCERN findings
+# Without ANTHROPIC_API_KEY the job fails, which is the intended fail-closed
+# behaviour for a required check.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - "**/Cargo.toml"
+      - package-lock.json
+      - package.json
+      - "**/package.json"
+      - .github/workflows/**
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  audit:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Install the audit-dep-update skill
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: anza-xyz/claude-skills
+          ref: 0ec828e9f44bb9d49b0814b6f4a40a48e4aedca6 # main, 2026-03-28
+          path: .dep-audit-skill
+          persist-credentials: false
+
+      - name: Copy skill into place
+        run: |
+          mkdir -p .claude/commands
+          cp .dep-audit-skill/commands/audit-dep-update.md .claude/commands/
+          cp -r .dep-audit-skill/commands/audit-dep-update-refs .claude/commands/
+
+      - name: Audit dependency update
+        uses: anthropics/claude-code-action@e7b588b6eaa5263c2e7c6c7b34a29e190d32ee68 # v1
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+          SECURITY_REPO: ${{ vars.SECURITY_REPO }}
+          GH_TOKEN: ${{ secrets.SECURITY_TOKEN }}
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Run /audit-dep-update with the PR number from the PR_NUMBER
+            environment variable.
+
+            Post the full verdict as your response. This becomes the PR
+            comment. If the verdict is CONCERN, post only the redacted
+            version — full findings go to the private issue.
+          claude_args: "--max-turns 30"

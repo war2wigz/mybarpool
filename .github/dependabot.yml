@@ -1,0 +1,48 @@
+# Dependabot on the public tree (build plan Step 0). Every dependency PR is
+# audited by audit-dep-update.yml, which must come back NO CONCERN before
+# merge. Weekly, grouped minor/patch so the bumps are reviewable; majors stay
+# separate because the toolchain pins (ARCHITECTURE › Toolchain) are bumped in
+# their own commits with the suite green before and after.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      cargo-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Pinned exactly; bumped by hand with the Agave release they track.
+      - dependency-name: anchor-lang
+      - dependency-name: anchor-spl
+      - dependency-name: mollusk-svm
+      - dependency-name: mollusk-svm-bencher
+      - dependency-name: solana-program-runtime
+      - dependency-name: solana-security-txt
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # One Kit major per lockfile; Kit moves by hand.
+      - dependency-name: "@solana/kit"
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["*"]
