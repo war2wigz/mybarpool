@@ -1,8 +1,8 @@
 # Dependabot on the public tree (build plan Step 0). Every dependency PR is
-# audited by audit-dep-update.yml, which must come back NO CONCERN before
-# merge. Weekly, grouped minor/patch so the bumps are reviewable; majors stay
-# separate because the toolchain pins (ARCHITECTURE › Toolchain) are bumped in
-# their own commits with the suite green before and after.
+# read by a person before merge (the AI review of dependency PRs arrives in a
+# later step). Weekly, grouped minor/patch so the bumps are reviewable; majors
+# stay separate because the toolchain pins (ARCHITECTURE › Toolchain) are
+# bumped in their own commits with the suite green before and after.
 version: 2
 updates:
   - package-ecosystem: cargo
