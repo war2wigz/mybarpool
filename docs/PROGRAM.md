@@ -54,7 +54,7 @@ The mapping from each source's IDs to a `GameKey` lives in `packages/shared` and
 
 ## 3. Accounts
 
-Every account has an 8-byte Anchor discriminator, the fields below in order, and `reserved` padding at the end so fields can be appended without a migration. Sizes are the serialized sizes; rent follows from them.
+Every account has an 8-byte Anchor discriminator and the fields below in order. The long-lived accounts (`PlatformConfig`, `GameRecord`, `Pool`) end with `reserved` padding so fields can be appended without a migration; the small accounts (`CreatorCounter`, `WalletOverride`, `Sponsorship`) have none, and a new field on one of them is a new account type. Sizes are the serialized sizes; rent follows from them.
 
 ### 3.1 `PlatformConfig` — seeds `["config"]`
 
@@ -91,7 +91,7 @@ One per deployment.
 | `max_price` | u64 | Base units |
 | `max_sponsorship` | u64 | Per pool, base units; initial `25 × max_price` |
 
-Invariants enforced on every write: `platform_bps + creator_bps + addon_budget_bps ≤ TOTAL_BPS_MAX`; `min_price ≥ 1`; `step ≥ 1`; `min_price ≤ max_price`; `(max_price − min_price) % step == 0`; `max_open_pools ≥ 1`; `1 ≤ max_own_boxes ≤ MAX_OWN_BOXES_ABSOLUTE`.
+Invariants enforced on every write: `platform_bps + creator_bps + addon_budget_bps ≤ TOTAL_BPS_MAX`; `min_price ≥ 1`; `step ≥ 1`; `min_price ≤ max_price`; `(max_price − min_price) % step == 0`; `max_open_pools ≥ 1`; `1 ≤ max_own_boxes ≤ MAX_OWN_BOXES_ABSOLUTE`; `admin` is never the default pubkey (a zeroed admin would leave the config unchangeable).
 
 Initial ladders: SOL `0.05 / 0.05 / 1`; SKR `100 / 100 / 5 000`; ORE `0.05 / 0.05 / 1` (in whole tokens; stored in base units).
 
@@ -198,8 +198,8 @@ Created by `create_pool` when absent (creator pays rent), incremented there, dec
 | Field | Type | Notes |
 |---|---|---|
 | `wallet` | Pubkey | |
-| `max_open_pools` | u8 | |
-| `max_own_boxes` | u8 | ≤ `MAX_OWN_BOXES_ABSOLUTE` |
+| `max_open_pools` | u8 | ≥ 1 |
+| `max_own_boxes` | u8 | 1 ≤ … ≤ `MAX_OWN_BOXES_ABSOLUTE` |
 | `bump` | u8 | |
 
 Admin-created. When present it replaces both config values for that wallet. Passed as an optional account to `create_pool` and `buy`; if the account at the derived address exists, it must be passed, and the program checks the address, so a client cannot omit it to escape a lower limit.
@@ -221,11 +221,11 @@ Each entry: who signs, what is checked, what changes, what is emitted. "Admin" i
 
 ### 4.1 Administration
 
-**`initialize(params)`** — signer: the deploying key, which becomes `admin` until changed.
+**`initialize(params)`** — signer: the deploying key, which becomes `admin` until changed. "The deploying key" is the program's upgrade authority, checked against the `ProgramData` account of this program (its `upgrade_authority_address`), so nobody else can create the single `["config"]` account first.
 Creates `PlatformConfig` with the given fields; enforces the §3.1 invariants. Emits `ConfigUpdated`.
 
 **`update_config(params)`** — signer: admin.
-Any subset of: `admin`, `score_authority`, `fee_wallet`, `platform_bps`, `creator_bps`, `addon_budget_bps`, `default_preset`, `max_open_pools`, `max_own_boxes`, `preseason_enabled`, `paused`, and any `TokenRule`. Enforces the §3.1 invariants; bps may go down or up but never above the constants. Emits `ConfigUpdated` with the full new config. Existing pools are untouched: their fee amounts and price are on their own account.
+Any subset of: `admin`, `score_authority`, `entropy_provider`, `fee_wallet`, `platform_bps`, `creator_bps`, `addon_budget_bps`, `default_preset`, `max_open_pools`, `max_own_boxes`, `preseason_enabled`, `paused`, and any `TokenRule`. Enforces the §3.1 invariants; bps may go down or up but never above the constants. Emits `ConfigUpdated` with the full new config. Existing pools are untouched: their fee amounts and price are on their own account.
 
 **`set_wallet_override(wallet, max_open_pools, max_own_boxes)`** — signer: admin. Creates or updates `WalletOverride`. Emits `OverrideSet`.
 
@@ -457,7 +457,9 @@ Clients show a box as **won** only on `QuarterSettled`; nothing else is a result
 
 Numbered from 6000 (Anchor custom errors). Names are the contract; numbers follow declaration order and are frozen once the program ships.
 
-`Unauthorized`, `Paused`, `GameNotScheduled`, `GameAlreadyMarked`, `SalesClosed`, `KickoffInPast`, `KickoffOutOfBounds`, `KickoffUpdateTooLate`, `QuarterOutOfOrder`, `QuarterTooSoon`, `ScoreDecreased`, `FinalFlagMismatch`, `TokenDisabled`, `PriceOffLadder`, `InvalidPreset`, `InvalidAccessType`, `GateKeyMissing`, `GateKeyNotSigner`, `AllowlistProofInvalid`, `AddonBudgetExceeded`, `IntegratorMismatch`, `OpenPoolLimit`, `OwnBoxLimit`, `OverrideRequired`, `NothingToBuy`, `TooManyBoxes`, `PoolNotOpen`, `PoolNotLocked`, `PoolNotDrawn`, `SponsorshipTooSmall`, `SponsorshipCapExceeded`, `VarAlreadySet`, `VarNotSet`, `VarMismatch`, `VarNotEntropy`, `VarProviderMismatch`, `VarNotFresh`, `VarNotRevealed`, `VarNotSampledHere`, `SampleWindowMissed`, `VarFallbackHash`, `TooManyVarReplacements`, `AlreadyDrawn`, `ScoresNotPosted`, `WinnerMismatch`, `FeeAccountMismatch`, `NotReturnable`, `FeesAlreadyPaid`, `NotSuspended`, `NotSplittable`, `ReclaimTooEarly`, `NotOwner`, `NothingToReturn`, `SponsorshipsStillOpen`, `BoxesStillOutstanding`, `PoolNotTerminal`, `CounterNotEmpty`, `UnsupportedMintExtension`, `MathOverflow`.
+`Unauthorized`, `Paused`, `GameNotScheduled`, `GameAlreadyMarked`, `SalesClosed`, `KickoffInPast`, `KickoffOutOfBounds`, `KickoffUpdateTooLate`, `QuarterOutOfOrder`, `QuarterTooSoon`, `ScoreDecreased`, `FinalFlagMismatch`, `TokenDisabled`, `PriceOffLadder`, `InvalidPreset`, `InvalidAccessType`, `GateKeyMissing`, `GateKeyNotSigner`, `AllowlistProofInvalid`, `AddonBudgetExceeded`, `IntegratorMismatch`, `OpenPoolLimit`, `OwnBoxLimit`, `OverrideRequired`, `NothingToBuy`, `TooManyBoxes`, `PoolNotOpen`, `PoolNotLocked`, `PoolNotDrawn`, `SponsorshipTooSmall`, `SponsorshipCapExceeded`, `VarAlreadySet`, `VarNotSet`, `VarMismatch`, `VarNotEntropy`, `VarProviderMismatch`, `VarNotFresh`, `VarNotRevealed`, `VarNotSampledHere`, `SampleWindowMissed`, `VarFallbackHash`, `TooManyVarReplacements`, `AlreadyDrawn`, `ScoresNotPosted`, `WinnerMismatch`, `FeeAccountMismatch`, `NotReturnable`, `FeesAlreadyPaid`, `NotSuspended`, `NotSplittable`, `ReclaimTooEarly`, `NotOwner`, `NothingToReturn`, `SponsorshipsStillOpen`, `BoxesStillOutstanding`, `PoolNotTerminal`, `CounterNotEmpty`, `UnsupportedMintExtension`, `MathOverflow`, `InvalidConfig`.
+
+`InvalidConfig` (6059) is the error for a violated §3.1 or §3.6 invariant on any write (`initialize`, `update_config`, `set_wallet_override`), and for a `TokenRule` whose shape does not fit its index (index 0 is native SOL with the default mint and program; a rule with the default mint elsewhere is a disabled placeholder; a rule with a mint needs that mint account passed, matching key, owner and decimals). `default_preset` outside 0–2 is `InvalidPreset`; a transfer-fee or transfer-hook mint is `UnsupportedMintExtension`. It was added in Step 2, after the list above had been written and before anything shipped, so every other number is unchanged.
 
 ## 9. State machines
 
