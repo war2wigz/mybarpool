@@ -9,6 +9,10 @@ name: Verifiable build
 # unless the ELF header reports `Flags: 0x3` (ARCHITECTURE › Toolchain,
 # SIMD-0500). When the reusable workflow gains an arch input, switch to it and
 # keep the readelf check.
+#
+# The Foundation job needs MAINNET_DEPLOYER_KEYPAIR even with deploy off (its
+# address-extraction step is unconditional), so it runs only once Step 14 has
+# set that secret; until then the `sbpf-v3` job alone produces the hash.
 
 on:
   push:
@@ -25,14 +29,35 @@ permissions:
 
 env:
   SOLANA_VERIFY_VERSION: "0.5.2"
+  # solana-verify picks its Docker image from the `solana-program` crate in
+  # Cargo.lock, falling back to `solana-program-error`. Anchor 1.2 uses the
+  # split crates at 3.0.x, so without this it chose the Agave 3.0.1 image
+  # (cargo 1.84, no edition 2024). This is the digest solana-verify 0.5.2 maps
+  # to Agave 4.3.0 in its own image table.
+  VERIFY_BASE_IMAGE: solanafoundation/solana-verifiable-build@sha256:12fd4c0a0790f0fc41ef74b0cdb6bccc167ba6137eb1adb749bac649481c86bd
   # Placeholder until the mainnet program id exists (Step 14). It must be a
   # valid pubkey for the reusable workflow's input; verification is off.
   PROGRAM_ID: "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw"
 
 jobs:
+  gate:
+    name: Mainnet secrets present?
+    runs-on: ubuntu-latest
+    outputs:
+      has-deployer: ${{ steps.check.outputs.has-deployer }}
+    steps:
+      - id: check
+        env:
+          HAS: ${{ secrets.MAINNET_DEPLOYER_KEYPAIR != '' }}
+        run: echo "has-deployer=$HAS" >> "$GITHUB_OUTPUT"
+
   foundation-build:
     name: Foundation reusable build (hash only)
+    needs: gate
+    if: needs.gate.outputs.has-deployer == 'true'
     uses: solana-foundation/github-workflows/.github/workflows/reusable-build.yaml@757c3917783064cbdd76f71c6b23e38e7b440dcb # v0.5.2
+    secrets:
+      MAINNET_DEPLOYER_KEYPAIR: ${{ secrets.MAINNET_DEPLOYER_KEYPAIR }}
     with:
       program: mybarpool
       program-id: "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw"
@@ -43,9 +68,9 @@ jobs:
       use-squads: false
       squads-export: false
       use-program-metadata-idl: true
-    # Secrets are intentionally not passed: nothing here deploys. Step 14 adds
-    # MAINNET_DEPLOYER_KEYPAIR, MAINNET_MULTISIG and MAINNET_MULTISIG_VAULT and
-    # flips deploy/upload_idl/verify/use-squads/squads-export to true.
+    # Only the deployer keypair is passed (the workflow reads its address even
+    # with deploy off). Step 14 adds MAINNET_MULTISIG and MAINNET_MULTISIG_VAULT
+    # and flips deploy/upload_idl/verify/use-squads/squads-export to true.
 
   sbpf-v3:
     name: solana-verify build --arch v3 + readelf
@@ -68,7 +93,7 @@ jobs:
       - name: solana-verify build --arch v3
         # Docker-based reproducible build, the same command Step 14's runbook
         # and `solana-verify remote submit-job --arch v3` use.
-        run: solana-verify build --arch v3 --library-name mybarpool
+        run: solana-verify build --arch v3 --library-name mybarpool --base-image "$VERIFY_BASE_IMAGE"
 
       - name: SBPFv3 header check
         run: |
