@@ -148,6 +148,7 @@ jobs:
           test "$(echo "$majors" | wc -w)" = "1"
 
       - run: npm run build
-      - run: npm test
+      - name: Tests with coverage thresholds (100% branches on fees and winner)
+        run: npm run test:coverage --workspace packages/shared
       - run: npm run typecheck
       - run: npm run format

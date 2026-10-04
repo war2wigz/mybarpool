@@ -19,6 +19,7 @@
   },
   "files": [
     "dist",
+    "src/vectors",
     "README.md"
   ],
   "engines": {
@@ -27,16 +28,22 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "vectors": "UPDATE_VECTORS=1 vitest run test/vectors.test.ts"
   },
   "peerDependencies": {
     "@solana/kit": "^8.4.0"
   },
   "devDependencies": {
     "@solana/kit": "8.4.0",
+    "@vitest/coverage-v8": "5.0.3",
     "typescript": "5.9.3",
     "vitest": "5.0.3"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0"
   }
 }
