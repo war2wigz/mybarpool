@@ -11,7 +11,7 @@ import {
 const KC_BAL = { season: 2026, week: 1, home: 15, away: 2 };
 const PHI_DAL = { season: 2026, week: 1, home: 25, away: 8 };
 
-describe("score-source game-ID map (SERVICES §3; PROGRAM §2)", () => {
+describe("score-source game-ID map (ARCHITECTURE › Games; PROGRAM §2)", () => {
   it("names the three sources", () => {
     expect(SCORE_SOURCES).toEqual(["apiSports", "sportradar", "espn"]);
   });

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   INITIAL_LADDERS,
   INITIAL_LADDERS_WHOLE,
+  MAX_LADDER_STEPS,
   ORE_DECIMALS,
   SOL_DECIMALS,
   TokenIndex,
@@ -98,5 +99,18 @@ describe("price ladders (ARCHITECTURE › Buying table; PROGRAM §3.1)", () => {
     expect(pow10(9)).toBe(SOL);
     expect(pow10(11)).toBe(ORE);
     expect(() => pow10(-1)).toThrow(RangeError);
+  });
+
+  it("priceLadderSteps refuses a ladder with more than MAX_LADDER_STEPS prices", () => {
+    expect(MAX_LADDER_STEPS).toBe(10_000n);
+    expect(
+      priceLadderSteps({ decimals: 0, minPrice: 1n, step: 1n, maxPrice: 10_000n }),
+    ).toHaveLength(10_000);
+    expect(() =>
+      priceLadderSteps({ decimals: 0, minPrice: 1n, step: 1n, maxPrice: 10_001n }),
+    ).toThrow(/steps/);
+    expect(() =>
+      priceLadderSteps({ decimals: 9, minPrice: 1n, step: 1n, maxPrice: 10n ** 18n }),
+    ).toThrow(/steps/);
   });
 });

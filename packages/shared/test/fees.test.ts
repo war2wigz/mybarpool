@@ -276,14 +276,11 @@ describe("properties", () => {
 
       const P = pot(price);
       const fees = feeAmounts({ price, platformBps, creatorBps, creatorAddonBps, integratorBps });
-      const feesWithout = feeAmounts({
-        price,
-        platformBps,
-        creatorBps,
-        creatorAddonBps,
-        integratorBps,
-      });
-      expect(fees).toEqual(feesWithout);
+      // Fees are computed on the pot only: the sponsorship passes through to the prize pool whole.
+      expect(
+        prizePool({ pot: P, fees, sponsoredTotal }) -
+          prizePool({ pot: P, fees, sponsoredTotal: 0n }),
+      ).toBe(sponsoredTotal);
       const pool = prizePool({ pot: P, fees, sponsoredTotal });
       const { quarters, dust } = quarterPrizes(pool, preset);
       const paid = quarters.reduce((s, q) => s + q, 0n);

@@ -91,4 +91,14 @@ describe("winningBox (PROGRAM §6.3)", () => {
       0,
     );
   });
+
+  it("rejects an axis that is not a permutation of 0–9 instead of matching the first duplicate", () => {
+    const duplicated = [0, 1, 2, 3, 4, 5, 6, 7, 8, 8] as unknown as Digits;
+    expect(() =>
+      winningBox({ home: 0, away: 0, homeAxis: duplicated, awayAxis: IDENTITY }),
+    ).toThrow(/permutation/);
+    expect(() =>
+      winningBox({ home: 0, away: 0, homeAxis: IDENTITY, awayAxis: duplicated }),
+    ).toThrow(/permutation/);
+  });
 });

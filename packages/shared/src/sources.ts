@@ -1,7 +1,9 @@
 /**
- * The game-ID mapping shape for the three score sources (SERVICES §3). Shape
- * and pure helpers only; the scores service fills the map in Step 10. A game
- * is identified on-chain by its `GameKey`, never by a source's ID (PROGRAM §2).
+ * The game-ID mapping shape for the three score sources (ARCHITECTURE › Games,
+ * Score integrity: API-Sports, the Sportradar ID the Polymarket stream carries,
+ * ESPN). Shape and pure helpers only; the scores service fills the map in Step
+ * 10. A game is identified on-chain by its `GameKey`, never by a source's ID
+ * (PROGRAM §2).
  */
 import type { GameKey } from "./gameKey.js";
 

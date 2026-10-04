@@ -52,9 +52,16 @@ export function isValidPrice(ladder: PriceLadder, amount: bigint): boolean {
   return (amount - ladder.minPrice) % ladder.step === 0n;
 }
 
+/** Upper bound on `priceLadderSteps`; the real ladders have 20 (SOL, ORE) and 50 (SKR). */
+export const MAX_LADDER_STEPS = 10_000n;
+
 /** Every valid price on the ladder, ascending (the create flow's stepper, DESIGN §4.5). */
 export function priceLadderSteps(ladder: PriceLadder): bigint[] {
   validateLadder(ladder);
+  const count = (ladder.maxPrice - ladder.minPrice) / ladder.step + 1n;
+  if (count > MAX_LADDER_STEPS) {
+    throw new RangeError(`ladder has ${count} steps, more than ${MAX_LADDER_STEPS}`);
+  }
   const steps: bigint[] = [];
   for (let p = ladder.minPrice; p <= ladder.maxPrice; p += ladder.step) steps.push(p);
   return steps;

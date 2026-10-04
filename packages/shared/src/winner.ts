@@ -11,7 +11,7 @@
  * Columns are the home team (across the top), rows the away team (down the
  * side). Exactly one box matches for any pair of scores.
  */
-import { DIGITS, type Digits, laneDigits, laneOfDigit } from "./axes.js";
+import { DIGITS, type Digits, assertDigits, laneDigits, laneOfDigit } from "./axes.js";
 import { type BoxIndex, colOf, indexAt, rowOf } from "./boxes.js";
 
 export interface WinningBoxInput {
@@ -36,6 +36,8 @@ function assertScore(score: number, what: string): number {
 
 /** The 0-based index of the box whose digits match the scores' last digits. */
 export function winningBox({ home, away, homeAxis, awayAxis }: WinningBoxInput): BoxIndex {
+  assertDigits(homeAxis);
+  assertDigits(awayAxis);
   const hd = assertScore(home, "home") % DIGITS;
   const ad = assertScore(away, "away") % DIGITS;
   const col = laneOfDigit(homeAxis, hd);
