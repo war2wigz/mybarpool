@@ -1,0 +1,1651 @@
+{
+  "address": "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw",
+  "metadata": {
+    "name": "mybarpool",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "MyBarPool: NFL boxes on Solana. The on-chain program.",
+    "repository": "https://github.com/war2wigz/mybarpool"
+  },
+  "instructions": [
+    {
+      "name": "close_wallet_override",
+      "docs": [
+        "PROGRAM §4.1 `close_wallet_override`: close it, rent to admin. Signer: admin.",
+        "Emits `OverrideClosed`."
+      ],
+      "discriminator": [
+        150,
+        113,
+        23,
+        46,
+        141,
+        210,
+        3,
+        100
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "`config.admin`; receives the rent."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "wallet_override",
+          "docs": [
+            "PROGRAM §3.6 `WalletOverride` for `wallet`; closed, rent to admin."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  118,
+                  101,
+                  114,
+                  114,
+                  105,
+                  100,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "wallet"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "wallet",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "PROGRAM §4.1 `initialize`: create `PlatformConfig`. Signer: the program's upgrade",
+        "authority, which becomes `admin`. Emits `ConfigUpdated`."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "The program's upgrade authority; pays for the config and becomes `admin`."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`, created here. One per deployment."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_data",
+          "docs": [
+            "The program's `ProgramData`; its upgrade authority must be the signer."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  40,
+                  170,
+                  117,
+                  5,
+                  41,
+                  97,
+                  208,
+                  32,
+                  223,
+                  117,
+                  74,
+                  65,
+                  237,
+                  63,
+                  120,
+                  48,
+                  209,
+                  108,
+                  165,
+                  79,
+                  38,
+                  7,
+                  213,
+                  160,
+                  56,
+                  44,
+                  54,
+                  105,
+                  100,
+                  93,
+                  223,
+                  138
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                2,
+                168,
+                246,
+                145,
+                78,
+                136,
+                161,
+                176,
+                226,
+                16,
+                21,
+                62,
+                247,
+                99,
+                174,
+                43,
+                0,
+                194,
+                185,
+                61,
+                22,
+                193,
+                36,
+                210,
+                192,
+                83,
+                122,
+                16,
+                4,
+                128,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        {
+          "name": "mint_1",
+          "docs": [
+            "Mint for token index 1 (SKR), when its rule names one."
+          ],
+          "optional": true
+        },
+        {
+          "name": "mint_2",
+          "docs": [
+            "Mint for token index 2 (ORE), when its rule names one."
+          ],
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "InitializeParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_wallet_override",
+      "docs": [
+        "PROGRAM §4.1 `set_wallet_override`: create or update a `WalletOverride`. Signer: admin.",
+        "Emits `OverrideSet`."
+      ],
+      "discriminator": [
+        50,
+        65,
+        156,
+        201,
+        20,
+        36,
+        203,
+        214
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "`config.admin`; pays the rent on create."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "wallet_override",
+          "docs": [
+            "PROGRAM §3.6 `WalletOverride` for `wallet`, created if absent."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  118,
+                  101,
+                  114,
+                  114,
+                  105,
+                  100,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "wallet"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "max_open_pools",
+          "type": "u8"
+        },
+        {
+          "name": "max_own_boxes",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "update_config",
+      "docs": [
+        "PROGRAM §4.1 `update_config`: any subset of config fields; §3.1 invariants judged on the",
+        "whole result. Signer: admin. Emits `ConfigUpdated`."
+      ],
+      "discriminator": [
+        29,
+        158,
+        252,
+        191,
+        10,
+        83,
+        219,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "`config.admin`."
+          ],
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint_1",
+          "docs": [
+            "Mint for token index 1 (SKR), required when `tokens[1]` is `Some` with a non-default mint."
+          ],
+          "optional": true
+        },
+        {
+          "name": "mint_2",
+          "docs": [
+            "Mint for token index 2 (ORE), required when `tokens[2]` is `Some` with a non-default mint."
+          ],
+          "optional": true
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "UpdateConfigParams"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "PlatformConfig",
+      "discriminator": [
+        160,
+        78,
+        128,
+        0,
+        248,
+        83,
+        230,
+        160
+      ]
+    },
+    {
+      "name": "WalletOverride",
+      "discriminator": [
+        169,
+        134,
+        103,
+        207,
+        26,
+        241,
+        118,
+        160
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "ConfigUpdated",
+      "discriminator": [
+        40,
+        241,
+        230,
+        122,
+        11,
+        19,
+        198,
+        194
+      ]
+    },
+    {
+      "name": "OverrideClosed",
+      "discriminator": [
+        136,
+        229,
+        114,
+        53,
+        238,
+        175,
+        56,
+        30
+      ]
+    },
+    {
+      "name": "OverrideSet",
+      "discriminator": [
+        32,
+        144,
+        253,
+        40,
+        136,
+        39,
+        233,
+        79
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Signer is not authorized for this instruction"
+    },
+    {
+      "code": 6001,
+      "name": "Paused",
+      "msg": "MyBarPool is paused; nothing has moved"
+    },
+    {
+      "code": 6002,
+      "name": "GameNotScheduled",
+      "msg": "Game is not scheduled"
+    },
+    {
+      "code": 6003,
+      "name": "GameAlreadyMarked",
+      "msg": "Game is already marked"
+    },
+    {
+      "code": 6004,
+      "name": "SalesClosed",
+      "msg": "Sales closed at kickoff"
+    },
+    {
+      "code": 6005,
+      "name": "KickoffInPast",
+      "msg": "Kickoff must be in the future"
+    },
+    {
+      "code": 6006,
+      "name": "KickoffOutOfBounds",
+      "msg": "Kickoff is outside the 72-hour bound"
+    },
+    {
+      "code": 6007,
+      "name": "KickoffUpdateTooLate",
+      "msg": "Kickoff can no longer be updated"
+    },
+    {
+      "code": 6008,
+      "name": "QuarterOutOfOrder",
+      "msg": "Quarter is out of order"
+    },
+    {
+      "code": 6009,
+      "name": "QuarterTooSoon",
+      "msg": "Quarter posted too soon"
+    },
+    {
+      "code": 6010,
+      "name": "ScoreDecreased",
+      "msg": "Score decreased"
+    },
+    {
+      "code": 6011,
+      "name": "FinalFlagMismatch",
+      "msg": "Final flag does not match the quarter"
+    },
+    {
+      "code": 6012,
+      "name": "TokenDisabled",
+      "msg": "Token is disabled"
+    },
+    {
+      "code": 6013,
+      "name": "PriceOffLadder",
+      "msg": "Price is off the ladder"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidPreset",
+      "msg": "Invalid payout preset"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidAccessType",
+      "msg": "Invalid access type"
+    },
+    {
+      "code": 6016,
+      "name": "GateKeyMissing",
+      "msg": "Gate key missing"
+    },
+    {
+      "code": 6017,
+      "name": "GateKeyNotSigner",
+      "msg": "Gate key is not a signer"
+    },
+    {
+      "code": 6018,
+      "name": "AllowlistProofInvalid",
+      "msg": "Allowlist proof is invalid"
+    },
+    {
+      "code": 6019,
+      "name": "AddonBudgetExceeded",
+      "msg": "Add-on budget exceeded"
+    },
+    {
+      "code": 6020,
+      "name": "IntegratorMismatch",
+      "msg": "Integrator and integrator fee do not match"
+    },
+    {
+      "code": 6021,
+      "name": "OpenPoolLimit",
+      "msg": "Open pool limit reached"
+    },
+    {
+      "code": 6022,
+      "name": "OwnBoxLimit",
+      "msg": "Own box limit reached"
+    },
+    {
+      "code": 6023,
+      "name": "OverrideRequired",
+      "msg": "Wallet override account is required"
+    },
+    {
+      "code": 6024,
+      "name": "NothingToBuy",
+      "msg": "Nothing to buy"
+    },
+    {
+      "code": 6025,
+      "name": "TooManyBoxes",
+      "msg": "Too many boxes"
+    },
+    {
+      "code": 6026,
+      "name": "PoolNotOpen",
+      "msg": "Pool is not open"
+    },
+    {
+      "code": 6027,
+      "name": "PoolNotLocked",
+      "msg": "Pool is not locked"
+    },
+    {
+      "code": 6028,
+      "name": "PoolNotDrawn",
+      "msg": "Pool is not drawn"
+    },
+    {
+      "code": 6029,
+      "name": "SponsorshipTooSmall",
+      "msg": "Sponsorship is below one box price"
+    },
+    {
+      "code": 6030,
+      "name": "SponsorshipCapExceeded",
+      "msg": "Sponsorship cap exceeded"
+    },
+    {
+      "code": 6031,
+      "name": "VarAlreadySet",
+      "msg": "Var is already set"
+    },
+    {
+      "code": 6032,
+      "name": "VarNotSet",
+      "msg": "Var is not set"
+    },
+    {
+      "code": 6033,
+      "name": "VarMismatch",
+      "msg": "Var does not match the pool"
+    },
+    {
+      "code": 6034,
+      "name": "VarNotEntropy",
+      "msg": "Var is not an Entropy account"
+    },
+    {
+      "code": 6035,
+      "name": "VarProviderMismatch",
+      "msg": "Var provider does not match config"
+    },
+    {
+      "code": 6036,
+      "name": "VarNotFresh",
+      "msg": "Var is not fresh"
+    },
+    {
+      "code": 6037,
+      "name": "VarNotRevealed",
+      "msg": "Var is not revealed"
+    },
+    {
+      "code": 6038,
+      "name": "VarNotSampledHere",
+      "msg": "Var was not sampled here"
+    },
+    {
+      "code": 6039,
+      "name": "SampleWindowMissed",
+      "msg": "Sample window missed"
+    },
+    {
+      "code": 6040,
+      "name": "VarFallbackHash",
+      "msg": "Var carries the fallback hash"
+    },
+    {
+      "code": 6041,
+      "name": "TooManyVarReplacements",
+      "msg": "Too many Var replacements"
+    },
+    {
+      "code": 6042,
+      "name": "AlreadyDrawn",
+      "msg": "Already drawn"
+    },
+    {
+      "code": 6043,
+      "name": "ScoresNotPosted",
+      "msg": "Scores not posted"
+    },
+    {
+      "code": 6044,
+      "name": "WinnerMismatch",
+      "msg": "Winner does not match"
+    },
+    {
+      "code": 6045,
+      "name": "FeeAccountMismatch",
+      "msg": "Fee account does not match"
+    },
+    {
+      "code": 6046,
+      "name": "NotReturnable",
+      "msg": "Pool is not returnable"
+    },
+    {
+      "code": 6047,
+      "name": "FeesAlreadyPaid",
+      "msg": "Fees already paid"
+    },
+    {
+      "code": 6048,
+      "name": "NotSuspended",
+      "msg": "Game is not suspended"
+    },
+    {
+      "code": 6049,
+      "name": "NotSplittable",
+      "msg": "Pool is not splittable"
+    },
+    {
+      "code": 6050,
+      "name": "ReclaimTooEarly",
+      "msg": "Reclaim is not yet available"
+    },
+    {
+      "code": 6051,
+      "name": "NotOwner",
+      "msg": "Signer is not the owner"
+    },
+    {
+      "code": 6052,
+      "name": "NothingToReturn",
+      "msg": "Nothing to return"
+    },
+    {
+      "code": 6053,
+      "name": "SponsorshipsStillOpen",
+      "msg": "Sponsorships still open"
+    },
+    {
+      "code": 6054,
+      "name": "BoxesStillOutstanding",
+      "msg": "Boxes still outstanding"
+    },
+    {
+      "code": 6055,
+      "name": "PoolNotTerminal",
+      "msg": "Pool is not terminal"
+    },
+    {
+      "code": 6056,
+      "name": "CounterNotEmpty",
+      "msg": "Counter is not empty"
+    },
+    {
+      "code": 6057,
+      "name": "UnsupportedMintExtension",
+      "msg": "Mint has an unsupported extension"
+    },
+    {
+      "code": 6058,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6059,
+      "name": "InvalidConfig",
+      "msg": "Invalid configuration"
+    }
+  ],
+  "types": [
+    {
+      "name": "ConfigUpdated",
+      "docs": [
+        "PROGRAM §7 `ConfigUpdated`: the full config snapshot after `initialize` or `update_config`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "admin",
+            "docs": [
+              "PROGRAM §3.1 `admin`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "score_authority",
+            "docs": [
+              "PROGRAM §3.1 `score_authority`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "entropy_provider",
+            "docs": [
+              "PROGRAM §3.1 `entropy_provider`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_wallet",
+            "docs": [
+              "PROGRAM §3.1 `fee_wallet`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "platform_bps",
+            "docs": [
+              "PROGRAM §3.1 `platform_bps`."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "creator_bps",
+            "docs": [
+              "PROGRAM §3.1 `creator_bps`."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "addon_budget_bps",
+            "docs": [
+              "PROGRAM §3.1 `addon_budget_bps`."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "default_preset",
+            "docs": [
+              "PROGRAM §3.1 `default_preset`."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "max_open_pools",
+            "docs": [
+              "PROGRAM §3.1 `max_open_pools`."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "max_own_boxes",
+            "docs": [
+              "PROGRAM §3.1 `max_own_boxes`."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "preseason_enabled",
+            "docs": [
+              "PROGRAM §3.1 `preseason_enabled`."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "PROGRAM §3.1 `paused`."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "tokens",
+            "docs": [
+              "PROGRAM §3.1 `tokens`."
+            ],
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "TokenRule"
+                  }
+                },
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitializeParams",
+      "docs": [
+        "Every PROGRAM §3.1 field except `admin` (the signer), `bump` and `reserved`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "score_authority",
+            "docs": [
+              "PROGRAM §3.1 `score_authority`: the keeper's key."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "entropy_provider",
+            "docs": [
+              "PROGRAM §3.1 `entropy_provider`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_wallet",
+            "docs": [
+              "PROGRAM §3.1 `fee_wallet`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "platform_bps",
+            "docs": [
+              "PROGRAM §3.1 `platform_bps`; ≤ PLATFORM_BPS_MAX."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "creator_bps",
+            "docs": [
+              "PROGRAM §3.1 `creator_bps`; ≤ CREATOR_BPS_MAX."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "addon_budget_bps",
+            "docs": [
+              "PROGRAM §3.1 `addon_budget_bps`; ≤ ADDON_BUDGET_BPS_MAX."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "default_preset",
+            "docs": [
+              "PROGRAM §3.1 `default_preset`; 0, 1 or 2."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "max_open_pools",
+            "docs": [
+              "PROGRAM §3.1 `max_open_pools`; ≥ 1."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "max_own_boxes",
+            "docs": [
+              "PROGRAM §3.1 `max_own_boxes`; 1–MAX_OWN_BOXES_ABSOLUTE."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "preseason_enabled",
+            "docs": [
+              "PROGRAM §3.1 `preseason_enabled`."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "PROGRAM §3.1 `paused`."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "tokens",
+            "docs": [
+              "PROGRAM §3.1 `tokens`, by token index (0 SOL, 1 SKR, 2 ORE)."
+            ],
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "TokenRule"
+                  }
+                },
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OverrideClosed",
+      "docs": [
+        "PROGRAM §7 `OverrideClosed`: a `WalletOverride` was closed; carries the values that were",
+        "closed so an indexer needs no prior state."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the close."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "wallet",
+            "docs": [
+              "The wallet whose override was closed."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "max_open_pools",
+            "docs": [
+              "The `max_open_pools` that was in force."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "max_own_boxes",
+            "docs": [
+              "The `max_own_boxes` that was in force."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OverrideSet",
+      "docs": [
+        "PROGRAM §7 `OverrideSet`: a `WalletOverride` was created or updated."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "wallet",
+            "docs": [
+              "The wallet the limits apply to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "max_open_pools",
+            "docs": [
+              "PROGRAM §3.6 `max_open_pools`."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "max_own_boxes",
+            "docs": [
+              "PROGRAM §3.6 `max_own_boxes`."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlatformConfig",
+      "docs": [
+        "PROGRAM §3.1 `PlatformConfig`: the account the rest of the program reads. 698 bytes.",
+        "",
+        "Layout (offsets from the start of the account data): discriminator 0 (8); `admin` 8;",
+        "`score_authority` 40; `entropy_provider` 72; `fee_wallet` 104; `platform_bps` 136;",
+        "`creator_bps` 138; `addon_budget_bps` 140; `default_preset` 142; `max_open_pools` 143;",
+        "`max_own_boxes` 144; `preseason_enabled` 145; `paused` 146; `tokens` 147 (three",
+        "`TokenRule` of 98 bytes at 147, 245, 343); `bump` 441; `reserved` 442 (256)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "PROGRAM §3.1: the Squads vault on mainnet. May not be the default pubkey."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "score_authority",
+            "docs": [
+              "PROGRAM §3.1: the keeper's KMS key."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "entropy_provider",
+            "docs": [
+              "PROGRAM §3.1: the Entropy provider whose commits `set_var` accepts."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_wallet",
+            "docs": [
+              "PROGRAM §3.1: platform fee destination (SOL directly; SPL to its ATA)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "platform_bps",
+            "docs": [
+              "PROGRAM §3.1: ≤ PLATFORM_BPS_MAX; initial 500."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "creator_bps",
+            "docs": [
+              "PROGRAM §3.1: ≤ CREATOR_BPS_MAX; initial 500."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "addon_budget_bps",
+            "docs": [
+              "PROGRAM §3.1: ≤ ADDON_BUDGET_BPS_MAX; initial 500."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "default_preset",
+            "docs": [
+              "PROGRAM §3.1: which preset clients pre-select; initial 0."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "max_open_pools",
+            "docs": [
+              "PROGRAM §3.1: open pools per creator per game; ≥ 1; initial 3."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "max_own_boxes",
+            "docs": [
+              "PROGRAM §3.1: creator's boxes in own pool; 1–MAX_OWN_BOXES_ABSOLUTE; initial 5."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "preseason_enabled",
+            "docs": [
+              "PROGRAM §3.1: initial false; `create_game` rejects weeks ≥ 101 when false."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "PROGRAM §3.1: when true, `create_pool`, `buy` and `sponsor` fail; nothing else is affected."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "tokens",
+            "docs": [
+              "PROGRAM §3.1: indexed by token index (0 SOL, 1 SKR, 2 ORE)."
+            ],
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "TokenRule"
+                  }
+                },
+                3
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "docs": [
+              "Padding so fields can be appended without a migration."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                256
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenRule",
+      "docs": [
+        "PROGRAM §3.1 `TokenRule`: one per token index (0 SOL, 1 SKR, 2 ORE). 98 bytes."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "enabled",
+            "docs": [
+              "Pools may be created in this token."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "The mint; `Pubkey::default()` for SOL and for a token whose mint is not yet known."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "token_program",
+            "docs": [
+              "Token or Token-2022; `Pubkey::default()` for SOL."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "docs": [
+              "Base-unit decimals: 9 SOL, 11 ORE, SKR per mint."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "min_price",
+            "docs": [
+              "Minimum box price, base units; ≥ 1."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "step",
+            "docs": [
+              "Price step, base units; ≥ 1; `(max_price − min_price) % step == 0`."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_price",
+            "docs": [
+              "Maximum box price, base units; ≥ `min_price`."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_sponsorship",
+            "docs": [
+              "Per-pool sponsorship cap, base units; initial `25 × max_price`."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateConfigParams",
+      "docs": [
+        "Every PROGRAM §3.1 field as an option; `None` leaves it unchanged."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "New `admin`; takes effect for the next instruction. May not be the default pubkey."
+            ],
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "score_authority",
+            "docs": [
+              "PROGRAM §3.1 `score_authority`."
+            ],
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "entropy_provider",
+            "docs": [
+              "PROGRAM §3.1 `entropy_provider`."
+            ],
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "fee_wallet",
+            "docs": [
+              "PROGRAM §3.1 `fee_wallet`."
+            ],
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "platform_bps",
+            "docs": [
+              "PROGRAM §3.1 `platform_bps`; up or down, never above PLATFORM_BPS_MAX."
+            ],
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "creator_bps",
+            "docs": [
+              "PROGRAM §3.1 `creator_bps`; never above CREATOR_BPS_MAX."
+            ],
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "addon_budget_bps",
+            "docs": [
+              "PROGRAM §3.1 `addon_budget_bps`; never above ADDON_BUDGET_BPS_MAX."
+            ],
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "default_preset",
+            "docs": [
+              "PROGRAM §3.1 `default_preset`."
+            ],
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "max_open_pools",
+            "docs": [
+              "PROGRAM §3.1 `max_open_pools`."
+            ],
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "max_own_boxes",
+            "docs": [
+              "PROGRAM §3.1 `max_own_boxes`."
+            ],
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "preseason_enabled",
+            "docs": [
+              "PROGRAM §3.1 `preseason_enabled`."
+            ],
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "PROGRAM §3.1 `paused`."
+            ],
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "tokens",
+            "docs": [
+              "PROGRAM §3.1 `tokens`, by token index; `Some` replaces that rule whole."
+            ],
+            "type": {
+              "array": [
+                {
+                  "option": {
+                    "defined": {
+                      "name": "TokenRule"
+                    }
+                  }
+                },
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "WalletOverride",
+      "docs": [
+        "PROGRAM §3.6 `WalletOverride`: per-wallet creator limits. 43 bytes.",
+        "",
+        "Layout: discriminator 0 (8); `wallet` 8 (32); `max_open_pools` 40; `max_own_boxes` 41;",
+        "`bump` 42. No `reserved` field (ARCHITECTURE › Open source names the pool and config",
+        "accounts as the padded ones)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "docs": [
+              "The wallet these limits apply to; also the PDA seed."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "max_open_pools",
+            "docs": [
+              "Open pools per game for this wallet; ≥ 1."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "max_own_boxes",
+            "docs": [
+              "Boxes in its own pool for this wallet; 1–MAX_OWN_BOXES_ABSOLUTE."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "ADDON_BUDGET_BPS_MAX",
+      "docs": [
+        "PROGRAM §1 `ADDON_BUDGET_BPS_MAX`: ceiling on `creator_addon_bps + integrator_bps`."
+      ],
+      "type": "u16",
+      "value": "500"
+    },
+    {
+      "name": "BOXES",
+      "docs": [
+        "PROGRAM §1 `BOXES`: boxes per pool."
+      ],
+      "type": "u8",
+      "value": "25"
+    },
+    {
+      "name": "CONFIG_SEED",
+      "docs": [
+        "PROGRAM §3.1 `PlatformConfig` seed."
+      ],
+      "type": "bytes",
+      "value": "[99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "CREATOR_BPS_MAX",
+      "docs": [
+        "PROGRAM §1 `CREATOR_BPS_MAX`: ceiling on the creator base share."
+      ],
+      "type": "u16",
+      "value": "500"
+    },
+    {
+      "name": "ENTROPY_PROGRAM",
+      "docs": [
+        "PROGRAM §1 `ENTROPY_PROGRAM`: Regolith Entropy."
+      ],
+      "type": "pubkey",
+      "value": "3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X"
+    },
+    {
+      "name": "KICKOFF_UPDATE_BOUND",
+      "docs": [
+        "PROGRAM §1 `KICKOFF_UPDATE_BOUND`: 72 hours; how far a recorded kickoff may move from the scheduled one."
+      ],
+      "type": "i64",
+      "value": "259200"
+    },
+    {
+      "name": "LANES",
+      "docs": [
+        "PROGRAM §1 `LANES`: positions per axis; lane `l` holds digits at positions `l` and `l + 5`."
+      ],
+      "type": "u8",
+      "value": "5"
+    },
+    {
+      "name": "MAX_OWN_BOXES_ABSOLUTE",
+      "docs": [
+        "PROGRAM §1 `MAX_OWN_BOXES_ABSOLUTE`: upper bound on any configured creator box cap."
+      ],
+      "type": "u8",
+      "value": "25"
+    },
+    {
+      "name": "MIN_QUARTER_SECONDS",
+      "docs": [
+        "PROGRAM §1 `MIN_QUARTER_SECONDS`: a quarter's worth of football takes at least this long in real time."
+      ],
+      "type": "i64",
+      "value": "900"
+    },
+    {
+      "name": "OVERRIDE_SEED",
+      "docs": [
+        "PROGRAM §3.6 `WalletOverride` seed prefix; the wallet follows."
+      ],
+      "type": "bytes",
+      "value": "[111, 118, 101, 114, 114, 105, 100, 101]"
+    },
+    {
+      "name": "PLATFORM_BPS_MAX",
+      "docs": [
+        "PROGRAM §1 `PLATFORM_BPS_MAX`: ceiling on the platform share."
+      ],
+      "type": "u16",
+      "value": "500"
+    },
+    {
+      "name": "PRESET_SPLITS",
+      "docs": [
+        "PROGRAM §1 preset table in percent, indexed by `PayoutPreset as usize`."
+      ],
+      "type": {
+        "array": [
+          {
+            "array": [
+              "u8",
+              4
+            ]
+          },
+          3
+        ]
+      },
+      "value": "[[20, 20, 20, 40], [25, 25, 25, 25], [0, 0, 0, 100]]"
+    },
+    {
+      "name": "QUARTERS",
+      "docs": [
+        "PROGRAM §1 `QUARTERS`: settlement periods; the fourth is the final score."
+      ],
+      "type": "u8",
+      "value": "4"
+    },
+    {
+      "name": "RECLAIM_DELAY",
+      "docs": [
+        "PROGRAM §1 `RECLAIM_DELAY`: 30 days; abandoned-pool reclaim opens this long after the scheduled kickoff."
+      ],
+      "type": "i64",
+      "value": "2592000"
+    },
+    {
+      "name": "SOL_DECIMALS",
+      "docs": [
+        "Native SOL (PROGRAM §2 token index 0): nine decimals."
+      ],
+      "type": "u8",
+      "value": "9"
+    },
+    {
+      "name": "TOTAL_BPS_MAX",
+      "docs": [
+        "PROGRAM §1 `TOTAL_BPS_MAX`: ceiling on platform + creator base + add-on budget."
+      ],
+      "type": "u16",
+      "value": "1500"
+    }
+  ]
+}

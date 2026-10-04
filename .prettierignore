@@ -4,6 +4,8 @@ target/
 .anchor/
 .surfpool/
 package-lock.json
+# Written by `anchor build`; Anchor's formatting is the source of truth (build plan Step 2).
+idl/
 # Prose and the generated table are kept as written.
 docs/
 *.md

@@ -1,0 +1,71 @@
+//! `set_wallet_override`, PROGRAM §4.1. Signer: admin. Creates or updates a
+//! `WalletOverride` (§3.6).
+
+use anchor_lang::prelude::*;
+
+use crate::constants::{CONFIG_SEED, OVERRIDE_SEED};
+use crate::errors::MybarpoolError;
+use crate::events::OverrideSet;
+use crate::state::{PlatformConfig, WalletOverride};
+
+#[derive(Accounts)]
+#[instruction(wallet: Pubkey)]
+#[event_cpi]
+pub struct SetWalletOverride<'info> {
+    /// `config.admin`; pays the rent on create.
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    /// PROGRAM §3.1 `PlatformConfig`.
+    #[account(
+        seeds = [CONFIG_SEED],
+        bump = config.bump,
+        has_one = admin @ MybarpoolError::Unauthorized,
+    )]
+    pub config: Account<'info, PlatformConfig>,
+    /// PROGRAM §3.6 `WalletOverride` for `wallet`, created if absent.
+    #[account(
+        init_if_needed,
+        payer = admin,
+        space = WalletOverride::SIZE,
+        seeds = [OVERRIDE_SEED, wallet.as_ref()],
+        bump,
+    )]
+    pub wallet_override: Account<'info, WalletOverride>,
+    pub system_program: Program<'info, System>,
+}
+
+pub fn handle_set_wallet_override(
+    ctx: Context<SetWalletOverride>,
+    wallet: Pubkey,
+    max_open_pools: u8,
+    max_own_boxes: u8,
+) -> Result<()> {
+    let wallet_override = &mut ctx.accounts.wallet_override;
+    let created = wallet_override.wallet == Pubkey::default();
+    if created {
+        wallet_override.wallet = wallet;
+        wallet_override.bump = ctx.bumps.wallet_override;
+    } else {
+        require_keys_eq!(
+            wallet_override.wallet,
+            wallet,
+            MybarpoolError::InvalidConfig
+        );
+        require!(
+            wallet_override.bump == ctx.bumps.wallet_override,
+            MybarpoolError::InvalidConfig
+        );
+    }
+    wallet_override.max_open_pools = max_open_pools;
+    wallet_override.max_own_boxes = max_own_boxes;
+    wallet_override.validate()?;
+
+    let time = Clock::get()?.unix_timestamp;
+    emit_cpi!(OverrideSet {
+        time,
+        wallet,
+        max_open_pools,
+        max_own_boxes
+    });
+    Ok(())
+}

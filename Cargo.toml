@@ -15,7 +15,7 @@ repository = "https://github.com/war2wigz/mybarpool"
 # with the test suite green before and after.
 [workspace.dependencies]
 anchor-lang = "=1.2.0"
-anchor-spl = "=1.2.0"
+anchor-spl = { version = "=1.2.0", default-features = false }
 mollusk-svm = "=0.15.1"
 mollusk-svm-bencher = "=0.15.1"
 solana-security-txt = "=1.1.3"

@@ -98,6 +98,12 @@ jobs:
           set -euo pipefail
           readelf -h target/deploy/mybarpool.so | tee /dev/stderr | grep -q 'Flags:\s*0x3'
 
+      - name: Committed IDL matches the build
+        # `address` is excluded because this job synced the id to a fresh keypair.
+        run: |
+          set -euo pipefail
+          diff <(jq 'del(.address)' target/idl/mybarpool.json) <(jq 'del(.address)' idl/mybarpool.json)
+
       - name: Mollusk unit tests
         run: cargo test -p mybarpool --locked
 
@@ -111,6 +117,9 @@ jobs:
 
       - name: npm ci
         run: npm ci
+
+      - name: Build packages/shared (the localnet suite imports its dist/)
+        run: npm run build
 
       - name: Localnet suite (Surfpool, mainnet fork)
         # The suite reads the program id from the synced Anchor.toml, so it

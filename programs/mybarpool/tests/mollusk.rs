@@ -14,13 +14,13 @@ fn program_id() -> Pubkey {
     Pubkey::new_from_array(mybarpool::ID.to_bytes())
 }
 
-/// Anchor's `InstructionFallbackNotFound` (error code 101): the program has
-/// no instructions yet, so any discriminator is unknown. Reaching this error
-/// means the loader accepted the SBPFv3 ELF and Anchor's dispatcher ran.
+/// Anchor's `InstructionFallbackNotFound` (error code 101): an all-zero
+/// discriminator matches no instruction. Reaching this error means the loader
+/// accepted the SBPFv3 ELF and Anchor's dispatcher ran.
 const INSTRUCTION_FALLBACK_NOT_FOUND: u32 = 101;
 
 #[test]
-fn empty_program_loads_and_rejects_unknown_instruction() {
+fn program_loads_and_rejects_unknown_instruction() {
     let mollusk = Mollusk::new(&program_id(), "mybarpool");
     let instruction =
         Instruction::new_with_bytes(program_id(), &[0u8; 8], Vec::<AccountMeta>::new());
