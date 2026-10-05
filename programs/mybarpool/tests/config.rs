@@ -646,6 +646,24 @@ fn set_wallet_override_rejects_zero_and_above_absolute_limits() {
 }
 
 #[test]
+fn set_wallet_override_for_the_zero_key_is_invalid_config() {
+    // Step 2 audit L1: `wallet == Pubkey::default()` is the "just created" sentinel in the
+    // handler, so an override for the zero key is refused before the account is touched.
+    let f = Fixture::new();
+    let m = mollusk();
+    let zero = Pubkey::default();
+    let mut accounts = base_accounts(&f, Some(&f.expected_config()));
+    accounts.push((override_pda(&zero).0, system_account(0)));
+    let ix = set_override_ix(&f.admin, &zero, 3, 5);
+    let result = m.process_and_validate_instruction(
+        &ix,
+        &accounts,
+        &[Check::err(custom(err(E::InvalidConfig)))],
+    );
+    assert_eq!(emitted_event_count(&result), 0);
+}
+
+#[test]
 fn close_wallet_override_returns_rent_to_admin_and_emits_the_closed_values() {
     let f = Fixture::new();
     let m = mollusk();

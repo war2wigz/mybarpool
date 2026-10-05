@@ -43,6 +43,9 @@ pub fn handle_set_wallet_override(
     max_open_pools: u8,
     max_own_boxes: u8,
 ) -> Result<()> {
+    // The zero key is how a just-created override reads; an override for it would be
+    // "created" on every call (Step 2 audit L1), and no wallet is the zero key anyway.
+    require_keys_neq!(wallet, Pubkey::default(), MybarpoolError::InvalidConfig);
     let wallet_override = &mut ctx.accounts.wallet_override;
     let created = wallet_override.wallet == Pubkey::default();
     if created {
