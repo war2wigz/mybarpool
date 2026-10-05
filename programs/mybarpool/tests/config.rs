@@ -3,11 +3,11 @@
 
 mod common;
 
+use anchor_spl::token_2022::spl_token_2022::extension::ExtensionType;
 use common::*;
 use mollusk_svm::result::Check;
 use mybarpool::{ConfigUpdated, MybarpoolError as E, OverrideClosed, OverrideSet, TokenRule};
 use solana_pubkey::Pubkey;
-use spl_token_2022_interface::extension::ExtensionType;
 
 // ---------------------------------------------------------------------------
 // initialize

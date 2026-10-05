@@ -13,12 +13,15 @@ use mollusk_svm::Mollusk;
 use solana_account::Account;
 use solana_instruction::{AccountMeta, Instruction};
 use solana_pubkey::Pubkey;
-use spl_token_2022_interface::extension::{
+
+// The SPL interface crates at the versions anchor-spl 1.2.0 resolves (re-exported), so the
+// fixtures and the program agree on one version of each (Step 2 audit M1).
+use anchor_spl::token::spl_token::state::Mint as MintLegacy;
+use anchor_spl::token_2022::spl_token_2022::extension::{
     metadata_pointer::MetadataPointer, transfer_fee::TransferFeeConfig,
     transfer_hook::TransferHook, BaseStateWithExtensionsMut, ExtensionType, StateWithExtensionsMut,
 };
-use spl_token_2022_interface::state::Mint as Mint2022;
-use spl_token_interface::state::Mint as MintLegacy;
+use anchor_spl::token_2022::spl_token_2022::state::Mint as Mint2022;
 
 use mybarpool::{
     constants::{CONFIG_SEED, OVERRIDE_SEED},
