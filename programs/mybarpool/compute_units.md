@@ -1,3 +1,15 @@
+#### 2026-10-05 21:55:27.016378232 UTC
+
+Solana CLI Version: solana-cli 4.3.0 (src:825efd18; feat:c9ad34d2, client:Agave)
+
+| Name | CUs | Delta |
+|------|------|-------|
+| initialize | 20266 | -- |
+| update_config_full | 15201 | -- |
+| set_wallet_override_create | 16130 | +3 |
+| set_wallet_override_update | 13800 | +3 |
+| close_wallet_override | 9383 | +6 |
+
 #### 2026-10-04 02:16:10.700321676 UTC
 
 Solana CLI Version: solana-cli 4.3.0 (src:825efd18; feat:c9ad34d2, client:Agave)
