@@ -753,6 +753,45 @@ fn update_config_and_set_override_are_unaffected_by_neighbouring_instructions() 
     );
 }
 
+#[test]
+fn event_helpers_ignore_inner_instructions_that_are_not_our_event_cpi() {
+    // Step 2 audit L2: `emitted_event` / `emitted_event_count` match the program id and the
+    // event-CPI tag, so system and (from Step 4) token CPIs are never counted as events.
+    let f = Fixture::new();
+    let m = mollusk();
+    let accounts = base_accounts(&f, Some(&f.expected_config()));
+    let transfer = solana_instruction::Instruction::new_with_bytes(
+        Pubkey::default(),
+        &[2u8, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // SystemInstruction::Transfer { lamports: 1 }
+        vec![
+            solana_instruction::AccountMeta::new(f.admin, true),
+            solana_instruction::AccountMeta::new(f.keeper, false),
+        ],
+    );
+    let result = m.process_instruction_chain(&[transfer.clone(), transfer], &accounts);
+    assert!(result.program_result.is_ok());
+    assert_eq!(emitted_event_count(&result), 0);
+    assert!(emitted_event::<ConfigUpdated>(&result).is_none());
+    assert!(emitted_event::<OverrideSet>(&result).is_none());
+
+    // And the helpers still find every Step 2 event: `set_wallet_override` creates the PDA
+    // (a system-program CPI) and emits exactly one event.
+    let wallet = Pubkey::new_unique();
+    let mut accounts = accounts;
+    accounts.push((override_pda(&wallet).0, system_account(0)));
+    let result = m.process_and_validate_instruction(
+        &set_override_ix(&f.admin, &wallet, 3, 5),
+        &accounts,
+        &[Check::success()],
+    );
+    assert!(
+        result.inner_instructions.len() >= 2,
+        "system CPI + event CPI"
+    );
+    assert_eq!(emitted_event_count(&result), 1);
+    assert!(emitted_event::<OverrideSet>(&result).is_some());
+}
+
 fn custom(code: u32) -> solana_program_error::ProgramError {
     solana_program_error::ProgramError::Custom(code)
 }

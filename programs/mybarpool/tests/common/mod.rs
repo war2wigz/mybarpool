@@ -479,26 +479,39 @@ pub fn err(e: mybarpool::MybarpoolError) -> u32 {
     anchor_lang::error::ERROR_CODE_OFFSET + e as u32
 }
 
+/// The event-CPI payloads (event discriminator + body) among the result's inner instructions:
+/// only self-CPIs whose program is ours and whose data starts with Anchor's event-CPI tag
+/// (`anchor_lang::event::EVENT_IX_TAG_LE`, the same bytes `tests/helpers/mybarpool.ts` uses).
+/// `init` CPIs the system program and Step 4 adds token CPIs; neither counts (Step 2 audit L2).
+pub fn event_payloads(result: &InstructionResult) -> Vec<&[u8]> {
+    let message = result.message.as_ref().expect("result carries its message");
+    let keys = message.account_keys();
+    result
+        .inner_instructions
+        .iter()
+        .filter(|inner| {
+            keys.get(usize::from(inner.instruction.program_id_index)) == Some(&program_id())
+        })
+        .map(|inner| inner.instruction.data.as_slice())
+        .filter(|data| data.len() >= 16 && &data[..8] == anchor_lang::event::EVENT_IX_TAG_LE)
+        .map(|data| &data[8..])
+        .collect()
+}
+
 /// Decode the `emit_cpi!` event of type `E` from the result's inner instructions.
 pub fn emitted_event<E: AnchorDeserialize + Discriminator>(
     result: &InstructionResult,
 ) -> Option<E> {
-    for inner in &result.inner_instructions {
-        let data = &inner.instruction.data;
-        // Self-CPI data: 8-byte event-CPI instruction tag, then the event discriminator and body.
-        if data.len() >= 16 && &data[8..16] == E::DISCRIMINATOR {
-            let mut body = &data[16..];
-            return Some(E::deserialize(&mut body).expect("decode event"));
-        }
-    }
-    None
+    event_payloads(result)
+        .into_iter()
+        .find(|payload| &payload[..8] == E::DISCRIMINATOR)
+        .map(|payload| {
+            let mut body = &payload[8..];
+            E::deserialize(&mut body).expect("decode event")
+        })
 }
 
-/// Inner instructions that are `emit_cpi!` self-calls (`init` also CPIs the system program).
+/// Inner instructions that are `emit_cpi!` self-calls.
 pub fn emitted_event_count(result: &InstructionResult) -> usize {
-    result
-        .inner_instructions
-        .iter()
-        .filter(|inner| &inner.instruction.data[..8] == anchor_lang::event::EVENT_IX_TAG_LE)
-        .count()
+    event_payloads(result).len()
 }
