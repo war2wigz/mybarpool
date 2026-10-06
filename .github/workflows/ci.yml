@@ -99,10 +99,38 @@ jobs:
           readelf -h target/deploy/mybarpool.so | tee /dev/stderr | grep -q 'Flags:\s*0x3'
 
       - name: Committed IDL matches the build
-        # `address` is excluded because this job synced the id to a fresh keypair.
+        # This job synced the id to a fresh keypair, so the two IDLs differ
+        # exactly where the program id appears: `address`, and any 32-byte
+        # `const` the id was baked into (the `program_data` PDA seed in
+        # `initialize` is `crate::ID`). Each file has those replaced by a
+        # placeholder against its own `address`, then they must be identical.
         run: |
           set -euo pipefail
-          diff <(jq 'del(.address)' target/idl/mybarpool.json) <(jq 'del(.address)' idl/mybarpool.json)
+          normalise() {
+            IDL_PATH="$IDL" python3 - <<'PY'
+          import json, os, sys
+          idl = json.load(open(os.environ["IDL_PATH"]))
+          # base58 decode without a dependency (a 32-byte address has no leading-zero bytes to lose).
+          ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+          n = 0
+          for c in idl["address"]:
+              n = n * 58 + ALPHABET.index(c)
+          id_bytes = list(n.to_bytes(32, "big"))
+          def walk(o):
+              if isinstance(o, dict):
+                  if o.get("kind") == "const" and o.get("value") == id_bytes:
+                      o["value"] = "<program id>"
+                  for v in o.values():
+                      walk(v)
+              elif isinstance(o, list):
+                  for v in o:
+                      walk(v)
+          walk(idl)
+          idl["address"] = "<program id>"
+          json.dump(idl, sys.stdout, indent=2, sort_keys=False)
+          PY
+          }
+          diff <(IDL=target/idl/mybarpool.json normalise) <(IDL=idl/mybarpool.json normalise)
 
       - name: Mollusk unit tests
         run: cargo test -p mybarpool --locked
