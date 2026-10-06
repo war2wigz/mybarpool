@@ -34,9 +34,6 @@ pub struct SetWalletOverride<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// `missing_mut_constraint` looks for the literal `mut` token; `init_if_needed` makes
-/// `wallet_override` writable and Anchor refuses `mut` next to it, so the lint cannot see it.
-#[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_set_wallet_override(
     ctx: Context<SetWalletOverride>,
     wallet: Pubkey,

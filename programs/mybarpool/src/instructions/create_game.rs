@@ -42,8 +42,11 @@ pub struct CreateGame<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// `missing_mut_constraint` looks for the literal `mut` token; `game` is `init`, which makes it
-/// writable, and Anchor refuses `mut` beside `init`, so the lint cannot see it.
+/// `missing_mut_constraint` names `config` here: the handler only reads
+/// `config.preseason_enabled`, and the lint treats a MIR temporary derived from a field read as
+/// a write (the Step 2 false positive on `PlatformConfig::validate`). Shown by
+/// `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace -- --lib` without this line:
+/// "account `config` is mutated in the instruction but is not declared with `#[account(mut)]`".
 #[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_create_game(
     ctx: Context<CreateGame>,
