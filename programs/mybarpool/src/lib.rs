@@ -1,18 +1,23 @@
 //! MyBarPool: NFL boxes on Solana.
 //!
-//! Build plan Steps 2 and 3: `PlatformConfig`, `WalletOverride`, every
-//! PROGRAM §1 constant, the complete §8 error enum, the four §4.1 admin
-//! instructions, and `GameRecord` with the four §4.2 game instructions.
-//! Nothing here moves money or touches a pool. Later steps add pools, the
+//! Build plan Steps 2–4: `PlatformConfig`, `WalletOverride`, every PROGRAM
+//! §1 constant, the complete §8 error enum, the four §4.1 admin
+//! instructions, `GameRecord` with the four §4.2 game instructions, and
+//! `Pool`, its vault, `CreatorCounter` and `Sponsorship` with the §4.3
+//! instructions that fill them. Money only moves in. Later steps add the
 //! draw, settlement and returns, each built and audited against
 //! `docs/PROGRAM.md`.
 #![allow(unexpected_cfgs)]
 
+pub mod assignment;
 pub mod constants;
 pub mod errors;
 pub mod events;
 pub mod instructions;
+pub mod money;
+pub mod slot_hashes;
 pub mod state;
+pub mod vault;
 
 use anchor_lang::prelude::*;
 
@@ -108,5 +113,38 @@ pub mod mybarpool {
     /// admin. Emits `GameMarked`.
     pub fn mark_game(ctx: Context<MarkGame>, new_status: GameStatus) -> Result<()> {
         instructions::mark_game::handle_mark_game(ctx, new_status)
+    }
+
+    /// PROGRAM §4.3 `create_pool`: create a `Pool`, its vault and (when absent) the creator's
+    /// counter; fix the §5.1 fee amounts; optionally buy the creator's first boxes. Signer and
+    /// payer: the creator. Emits `PoolCreated`, then `BoxesBought` and `PoolLocked` as earned.
+    pub fn create_pool(ctx: Context<CreatePool>, params: CreatePoolParams) -> Result<()> {
+        instructions::create_pool::handle_create_pool(ctx, params)
+    }
+
+    /// PROGRAM §4.3 `buy`: buy `count` boxes at the pool's price; positions are assigned by
+    /// §6.1 from the SlotHashes sysvar. The 25th box locks the pool. Signer and payer: the
+    /// buyer. Emits `BoxesBought` and, on lock, `PoolLocked`.
+    pub fn buy(ctx: Context<Buy>, count: u8) -> Result<()> {
+        instructions::buy::handle_buy(ctx, count)
+    }
+
+    /// PROGRAM §4.3 `sponsor`: add `amount` (≥ one box price, within the token's cap) to the
+    /// prize pool of an `Open`, `Locked` or `Drawn` pool before kickoff. Signer and payer: the
+    /// sponsor. Emits `Sponsored`.
+    pub fn sponsor(ctx: Context<Sponsor>, amount: u64) -> Result<()> {
+        instructions::sponsor::handle_sponsor(ctx, amount)
+    }
+
+    /// PROGRAM §4.3 `rotate_gate_key`: set a `Link` pool's gate key. Signer: the creator.
+    /// Emits `GateKeyRotated`.
+    pub fn rotate_gate_key(ctx: Context<RotateGateKey>, new_key: Pubkey) -> Result<()> {
+        instructions::rotate_gate_key::handle_rotate_gate_key(ctx, new_key)
+    }
+
+    /// PROGRAM §3.5 `close_counter`: close a `CreatorCounter` whose `open_count` is zero, rent to
+    /// `config.fee_wallet`. Permissionless.
+    pub fn close_counter(ctx: Context<CloseCounter>) -> Result<()> {
+        instructions::close_counter::handle_close_counter(ctx)
     }
 }

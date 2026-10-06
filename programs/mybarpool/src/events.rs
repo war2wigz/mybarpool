@@ -4,8 +4,8 @@
 
 use anchor_lang::prelude::*;
 
-use crate::constants::TOKEN_COUNT;
-use crate::state::{GameKey, GameStatus, PlatformConfig, TokenRule};
+use crate::constants::{PayoutPreset, TOKEN_COUNT};
+use crate::state::{AccessType, GameKey, GameStatus, PlatformConfig, TokenRule};
 
 /// PROGRAM §7 `ConfigUpdated`: the full config snapshot after `initialize` or `update_config`.
 #[event]
@@ -142,4 +142,93 @@ pub struct GameMarked {
     pub game: Pubkey,
     /// The new status.
     pub status: GameStatus,
+}
+
+/// PROGRAM §7 `PoolCreated`: `create_pool` wrote a `Pool`. Exactly the §7 fields: `nonce` and
+/// `vault` derive from the pool address and the IDL seeds.
+#[event]
+pub struct PoolCreated {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The `GameRecord`.
+    pub game: Pubkey,
+    /// The creator.
+    pub creator: Pubkey,
+    /// PROGRAM §2 token index.
+    pub token: u8,
+    /// The mint; default for SOL.
+    pub mint: Pubkey,
+    /// Per box, base units.
+    pub price: u64,
+    /// PROGRAM §1 payout preset.
+    pub preset: PayoutPreset,
+    /// PROGRAM §3.3 access type.
+    pub access_type: AccessType,
+    /// 0–500.
+    pub creator_addon_bps: u16,
+    /// Default when unset.
+    pub integrator: Pubkey,
+    /// 0–500; 0 when unset.
+    pub integrator_bps: u16,
+    /// PROGRAM §5.1.
+    pub platform_fee: u64,
+    /// PROGRAM §5.1.
+    pub creator_fee: u64,
+    /// PROGRAM §5.1.
+    pub integrator_fee: u64,
+}
+
+/// PROGRAM §7 `BoxesBought`: a purchase landed (by `buy`, or by `create_pool` for the creator).
+#[event]
+pub struct BoxesBought {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The buyer.
+    pub buyer: Pubkey,
+    /// 0-based box indices in assignment order (labels 1–25 are made in `packages/shared`).
+    pub boxes: Vec<u8>,
+    /// Boxes bought.
+    pub count: u8,
+    /// `pool.sold` after this purchase.
+    pub sold_after: u8,
+}
+
+/// PROGRAM §7 `PoolLocked`: the 25th box sold.
+#[event]
+pub struct PoolLocked {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// `pool.locked_at`, the same instant.
+    pub locked_at: i64,
+}
+
+/// PROGRAM §7 `Sponsored`: a `sponsor` call landed.
+#[event]
+pub struct Sponsored {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The sponsor wallet.
+    pub sponsor: Pubkey,
+    /// This call's amount, base units.
+    pub amount: u64,
+    /// `pool.sponsored_total` after this call.
+    pub sponsored_total: u64,
+}
+
+/// PROGRAM §7 `GateKeyRotated`: the creator rotated a `Link` pool's gate key. The new key is
+/// public information; only signatures from it matter, so it is not in the event.
+#[event]
+pub struct GateKeyRotated {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
 }

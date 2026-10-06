@@ -27,6 +27,12 @@ custom-panic = []
 anchor-lang = { workspace = true, features = ["event-cpi", "init-if-needed"] }
 # token_interface::Mint and the Token-2022 extension reader (PROGRAM §5.4).
 anchor-spl = { workspace = true, features = ["token", "token_2022"] }
+# PROGRAM §6.1 `sha256` (the hashv syscall) and the SlotHashes sysvar id.
+# anchor-lang 1.2.0's `solana_program` facade re-exports neither, and both
+# crates are already in its own tree at these versions, so nothing new is
+# resolved: the two lines only make the dependency direct.
+solana-sha256-hasher = "3.1"
+solana-sdk-ids = "3.1"
 
 [dev-dependencies]
 mollusk-svm = { workspace = true, features = ["inner-instructions"] }

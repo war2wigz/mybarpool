@@ -9,6 +9,319 @@
   },
   "instructions": [
     {
+      "name": "buy",
+      "docs": [
+        "PROGRAM §4.3 `buy`: buy `count` boxes at the pool's price; positions are assigned by",
+        "§6.1 from the SlotHashes sysvar. The 25th box locks the pool. Signer and payer: the",
+        "buyer. Emits `BoxesBought` and, on lock, `PoolLocked`."
+      ],
+      "discriminator": [
+        102,
+        6,
+        61,
+        18,
+        1,
+        218,
+        235,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "buyer",
+          "docs": [
+            "The buyer; pays `count × price` and the transaction fee."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; read for `paused` and the limits."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for status and kickoff."
+          ],
+          "relations": [
+            "pool"
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PROGRAM §3.4 vault at `[\"vault\", pool]` with the stored bump; `pool.vault` is the",
+            "only address `buy` accepts for it. SOL: system-owned, lamports only. SPL: a token account",
+            "owned by the pool PDA, which `transfer_checked` into it verifies."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "counter",
+          "docs": [
+            "PROGRAM §3.5 the creator's counter for this game; decremented when this buy locks."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wallet_override",
+          "docs": [
+            "The creator's `WalletOverride` slot at `[\"override\", pool.creator]` (seeds",
+            "constraint); read only when initialised and only when the buyer is the creator."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  118,
+                  101,
+                  114,
+                  114,
+                  105,
+                  100,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's mint (`address = pool.mint`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "buyer_token_account",
+          "docs": [
+            "The buyer's token account for the mint; SPL pools only."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The pool's token program (checked against `pool.token_program`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "slot_hashes",
+          "docs": [
+            "The SlotHashes sysvar by address; PROGRAM §6.1's `slothash` comes from it and",
+            "never from instruction data."
+          ],
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "count",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "close_counter",
+      "docs": [
+        "PROGRAM §3.5 `close_counter`: close a `CreatorCounter` whose `open_count` is zero, rent to",
+        "`config.fee_wallet`. Permissionless."
+      ],
+      "discriminator": [
+        4,
+        236,
+        52,
+        248,
+        107,
+        146,
+        187,
+        49
+      ],
+      "accounts": [
+        {
+          "name": "counter",
+          "docs": [
+            "PROGRAM §3.5 `CreatorCounter`, re-derived from its own fields; closed to `fee_wallet`."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "counter.creator",
+                "account": "CreatorCounter"
+              },
+              {
+                "kind": "account",
+                "path": "counter.game",
+                "account": "CreatorCounter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; names the rent destination."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fee_wallet",
+          "docs": [
+            "`config.fee_wallet` by `has_one`; a destination only, never `SystemAccount`",
+            "(PROGRAM §10: a wallet whose owner may change must still be payable)."
+          ],
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "close_wallet_override",
       "docs": [
         "PROGRAM §4.1 `close_wallet_override`: close it, rent to admin. Signer: admin.",
@@ -179,6 +492,228 @@
         {
           "name": "scheduled_kickoff",
           "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "create_pool",
+      "docs": [
+        "PROGRAM §4.3 `create_pool`: create a `Pool`, its vault and (when absent) the creator's",
+        "counter; fix the §5.1 fee amounts; optionally buy the creator's first boxes. Signer and",
+        "payer: the creator. Emits `PoolCreated`, then `BoxesBought` and `PoolLocked` as earned."
+      ],
+      "discriminator": [
+        233,
+        146,
+        209,
+        142,
+        207,
+        104,
+        64,
+        188
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "docs": [
+            "The creator; pays the rent of the pool, the vault and (first time) the counter, plus any",
+            "initial boxes."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; read for `paused`, the token rule, the fee bps and limits."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, re-derived from its own fields (the Step 3 discipline)."
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool` at `[\"pool\", game, creator, nonce]`; must not exist yet."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "game"
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "params.nonce"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PDA of the pool at `[\"vault\", pool]` (seeds constraint); funded (SOL) or",
+            "initialised as a token account (SPL) by this handler, nothing else."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "counter",
+          "docs": [
+            "PROGRAM §3.5 `CreatorCounter` at `[\"counter\", creator, game]`; created when absent."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "account",
+                "path": "game"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wallet_override",
+          "docs": [
+            "The creator's `WalletOverride` slot at `[\"override\", creator]` (seeds",
+            "constraint); read only when initialised."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  118,
+                  101,
+                  114,
+                  114,
+                  105,
+                  100,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The rule's mint; SPL pools only (checked against `rule.mint`)."
+          ],
+          "optional": true
+        },
+        {
+          "name": "creator_token_account",
+          "docs": [
+            "The creator's token account for the mint; SPL pools with `initial_boxes > 0` only."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The rule's token program; SPL pools only (checked against `rule.token_program`)."
+          ],
+          "optional": true
+        },
+        {
+          "name": "slot_hashes",
+          "docs": [
+            "The SlotHashes sysvar by address; read only when `initial_boxes > 0`."
+          ],
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "CreatePoolParams"
+            }
+          }
         }
       ]
     },
@@ -511,6 +1046,82 @@
       ]
     },
     {
+      "name": "rotate_gate_key",
+      "docs": [
+        "PROGRAM §4.3 `rotate_gate_key`: set a `Link` pool's gate key. Signer: the creator.",
+        "Emits `GateKeyRotated`."
+      ],
+      "discriminator": [
+        221,
+        236,
+        111,
+        121,
+        139,
+        41,
+        133,
+        196
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "docs": [
+            "`pool.creator`."
+          ],
+          "signer": true,
+          "relations": [
+            "pool"
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields; `has_one = creator`."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_key",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "set_wallet_override",
       "docs": [
         "PROGRAM §4.1 `set_wallet_override`: create or update a `WalletOverride`. Signer: admin.",
@@ -610,6 +1221,198 @@
         {
           "name": "max_own_boxes",
           "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "sponsor",
+      "docs": [
+        "PROGRAM §4.3 `sponsor`: add `amount` (≥ one box price, within the token's cap) to the",
+        "prize pool of an `Open`, `Locked` or `Drawn` pool before kickoff. Signer and payer: the",
+        "sponsor. Emits `Sponsored`."
+      ],
+      "discriminator": [
+        178,
+        108,
+        177,
+        165,
+        239,
+        218,
+        13,
+        127
+      ],
+      "accounts": [
+        {
+          "name": "sponsor",
+          "docs": [
+            "The sponsor; pays `amount`, the `Sponsorship` rent on first call, and the transaction fee."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; read for `paused` and the token's `max_sponsorship`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for status and kickoff."
+          ],
+          "relations": [
+            "pool"
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PROGRAM §3.4 vault at `[\"vault\", pool]` with the stored bump; `pool.vault` is the",
+            "only address `sponsor` accepts for it."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "sponsorship",
+          "docs": [
+            "PROGRAM §3.7 `Sponsorship` at `[\"sponsorship\", pool, sponsor]`; created on first call."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  112,
+                  111,
+                  110,
+                  115,
+                  111,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "sponsor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's mint (`address = pool.mint`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "sponsor_token_account",
+          "docs": [
+            "The sponsor's token account for the mint; SPL pools only."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The pool's token program (checked against `pool.token_program`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
         }
       ]
     },
@@ -768,6 +1571,19 @@
   ],
   "accounts": [
     {
+      "name": "CreatorCounter",
+      "discriminator": [
+        62,
+        129,
+        78,
+        26,
+        23,
+        138,
+        248,
+        82
+      ]
+    },
+    {
       "name": "GameRecord",
       "discriminator": [
         28,
@@ -794,6 +1610,32 @@
       ]
     },
     {
+      "name": "Pool",
+      "discriminator": [
+        241,
+        154,
+        109,
+        4,
+        17,
+        177,
+        109,
+        188
+      ]
+    },
+    {
+      "name": "Sponsorship",
+      "discriminator": [
+        191,
+        110,
+        48,
+        7,
+        9,
+        44,
+        168,
+        248
+      ]
+    },
+    {
       "name": "WalletOverride",
       "discriminator": [
         169,
@@ -808,6 +1650,19 @@
     }
   ],
   "events": [
+    {
+      "name": "BoxesBought",
+      "discriminator": [
+        232,
+        58,
+        103,
+        217,
+        202,
+        86,
+        171,
+        184
+      ]
+    },
     {
       "name": "ConfigUpdated",
       "discriminator": [
@@ -845,6 +1700,19 @@
         155,
         186,
         60
+      ]
+    },
+    {
+      "name": "GateKeyRotated",
+      "discriminator": [
+        67,
+        190,
+        168,
+        101,
+        157,
+        226,
+        215,
+        129
       ]
     },
     {
@@ -887,6 +1755,32 @@
       ]
     },
     {
+      "name": "PoolCreated",
+      "discriminator": [
+        202,
+        44,
+        41,
+        88,
+        104,
+        220,
+        157,
+        82
+      ]
+    },
+    {
+      "name": "PoolLocked",
+      "discriminator": [
+        222,
+        161,
+        104,
+        177,
+        64,
+        73,
+        79,
+        149
+      ]
+    },
+    {
       "name": "ScoresPosted",
       "discriminator": [
         88,
@@ -897,6 +1791,19 @@
         208,
         208,
         120
+      ]
+    },
+    {
+      "name": "Sponsored",
+      "discriminator": [
+        13,
+        53,
+        40,
+        13,
+        165,
+        80,
+        85,
+        131
       ]
     }
   ],
@@ -1214,6 +2121,83 @@
   ],
   "types": [
     {
+      "name": "AccessType",
+      "docs": [
+        "PROGRAM §3.3 `AccessType`; the discriminant is the on-chain byte. Step 4 creates `Public`",
+        "pools only; `Link` and `Allowlist` gating lands in Step 8."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Public"
+          },
+          {
+            "name": "Link"
+          },
+          {
+            "name": "Allowlist"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BoxesBought",
+      "docs": [
+        "PROGRAM §7 `BoxesBought`: a purchase landed (by `buy`, or by `create_pool` for the creator)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "buyer",
+            "docs": [
+              "The buyer."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "boxes",
+            "docs": [
+              "0-based box indices in assignment order (labels 1–25 are made in `packages/shared`)."
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "count",
+            "docs": [
+              "Boxes bought."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "sold_after",
+            "docs": [
+              "`pool.sold` after this purchase."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "ConfigUpdated",
       "docs": [
         "PROGRAM §7 `ConfigUpdated`: the full config snapshot after `initialize` or `update_config`."
@@ -1327,6 +2311,152 @@
                 3
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreatePoolParams",
+      "docs": [
+        "PROGRAM §4.3 `create_pool` parameters, in the §4.3 order."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "nonce",
+            "docs": [
+              "Client-chosen; part of the pool's seeds (PROGRAM §3.3)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "token",
+            "docs": [
+              "PROGRAM §2 token index: 0 SOL, 1 SKR, 2 ORE."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "price",
+            "docs": [
+              "Per box, base units; must be on the token's ladder."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "preset",
+            "docs": [
+              "PROGRAM §1 payout preset; a byte outside 0–2 fails to deserialise."
+            ],
+            "type": {
+              "defined": {
+                "name": "PayoutPreset"
+              }
+            }
+          },
+          {
+            "name": "access_type",
+            "docs": [
+              "PROGRAM §3.3 access type; a byte outside 0–2 fails to deserialise. Step 4: `Public` only."
+            ],
+            "type": {
+              "defined": {
+                "name": "AccessType"
+              }
+            }
+          },
+          {
+            "name": "gate_key",
+            "docs": [
+              "Co-signer for `Link`; must be default otherwise."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "allowlist_root",
+            "docs": [
+              "Merkle root for `Allowlist`; must be zero otherwise."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "creator_addon_bps",
+            "docs": [
+              "0–500, within `config.addon_budget_bps` together with `integrator_bps`."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "integrator",
+            "docs": [
+              "The client taking `integrator_bps`; default iff `integrator_bps == 0`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "integrator_bps",
+            "docs": [
+              "0–500."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "initial_boxes",
+            "docs": [
+              "Boxes the creator buys in the same instruction, 0–`max_own_boxes`."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreatorCounter",
+      "docs": [
+        "PROGRAM §3.5 `CreatorCounter`. 74 bytes = 8 + 66.",
+        "",
+        "Seeds `[\"counter\", creator, game_record]`. Created by `create_pool` when absent (the creator",
+        "pays rent) and incremented there; decremented whenever one of the creator's pools on that",
+        "game leaves `Open`; closed by `close_counter` at zero, rent to `fee_wallet`.",
+        "",
+        "Layout: discriminator 0 (8); `creator` 8 (32); `game` 40 (32); `open_count` 72; `bump` 73."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "docs": [
+              "The creator; part of the seeds."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "game",
+            "docs": [
+              "The `GameRecord`; part of the seeds."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "open_count",
+            "docs": [
+              "Pools in `Open` by this creator on this game."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump."
+            ],
+            "type": "u8"
           }
         ]
       }
@@ -1614,6 +2744,32 @@
       }
     },
     {
+      "name": "GateKeyRotated",
+      "docs": [
+        "PROGRAM §7 `GateKeyRotated`: the creator rotated a `Link` pool's gate key. The new key is",
+        "public information; only signatures from it matter, so it is not in the event."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "InitializeParams",
       "docs": [
         "Every PROGRAM §3.1 field except `admin` (the signer), `bump` and `reserved`."
@@ -1836,6 +2992,31 @@
       }
     },
     {
+      "name": "PayoutPreset",
+      "docs": [
+        "PROGRAM §1 payout presets; the discriminant is the on-chain value. On `Pool`, in",
+        "`CreatePoolParams` and in `PoolCreated` it is the enum itself (one byte), so the IDL carries",
+        "the type and anything outside 0–2 fails to deserialise (Anchor 102)."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Standard"
+          },
+          {
+            "name": "Even"
+          },
+          {
+            "name": "FinalOnly"
+          }
+        ]
+      }
+    },
+    {
       "name": "PlatformConfig",
       "docs": [
         "PROGRAM §3.1 `PlatformConfig`: the account the rest of the program reads. 698 bytes.",
@@ -1972,6 +3153,612 @@
       }
     },
     {
+      "name": "Pool",
+      "docs": [
+        "PROGRAM §3.3 `Pool`. 1,442 bytes = 8 + 1,434.",
+        "",
+        "Seeds `[\"pool\", game_record, creator, nonce u64 LE]`; `nonce` is chosen by the client so one",
+        "creator can have several pools on one game.",
+        "",
+        "Layout (offsets from the start of the account data): `game` 8; `creator` 40; `nonce` 72;",
+        "`token` 80; `mint` 81; `token_program` 113; `vault` 145; `price` 177; `preset` 185;",
+        "`access_type` 186; `gate_key` 187; `allowlist_root` 219; `creator_addon_bps` 251;",
+        "`integrator` 253; `integrator_bps` 285; `platform_fee` 287; `creator_fee` 295;",
+        "`integrator_fee` 303; `status` 311; `sold` 312; `owners` 313 (25 × 32); `creator_boxes` 1113;",
+        "`sponsored_total` 1114; `sponsor_count` 1122; `sponsorships_open` 1124; `var` 1126;",
+        "`var_end_at` 1158; `sampled_slot` 1166; `sampled_hash` 1174; `var_replacements` 1206;",
+        "`drawn` 1207; `home_axis` 1208; `away_axis` 1218; `prize_pool` 1228; `quarter_prize` 1236",
+        "(4 × 8); `quarters_settled` 1268; `winning_box` 1269; `fees_paid` 1273;",
+        "`unpaid_prize_pool` 1274; `returned` 1282; `split_amount` 1286; `cancelled_by_admin` 1294;",
+        "`abandoned` 1295; `created_at` 1296; `locked_at` 1304; `bump` 1312; `vault_bump` 1313;",
+        "`reserved` 1314 (128)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "game",
+            "docs": [
+              "The `GameRecord` (PROGRAM §3.2); part of the seeds."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "docs": [
+              "The creator; part of the seeds; receives `creator_fee` at the first settlement."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "nonce",
+            "docs": [
+              "Client-chosen; part of the seeds."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "token",
+            "docs": [
+              "PROGRAM §2 token index: 0 SOL, 1 SKR, 2 ORE."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "Copied from `config.tokens[token]` at creation; `Pubkey::default()` for SOL."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "token_program",
+            "docs": [
+              "Copied from `config.tokens[token]` at creation; `Pubkey::default()` for SOL."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "docs": [
+              "The vault (PROGRAM §3.4) at `[\"vault\", pool]`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "docs": [
+              "Per box, base units; on the token's ladder at creation."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "preset",
+            "docs": [
+              "PROGRAM §1 payout preset."
+            ],
+            "type": {
+              "defined": {
+                "name": "PayoutPreset"
+              }
+            }
+          },
+          {
+            "name": "access_type",
+            "docs": [
+              "PROGRAM §3.3 access type."
+            ],
+            "type": {
+              "defined": {
+                "name": "AccessType"
+              }
+            }
+          },
+          {
+            "name": "gate_key",
+            "docs": [
+              "Co-signer for `Link` pools; default otherwise."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "allowlist_root",
+            "docs": [
+              "Merkle root for `Allowlist` pools; zero otherwise."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "creator_addon_bps",
+            "docs": [
+              "0–500: extra fee to the creator on top of the base share."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "integrator",
+            "docs": [
+              "The client that created the pool, when it takes a fee; default when unset."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "integrator_bps",
+            "docs": [
+              "0–500; 0 when `integrator` is unset."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "platform_fee",
+            "docs": [
+              "PROGRAM §5.1, fixed at creation."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "creator_fee",
+            "docs": [
+              "PROGRAM §5.1, fixed at creation: base and add-on in one amount."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "integrator_fee",
+            "docs": [
+              "PROGRAM §5.1, fixed at creation; 0 when unset."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "docs": [
+              "PROGRAM §3.3 / §9 status."
+            ],
+            "type": {
+              "defined": {
+                "name": "PoolStatus"
+              }
+            }
+          },
+          {
+            "name": "sold",
+            "docs": [
+              "Boxes sold, 0–25."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "owners",
+            "docs": [
+              "Box owners by 0-based index; `Pubkey::default()` is unsold."
+            ],
+            "type": {
+              "array": [
+                "pubkey",
+                25
+              ]
+            }
+          },
+          {
+            "name": "creator_boxes",
+            "docs": [
+              "Boxes the creator holds in this pool, against the creator cap."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "sponsored_total",
+            "docs": [
+              "Sum of all sponsorships (PROGRAM §3.7); never part of the fee base."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "sponsor_count",
+            "docs": [
+              "Distinct sponsor wallets ever."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "sponsorships_open",
+            "docs": [
+              "`Sponsorship` accounts not yet closed."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "var",
+            "docs": [
+              "Entropy `Var` recorded at lock (Step 5); default until then."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "var_end_at",
+            "docs": [
+              "The `Var`'s `end_at` (Step 5); 0 until then."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "sampled_slot",
+            "docs": [
+              "Slot at which `sample_var` ran (Step 5); 0 until then."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "sampled_hash",
+            "docs": [
+              "The slot hash `sample_var` verified against (Step 5); zero until then."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "var_replacements",
+            "docs": [
+              "Admin `replace_var` calls so far (Step 5); max 2."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "drawn",
+            "docs": [
+              "Axes drawn (Step 5)."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "home_axis",
+            "docs": [
+              "Home (column) digits after the draw; lane `l` = positions `l`, `l + 5`."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                10
+              ]
+            }
+          },
+          {
+            "name": "away_axis",
+            "docs": [
+              "Away (row) digits after the draw."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                10
+              ]
+            }
+          },
+          {
+            "name": "prize_pool",
+            "docs": [
+              "Fixed at the first settlement (Step 6); 0 before."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "quarter_prize",
+            "docs": [
+              "Fixed at the first settlement (Step 6)."
+            ],
+            "type": {
+              "array": [
+                "u64",
+                4
+              ]
+            }
+          },
+          {
+            "name": "quarters_settled",
+            "docs": [
+              "0–4 (Step 6)."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "winning_box",
+            "docs": [
+              "Winning box per quarter; `NO_WINNING_BOX` (255) until settled."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                4
+              ]
+            }
+          },
+          {
+            "name": "fees_paid",
+            "docs": [
+              "True once the first non-zero prize has been paid (Step 6)."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "unpaid_prize_pool",
+            "docs": [
+              "`prize_pool` minus prizes paid so far (Step 6)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "returned",
+            "docs": [
+              "Bitmap over boxes: returned, split or reclaimed (Step 7)."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "split_amount",
+            "docs": [
+              "Per-box amount fixed when the pool enters `Split` or is first reclaimed after a payout (Step 7)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "cancelled_by_admin",
+            "docs": [
+              "Set by `cancel_pool` (Step 7)."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "abandoned",
+            "docs": [
+              "Set by the first `reclaim` or `reclaim_sponsorship` (Step 7)."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Unix time of `create_pool`."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "locked_at",
+            "docs": [
+              "Unix time the 25th box sold; 0 until locked."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump of the pool."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "docs": [
+              "PDA bump of the vault."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "docs": [
+              "PROGRAM §3 preamble: padding so fields can be appended without a migration."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolCreated",
+      "docs": [
+        "PROGRAM §7 `PoolCreated`: `create_pool` wrote a `Pool`. Exactly the §7 fields: `nonce` and",
+        "`vault` derive from the pool address and the IDL seeds."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "game",
+            "docs": [
+              "The `GameRecord`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "docs": [
+              "The creator."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "token",
+            "docs": [
+              "PROGRAM §2 token index."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "The mint; default for SOL."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "docs": [
+              "Per box, base units."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "preset",
+            "docs": [
+              "PROGRAM §1 payout preset."
+            ],
+            "type": {
+              "defined": {
+                "name": "PayoutPreset"
+              }
+            }
+          },
+          {
+            "name": "access_type",
+            "docs": [
+              "PROGRAM §3.3 access type."
+            ],
+            "type": {
+              "defined": {
+                "name": "AccessType"
+              }
+            }
+          },
+          {
+            "name": "creator_addon_bps",
+            "docs": [
+              "0–500."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "integrator",
+            "docs": [
+              "Default when unset."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "integrator_bps",
+            "docs": [
+              "0–500; 0 when unset."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "platform_fee",
+            "docs": [
+              "PROGRAM §5.1."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "creator_fee",
+            "docs": [
+              "PROGRAM §5.1."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "integrator_fee",
+            "docs": [
+              "PROGRAM §5.1."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolLocked",
+      "docs": [
+        "PROGRAM §7 `PoolLocked`: the 25th box sold."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "locked_at",
+            "docs": [
+              "`pool.locked_at`, the same instant."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolStatus",
+      "docs": [
+        "PROGRAM §3.3 `PoolStatus`; the discriminant is the on-chain byte. PROGRAM §9: `Settled`,",
+        "`Returned` and `Split` are terminal. \"Live\" is not a state: clients derive it as `Drawn`",
+        "with `now ≥ game.recorded_kickoff`."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Open"
+          },
+          {
+            "name": "Locked"
+          },
+          {
+            "name": "Drawn"
+          },
+          {
+            "name": "Settled"
+          },
+          {
+            "name": "Returned"
+          },
+          {
+            "name": "Split"
+          }
+        ]
+      }
+    },
+    {
       "name": "ScoresPosted",
       "docs": [
         "PROGRAM §7 `ScoresPosted`: `post_scores` landed a quarter."
@@ -2027,6 +3814,96 @@
               "Informational; only ever true with `is_final`."
             ],
             "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Sponsored",
+      "docs": [
+        "PROGRAM §7 `Sponsored`: a `sponsor` call landed."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "sponsor",
+            "docs": [
+              "The sponsor wallet."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "This call's amount, base units."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "sponsored_total",
+            "docs": [
+              "`pool.sponsored_total` after this call."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Sponsorship",
+      "docs": [
+        "PROGRAM §3.7 `Sponsorship`. 81 bytes = 8 + 73.",
+        "",
+        "Seeds `[\"sponsorship\", pool, wallet]`. Created by the first `sponsor` from that wallet (the",
+        "sponsor pays rent), topped up by later ones; closed in Step 7 with rent to `wallet`.",
+        "",
+        "Layout: discriminator 0 (8); `pool` 8 (32); `wallet` 40 (32); `amount` 72 (8); `bump` 80."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "docs": [
+              "The pool; part of the seeds."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "wallet",
+            "docs": [
+              "The sponsor; part of the seeds; the only possible return destination."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "Cumulative amount in the pool's token, base units."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump."
+            ],
+            "type": "u8"
           }
         ]
       }
@@ -2297,12 +4174,28 @@
       "value": "25"
     },
     {
+      "name": "BPS_DENOMINATOR",
+      "docs": [
+        "PROGRAM §5.1: basis points are out of 10 000."
+      ],
+      "type": "u64",
+      "value": "10000"
+    },
+    {
       "name": "CONFIG_SEED",
       "docs": [
         "PROGRAM §3.1 `PlatformConfig` seed."
       ],
       "type": "bytes",
       "value": "[99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "COUNTER_SEED",
+      "docs": [
+        "PROGRAM §3.5 `CreatorCounter` seed prefix; creator and game record follow."
+      ],
+      "type": "bytes",
+      "value": "[99, 111, 117, 110, 116, 101, 114]"
     },
     {
       "name": "CREATOR_BPS_MAX",
@@ -2361,6 +4254,14 @@
       "value": "900"
     },
     {
+      "name": "NO_WINNING_BOX",
+      "docs": [
+        "PROGRAM §3.3 `winning_box`: the value of a quarter not yet settled."
+      ],
+      "type": "u8",
+      "value": "255"
+    },
+    {
       "name": "OVERRIDE_SEED",
       "docs": [
         "PROGRAM §3.6 `WalletOverride` seed prefix; the wallet follows."
@@ -2375,6 +4276,14 @@
       ],
       "type": "u16",
       "value": "500"
+    },
+    {
+      "name": "POOL_SEED",
+      "docs": [
+        "PROGRAM §3.3 `Pool` seed prefix; game record, creator and nonce (u64 LE) follow."
+      ],
+      "type": "bytes",
+      "value": "[112, 111, 111, 108]"
     },
     {
       "name": "PRESET_SPLITS",
@@ -2419,12 +4328,28 @@
       "value": "9"
     },
     {
+      "name": "SPONSORSHIP_SEED",
+      "docs": [
+        "PROGRAM §3.7 `Sponsorship` seed prefix; pool and wallet follow."
+      ],
+      "type": "bytes",
+      "value": "[115, 112, 111, 110, 115, 111, 114, 115, 104, 105, 112]"
+    },
+    {
       "name": "TOTAL_BPS_MAX",
       "docs": [
         "PROGRAM §1 `TOTAL_BPS_MAX`: ceiling on platform + creator base + add-on budget."
       ],
       "type": "u16",
       "value": "1500"
+    },
+    {
+      "name": "VAULT_SEED",
+      "docs": [
+        "PROGRAM §3.4 vault seed prefix; the pool follows."
+      ],
+      "type": "bytes",
+      "value": "[118, 97, 117, 108, 116]"
     }
   ]
 }

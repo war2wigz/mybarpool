@@ -64,6 +64,30 @@ pub const OVERRIDE_SEED: &[u8] = b"override";
 #[constant]
 pub const GAME_SEED: &[u8] = b"game";
 
+/// PROGRAM §3.3 `Pool` seed prefix; game record, creator and nonce (u64 LE) follow.
+#[constant]
+pub const POOL_SEED: &[u8] = b"pool";
+
+/// PROGRAM §3.4 vault seed prefix; the pool follows.
+#[constant]
+pub const VAULT_SEED: &[u8] = b"vault";
+
+/// PROGRAM §3.5 `CreatorCounter` seed prefix; creator and game record follow.
+#[constant]
+pub const COUNTER_SEED: &[u8] = b"counter";
+
+/// PROGRAM §3.7 `Sponsorship` seed prefix; pool and wallet follow.
+#[constant]
+pub const SPONSORSHIP_SEED: &[u8] = b"sponsorship";
+
+/// PROGRAM §5.1: basis points are out of 10 000.
+#[constant]
+pub const BPS_DENOMINATOR: u64 = 10_000;
+
+/// PROGRAM §3.3 `winning_box`: the value of a quarter not yet settled.
+#[constant]
+pub const NO_WINNING_BOX: u8 = 255;
+
 /// Native SOL (PROGRAM §2 token index 0): nine decimals.
 #[constant]
 pub const SOL_DECIMALS: u8 = 9;
@@ -71,8 +95,10 @@ pub const SOL_DECIMALS: u8 = 9;
 /// Number of token rules in the config (PROGRAM §2: SOL, SKR, ORE).
 pub const TOKEN_COUNT: usize = 3;
 
-/// PROGRAM §1 payout presets; the discriminant is the on-chain value.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq)]
+/// PROGRAM §1 payout presets; the discriminant is the on-chain value. On `Pool`, in
+/// `CreatePoolParams` and in `PoolCreated` it is the enum itself (one byte), so the IDL carries
+/// the type and anything outside 0–2 fails to deserialise (Anchor 102).
+#[derive(AnchorSerialize, AnchorDeserialize, InitSpace, Clone, Copy, Debug, PartialEq, Eq)]
 #[borsh(use_discriminant = true)]
 #[repr(u8)]
 pub enum PayoutPreset {
