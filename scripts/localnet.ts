@@ -79,7 +79,9 @@ export class Localnet {
     }
     const body = (await response.json()) as JsonRpcResponse<T>;
     if ("error" in body) {
-      throw new Error(`${method}: ${body.error.code} ${body.error.message}`);
+      // Surfpool puts the reason in `data` ("Cannot travel to past timestamp: …"); surface it.
+      const detail = body.error.data === undefined ? "" : ` (${JSON.stringify(body.error.data)})`;
+      throw new Error(`${method}: ${body.error.code} ${body.error.message}${detail}`);
     }
     return body.result;
   }

@@ -1,8 +1,9 @@
 /**
- * Hand-rolled Kit codecs for the four admin instructions, the two accounts and
- * the three events (build plan Step 2). Discriminators are read from
- * `idl/mybarpool.json` at test time so the committed IDL is exercised, not
- * just diffed. Step 9 replaces this file with the Codama-generated client.
+ * Hand-rolled Kit codecs for the admin and game instructions, the three
+ * accounts and the seven events (build plan Steps 2 and 3). Discriminators are
+ * read from `idl/mybarpool.json` at test time so the committed IDL is
+ * exercised, not just diffed. Step 9 replaces this file with the
+ * Codama-generated client.
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -25,7 +26,10 @@ import {
   getBooleanDecoder,
   getBooleanEncoder,
   getBytesDecoder,
+  getEnumDecoder,
+  getEnumEncoder,
   getI64Decoder,
+  getI64Encoder,
   getOptionEncoder,
   getProgramDerivedAddress,
   getSignatureFromTransaction,
@@ -50,6 +54,9 @@ import {
   type Decoder,
   type Encoder,
   type Instruction,
+  type InstructionWithSigners,
+  type AccountMeta,
+  type AccountSignerMeta,
   type ReadonlyUint8Array,
   type Rpc,
   type RpcSubscriptions,
@@ -58,6 +65,8 @@ import {
   type SolanaRpcSubscriptionsApi,
   type TransactionSigner,
 } from "@solana/kit";
+
+import { gameRecordSeeds, type GameKey } from "@mybarpool/shared";
 
 import { LOCALNET_URL } from "../../scripts/localnet.js";
 
@@ -153,6 +162,15 @@ export async function eventAuthorityPda(): Promise<Address> {
   const [pda] = await getProgramDerivedAddress({
     programAddress: PROGRAM_ID,
     seeds: [utf8.encode("__event_authority")],
+  });
+  return pda;
+}
+
+/** PROGRAM §3.2: the six seeds `@mybarpool/shared` produces, in that order. */
+export async function gamePda(key: GameKey, scheduledKickoff: bigint): Promise<Address> {
+  const [pda] = await getProgramDerivedAddress({
+    programAddress: PROGRAM_ID,
+    seeds: gameRecordSeeds(key, scheduledKickoff),
   });
   return pda;
 }
@@ -376,7 +394,7 @@ function withDiscriminator(name: string, body: ReadonlyUint8Array): Uint8Array {
   return out;
 }
 
-async function eventCpiAccounts() {
+async function eventCpiAccounts(): Promise<{ address: Address; role: AccountRole.READONLY }[]> {
   return [
     { address: await eventAuthorityPda(), role: AccountRole.READONLY },
     { address: PROGRAM_ID, role: AccountRole.READONLY },
@@ -466,6 +484,268 @@ export async function closeWalletOverrideInstruction(
 }
 
 // ---------------------------------------------------------------------------
+// Games (PROGRAM §2, §3.2, §4.2, §7)
+// ---------------------------------------------------------------------------
+
+export type { GameKey };
+
+/** PROGRAM §3.2 `GameStatus`; the numeric value is the on-chain byte. */
+export enum GameStatus {
+  Scheduled = 0,
+  Postponed = 1,
+  Cancelled = 2,
+  Suspended = 3,
+  Final = 4,
+}
+
+export const gameKeyEncoder: Encoder<GameKey> = getStructEncoder([
+  ["season", getU16Encoder()],
+  ["week", getU8Encoder()],
+  ["home", getU8Encoder()],
+  ["away", getU8Encoder()],
+]);
+
+export const gameKeyDecoder: Decoder<GameKey> = getStructDecoder([
+  ["season", getU16Decoder()],
+  ["week", getU8Decoder()],
+  ["home", getU8Decoder()],
+  ["away", getU8Decoder()],
+]);
+
+export const gameStatusEncoder = getEnumEncoder(GameStatus) as Encoder<GameStatus>;
+export const gameStatusDecoder = getEnumDecoder(GameStatus) as Decoder<GameStatus>;
+
+export interface GameRecord {
+  key: GameKey;
+  scheduledKickoff: bigint;
+  recordedKickoff: bigint;
+  status: GameStatus;
+  quartersPosted: number;
+  homeScore: number[];
+  awayScore: number[];
+  postedAt: bigint[];
+  finalHadOvertime: boolean;
+  markedAt: bigint;
+  bump: number;
+  reserved: ReadonlyUint8Array;
+}
+
+export const gameRecordDecoder = getStructDecoder([
+  ["key", gameKeyDecoder],
+  ["scheduledKickoff", getI64Decoder()],
+  ["recordedKickoff", getI64Decoder()],
+  ["status", gameStatusDecoder],
+  ["quartersPosted", getU8Decoder()],
+  ["homeScore", getArrayDecoder(getU16Decoder(), { size: 4 })],
+  ["awayScore", getArrayDecoder(getU16Decoder(), { size: 4 })],
+  ["postedAt", getArrayDecoder(getI64Decoder(), { size: 4 })],
+  ["finalHadOvertime", getBooleanDecoder()],
+  ["markedAt", getI64Decoder()],
+  ["bump", getU8Decoder()],
+  ["reserved", fixDecoderSize(getBytesDecoder(), 64)],
+]) as Decoder<GameRecord>;
+
+export interface GameCreated {
+  time: bigint;
+  game: Address;
+  key: GameKey;
+  scheduledKickoff: bigint;
+}
+export const gameCreatedDecoder: Decoder<GameCreated> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["game", getAddressDecoder()],
+  ["key", gameKeyDecoder],
+  ["scheduledKickoff", getI64Decoder()],
+]);
+
+export interface KickoffUpdated {
+  time: bigint;
+  game: Address;
+  old: bigint;
+  new: bigint;
+}
+export const kickoffUpdatedDecoder: Decoder<KickoffUpdated> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["game", getAddressDecoder()],
+  ["old", getI64Decoder()],
+  ["new", getI64Decoder()],
+]);
+
+export interface ScoresPosted {
+  time: bigint;
+  game: Address;
+  quarter: number;
+  home: number;
+  away: number;
+  isFinal: boolean;
+  hadOvertime: boolean;
+}
+export const scoresPostedDecoder: Decoder<ScoresPosted> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["game", getAddressDecoder()],
+  ["quarter", getU8Decoder()],
+  ["home", getU16Decoder()],
+  ["away", getU16Decoder()],
+  ["isFinal", getBooleanDecoder()],
+  ["hadOvertime", getBooleanDecoder()],
+]);
+
+export interface GameMarked {
+  time: bigint;
+  game: Address;
+  status: GameStatus;
+}
+export const gameMarkedDecoder: Decoder<GameMarked> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["game", getAddressDecoder()],
+  ["status", gameStatusDecoder],
+]);
+
+/**
+ * `create_game`: the keeper signs and pays. Unlike the admin instructions, the keeper is a
+ * separate signer from the fee payer in the tests, so the signer is attached to the meta.
+ */
+export async function createGameInstruction(
+  keeper: TransactionSigner,
+  key: GameKey,
+  scheduledKickoff: bigint,
+): Promise<SignedInstruction> {
+  return createGameInstructionAt(
+    keeper,
+    key,
+    scheduledKickoff,
+    await gamePda(key, scheduledKickoff),
+  );
+}
+
+/**
+ * `create_game` for a key `@mybarpool/shared` refuses to encode (home == away, a bad week), so
+ * the suite can show the program rejects it too. The PDA is derived from raw seeds.
+ */
+export async function createGameInstructionUnchecked(
+  keeper: TransactionSigner,
+  key: GameKey,
+  scheduledKickoff: bigint,
+): Promise<SignedInstruction> {
+  const [pda] = await getProgramDerivedAddress({
+    programAddress: PROGRAM_ID,
+    seeds: [
+      utf8.encode("game"),
+      getU16Encoder().encode(key.season),
+      getU8Encoder().encode(key.week),
+      getU8Encoder().encode(key.home),
+      getU8Encoder().encode(key.away),
+      getI64Encoder().encode(scheduledKickoff),
+    ],
+  });
+  return createGameInstructionAt(keeper, key, scheduledKickoff, pda);
+}
+
+async function createGameInstructionAt(
+  keeper: TransactionSigner,
+  key: GameKey,
+  scheduledKickoff: bigint,
+  game: Address,
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: keeper.address, role: AccountRole.WRITABLE_SIGNER, signer: keeper },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: game, role: AccountRole.WRITABLE },
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator(
+      "create_game",
+      getStructEncoder([
+        ["key", gameKeyEncoder],
+        ["scheduledKickoff", getI64Encoder()],
+      ]).encode({ key, scheduledKickoff }),
+    ),
+  };
+}
+
+export async function updateKickoffInstruction(
+  keeper: TransactionSigner,
+  game: Address,
+  newTime: bigint,
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: keeper.address, role: AccountRole.READONLY_SIGNER, signer: keeper },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: game, role: AccountRole.WRITABLE },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("update_kickoff", getI64Encoder().encode(newTime)),
+  };
+}
+
+export interface ScorePost {
+  quarter: number;
+  home: number;
+  away: number;
+  isFinal: boolean;
+  hadOvertime: boolean;
+}
+
+const scorePostEncoder: Encoder<ScorePost> = getStructEncoder([
+  ["quarter", getU8Encoder()],
+  ["home", getU16Encoder()],
+  ["away", getU16Encoder()],
+  ["isFinal", getBooleanEncoder()],
+  ["hadOvertime", getBooleanEncoder()],
+]);
+
+export async function postScoresInstruction(
+  keeper: TransactionSigner,
+  game: Address,
+  post: ScorePost,
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: keeper.address, role: AccountRole.READONLY_SIGNER, signer: keeper },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: game, role: AccountRole.WRITABLE },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("post_scores", scorePostEncoder.encode(post)),
+  };
+}
+
+export async function markGameInstruction(
+  admin: TransactionSigner,
+  game: Address,
+  newStatus: GameStatus,
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: admin.address, role: AccountRole.READONLY_SIGNER, signer: admin },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: game, role: AccountRole.WRITABLE },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("mark_game", gameStatusEncoder.encode(newStatus)),
+  };
+}
+
+/** The chain's clock, PROGRAM conventions: `unix_timestamp` is the i64 at byte 32 of the Clock sysvar. */
+export const CLOCK_SYSVAR = address("SysvarC1ock11111111111111111111111111111111");
+export async function chainNow(): Promise<bigint> {
+  const data = await fetchAccountData(CLOCK_SYSVAR);
+  if (!data || data.length < 40) throw new Error("Clock sysvar unreadable");
+  return getI64Decoder().decode(data.subarray(32, 40));
+}
+
+// ---------------------------------------------------------------------------
 // Sending and reading back
 // ---------------------------------------------------------------------------
 
@@ -474,7 +754,14 @@ export const rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi> =
   createSolanaRpcSubscriptions(LOCALNET_URL.replace(/^http/, "ws").replace(/:8899$/, ":8900"));
 const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions });
 
-export async function send(payer: TransactionSigner, instruction: Instruction): Promise<Signature> {
+/** An instruction whose signer metas carry their `TransactionSigner`, so `send` needs no extra signers. */
+export type SignedInstruction = Instruction & InstructionWithSigners;
+type SignedMetas = (AccountMeta | AccountSignerMeta)[];
+
+export async function send(
+  payer: TransactionSigner,
+  instruction: Instruction | SignedInstruction,
+): Promise<Signature> {
   const { value: blockhash } = await rpc.getLatestBlockhash().send();
   const message = pipe(
     createTransactionMessage({ version: 0 }),
@@ -491,7 +778,7 @@ export async function send(payer: TransactionSigner, instruction: Instruction): 
 /** Send and return the Anchor custom error code the program failed with, or `null` on success. */
 export async function sendExpectingError(
   payer: TransactionSigner,
-  instruction: Instruction,
+  instruction: Instruction | SignedInstruction,
 ): Promise<number | null> {
   try {
     await send(payer, instruction);
