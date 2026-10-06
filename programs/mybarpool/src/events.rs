@@ -5,7 +5,7 @@
 use anchor_lang::prelude::*;
 
 use crate::constants::TOKEN_COUNT;
-use crate::state::{PlatformConfig, TokenRule};
+use crate::state::{GameKey, GameStatus, PlatformConfig, TokenRule};
 
 /// PROGRAM §7 `ConfigUpdated`: the full config snapshot after `initialize` or `update_config`.
 #[event]
@@ -86,4 +86,60 @@ pub struct OverrideClosed {
     pub max_open_pools: u8,
     /// The `max_own_boxes` that was in force.
     pub max_own_boxes: u8,
+}
+
+/// PROGRAM §7 `GameCreated`: a `GameRecord` was created by `create_game`.
+#[event]
+pub struct GameCreated {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The record's address.
+    pub game: Pubkey,
+    /// PROGRAM §2 game key.
+    pub key: GameKey,
+    /// PROGRAM §3.2 `scheduled_kickoff`; also `recorded_kickoff` at creation.
+    pub scheduled_kickoff: i64,
+}
+
+/// PROGRAM §7 `KickoffUpdated`: `update_kickoff` moved `recorded_kickoff`.
+#[event]
+pub struct KickoffUpdated {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The record's address.
+    pub game: Pubkey,
+    /// `recorded_kickoff` before the update.
+    pub old: i64,
+    /// `recorded_kickoff` after the update.
+    pub new: i64,
+}
+
+/// PROGRAM §7 `ScoresPosted`: `post_scores` landed a quarter.
+#[event]
+pub struct ScoresPosted {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The record's address.
+    pub game: Pubkey,
+    /// 1–4; 4 is the final score.
+    pub quarter: u8,
+    /// Cumulative home score.
+    pub home: u16,
+    /// Cumulative away score.
+    pub away: u16,
+    /// True on the fourth post only.
+    pub is_final: bool,
+    /// Informational; only ever true with `is_final`.
+    pub had_overtime: bool,
+}
+
+/// PROGRAM §7 `GameMarked`: the admin marked the record `Postponed`, `Cancelled` or `Suspended`.
+#[event]
+pub struct GameMarked {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The record's address.
+    pub game: Pubkey,
+    /// The new status.
+    pub status: GameStatus,
 }

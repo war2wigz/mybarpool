@@ -1,10 +1,11 @@
 //! MyBarPool: NFL boxes on Solana.
 //!
-//! Build plan Step 2: `PlatformConfig`, `WalletOverride`, every PROGRAM §1
-//! constant, the complete §8 error enum, and the four §4.1 admin
-//! instructions. Nothing here moves money or touches a pool. Later steps add
-//! games, pools, the draw, settlement and returns, each built and audited
-//! against `docs/PROGRAM.md`.
+//! Build plan Steps 2 and 3: `PlatformConfig`, `WalletOverride`, every
+//! PROGRAM §1 constant, the complete §8 error enum, the four §4.1 admin
+//! instructions, and `GameRecord` with the four §4.2 game instructions.
+//! Nothing here moves money or touches a pool. Later steps add pools, the
+//! draw, settlement and returns, each built and audited against
+//! `docs/PROGRAM.md`.
 #![allow(unexpected_cfgs)]
 
 pub mod constants;
@@ -59,5 +60,53 @@ pub mod mybarpool {
     /// Emits `OverrideClosed`.
     pub fn close_wallet_override(ctx: Context<CloseWalletOverride>, wallet: Pubkey) -> Result<()> {
         instructions::close_wallet_override::handle_close_wallet_override(ctx, wallet)
+    }
+
+    /// PROGRAM §4.2 `create_game`: create the `GameRecord` for `key` at `scheduled_kickoff`
+    /// (must be in the future; §2 key rules, preseason only with `preseason_enabled`).
+    /// Signer and payer: the keeper. Emits `GameCreated`.
+    pub fn create_game(
+        ctx: Context<CreateGame>,
+        key: GameKey,
+        scheduled_kickoff: i64,
+    ) -> Result<()> {
+        instructions::create_game::handle_create_game(ctx, key, scheduled_kickoff)
+    }
+
+    /// PROGRAM §4.2 `update_kickoff`: move `recorded_kickoff` to `new_time` while the record is
+    /// `Scheduled`, nothing is posted, the recorded kickoff is still ahead, `new_time` is in the
+    /// future and within 72 hours of the scheduled kickoff. Signer: the keeper. Emits
+    /// `KickoffUpdated`.
+    pub fn update_kickoff(ctx: Context<UpdateKickoff>, new_time: i64) -> Result<()> {
+        instructions::update_kickoff::handle_update_kickoff(ctx, new_time)
+    }
+
+    /// PROGRAM §4.2 `post_scores`: post the cumulative score at the end of `quarter` (1–4, in
+    /// order, at least 15 minutes after kickoff or the previous post, never decreasing;
+    /// `is_final` on the fourth only). The fourth post sets `Final`. Signer: the keeper. Emits
+    /// `ScoresPosted`.
+    pub fn post_scores(
+        ctx: Context<PostScores>,
+        quarter: u8,
+        home: u16,
+        away: u16,
+        is_final: bool,
+        had_overtime: bool,
+    ) -> Result<()> {
+        instructions::post_scores::handle_post_scores(
+            ctx,
+            quarter,
+            home,
+            away,
+            is_final,
+            had_overtime,
+        )
+    }
+
+    /// PROGRAM §4.2 `mark_game`: mark a `Scheduled` record `Postponed` or `Cancelled` (only
+    /// before any post) or `Suspended` (any time before `Final`). Irreversible. Signer: the
+    /// admin. Emits `GameMarked`.
+    pub fn mark_game(ctx: Context<MarkGame>, new_status: GameStatus) -> Result<()> {
+        instructions::mark_game::handle_mark_game(ctx, new_status)
     }
 }

@@ -100,6 +100,89 @@
       ]
     },
     {
+      "name": "create_game",
+      "docs": [
+        "PROGRAM §4.2 `create_game`: create the `GameRecord` for `key` at `scheduled_kickoff`",
+        "(must be in the future; §2 key rules, preseason only with `preseason_enabled`).",
+        "Signer and payer: the keeper. Emits `GameCreated`."
+      ],
+      "discriminator": [
+        124,
+        69,
+        75,
+        66,
+        184,
+        220,
+        72,
+        206
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "docs": [
+            "The keeper, `config.score_authority`; pays the record's rent."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; read for `score_authority` and `preseason_enabled`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord` at the six seeds; one per (key, scheduled kickoff)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "key",
+          "type": {
+            "defined": {
+              "name": "GameKey"
+            }
+          }
+        },
+        {
+          "name": "scheduled_kickoff",
+          "type": "i64"
+        }
+      ]
+    },
+    {
       "name": "initialize",
       "docs": [
         "PROGRAM §4.1 `initialize`: create `PlatformConfig`. Signer: the program's upgrade",
@@ -263,6 +346,167 @@
               "name": "InitializeParams"
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "mark_game",
+      "docs": [
+        "PROGRAM §4.2 `mark_game`: mark a `Scheduled` record `Postponed` or `Cancelled` (only",
+        "before any post) or `Suspended` (any time before `Final`). Irreversible. Signer: the",
+        "admin. Emits `GameMarked`."
+      ],
+      "discriminator": [
+        2,
+        101,
+        160,
+        150,
+        221,
+        111,
+        65,
+        61
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "`config.admin`."
+          ],
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, re-derived from its own key and scheduled kickoff."
+          ],
+          "writable": true
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_status",
+          "type": {
+            "defined": {
+              "name": "GameStatus"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "post_scores",
+      "docs": [
+        "PROGRAM §4.2 `post_scores`: post the cumulative score at the end of `quarter` (1–4, in",
+        "order, at least 15 minutes after kickoff or the previous post, never decreasing;",
+        "`is_final` on the fourth only). The fourth post sets `Final`. Signer: the keeper. Emits",
+        "`ScoresPosted`."
+      ],
+      "discriminator": [
+        41,
+        241,
+        139,
+        5,
+        76,
+        14,
+        13,
+        8
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "docs": [
+            "The keeper, `config.score_authority`."
+          ],
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, re-derived from its own key and scheduled kickoff."
+          ],
+          "writable": true
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "quarter",
+          "type": "u8"
+        },
+        {
+          "name": "home",
+          "type": "u16"
+        },
+        {
+          "name": "away",
+          "type": "u16"
+        },
+        {
+          "name": "is_final",
+          "type": "bool"
+        },
+        {
+          "name": "had_overtime",
+          "type": "bool"
         }
       ]
     },
@@ -449,9 +693,93 @@
           }
         }
       ]
+    },
+    {
+      "name": "update_kickoff",
+      "docs": [
+        "PROGRAM §4.2 `update_kickoff`: move `recorded_kickoff` to `new_time` while the record is",
+        "`Scheduled`, nothing is posted, the recorded kickoff is still ahead, `new_time` is in the",
+        "future and within 72 hours of the scheduled kickoff. Signer: the keeper. Emits",
+        "`KickoffUpdated`."
+      ],
+      "discriminator": [
+        235,
+        99,
+        136,
+        149,
+        108,
+        252,
+        203,
+        190
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "docs": [
+            "The keeper, `config.score_authority`."
+          ],
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, re-derived from its own key and scheduled kickoff."
+          ],
+          "writable": true
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_time",
+          "type": "i64"
+        }
+      ]
     }
   ],
   "accounts": [
+    {
+      "name": "GameRecord",
+      "discriminator": [
+        28,
+        157,
+        20,
+        4,
+        219,
+        32,
+        208,
+        147
+      ]
+    },
     {
       "name": "PlatformConfig",
       "discriminator": [
@@ -494,6 +822,45 @@
       ]
     },
     {
+      "name": "GameCreated",
+      "discriminator": [
+        218,
+        25,
+        150,
+        94,
+        177,
+        112,
+        96,
+        2
+      ]
+    },
+    {
+      "name": "GameMarked",
+      "discriminator": [
+        113,
+        31,
+        193,
+        61,
+        194,
+        155,
+        186,
+        60
+      ]
+    },
+    {
+      "name": "KickoffUpdated",
+      "discriminator": [
+        154,
+        105,
+        18,
+        149,
+        219,
+        78,
+        73,
+        186
+      ]
+    },
+    {
       "name": "OverrideClosed",
       "discriminator": [
         136,
@@ -518,6 +885,19 @@
         233,
         79
       ]
+    },
+    {
+      "name": "ScoresPosted",
+      "discriminator": [
+        88,
+        32,
+        36,
+        115,
+        91,
+        208,
+        208,
+        120
+      ]
     }
   ],
   "errors": [
@@ -534,12 +914,12 @@
     {
       "code": 6002,
       "name": "GameNotScheduled",
-      "msg": "Game is not scheduled"
+      "msg": "Game is not scheduled: the record is final or has been marked"
     },
     {
       "code": 6003,
       "name": "GameAlreadyMarked",
-      "msg": "Game is already marked"
+      "msg": "Game is already marked; marks are irreversible"
     },
     {
       "code": 6004,
@@ -549,37 +929,37 @@
     {
       "code": 6005,
       "name": "KickoffInPast",
-      "msg": "Kickoff must be in the future"
+      "msg": "Kickoff must be later than the current time"
     },
     {
       "code": 6006,
       "name": "KickoffOutOfBounds",
-      "msg": "Kickoff is outside the 72-hour bound"
+      "msg": "Kickoff may not move more than 72 hours past the scheduled kickoff"
     },
     {
       "code": 6007,
       "name": "KickoffUpdateTooLate",
-      "msg": "Kickoff can no longer be updated"
+      "msg": "Kickoff can no longer be updated: the recorded kickoff has passed"
     },
     {
       "code": 6008,
       "name": "QuarterOutOfOrder",
-      "msg": "Quarter is out of order"
+      "msg": "Quarter must be the next unposted one (1 to 4, in order)"
     },
     {
       "code": 6009,
       "name": "QuarterTooSoon",
-      "msg": "Quarter posted too soon"
+      "msg": "Quarter posted sooner than 15 minutes after kickoff or the previous post"
     },
     {
       "code": 6010,
       "name": "ScoreDecreased",
-      "msg": "Score decreased"
+      "msg": "A cumulative score is lower than the previous post"
     },
     {
       "code": 6011,
       "name": "FinalFlagMismatch",
-      "msg": "Final flag does not match the quarter"
+      "msg": "is_final must be set on the fourth post only; had_overtime needs is_final"
     },
     {
       "code": 6012,
@@ -820,6 +1200,16 @@
       "code": 6059,
       "name": "InvalidConfig",
       "msg": "Invalid configuration"
+    },
+    {
+      "code": 6060,
+      "name": "InvalidGameKey",
+      "msg": "Invalid game key: week, team index or home == away"
+    },
+    {
+      "code": 6061,
+      "name": "InvalidGameStatus",
+      "msg": "Invalid game status for mark_game"
     }
   ],
   "types": [
@@ -942,6 +1332,288 @@
       }
     },
     {
+      "name": "GameCreated",
+      "docs": [
+        "PROGRAM §7 `GameCreated`: a `GameRecord` was created by `create_game`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "game",
+            "docs": [
+              "The record's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "key",
+            "docs": [
+              "PROGRAM §2 game key."
+            ],
+            "type": {
+              "defined": {
+                "name": "GameKey"
+              }
+            }
+          },
+          {
+            "name": "scheduled_kickoff",
+            "docs": [
+              "PROGRAM §3.2 `scheduled_kickoff`; also `recorded_kickoff` at creation."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GameKey",
+      "docs": [
+        "PROGRAM §2 game key: season, week, home, away. Five bytes on the wire (`season` u16 LE,",
+        "then `week`, `home`, `away`), the encoding `encodeGameKey` in `@mybarpool/shared` produces."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "season",
+            "docs": [
+              "The year the regular season starts in (2026 for the 2026–27 season)."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "week",
+            "docs": [
+              "1–18 regular season; 19 Wild Card, 20 Divisional, 21 Conference Championships,",
+              "22 Super Bowl. Preseason, when enabled, is 101–103 so it can never collide."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "home",
+            "docs": [
+              "Home team: index 0–31 into the frozen team table (PROGRAM §2)."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "away",
+            "docs": [
+              "Away team: index 0–31 into the frozen team table (PROGRAM §2)."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GameMarked",
+      "docs": [
+        "PROGRAM §7 `GameMarked`: the admin marked the record `Postponed`, `Cancelled` or `Suspended`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "game",
+            "docs": [
+              "The record's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "status",
+            "docs": [
+              "The new status."
+            ],
+            "type": {
+              "defined": {
+                "name": "GameStatus"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "GameRecord",
+      "docs": [
+        "PROGRAM §3.2 `GameRecord`. 153 bytes = 8 + 145.",
+        "",
+        "Seeds `[\"game\", season u16 LE, week u8, home u8, away u8, scheduled_kickoff i64 LE]`, the",
+        "six `gameRecordSeeds` in `@mybarpool/shared` produces, in that order.",
+        "",
+        "Layout: discriminator 0 (8); `key` 8 (5: `season` 8, `week` 10, `home` 11, `away` 12);",
+        "`scheduled_kickoff` 13; `recorded_kickoff` 21; `status` 29; `quarters_posted` 30;",
+        "`home_score` 31 (4 × u16); `away_score` 39 (4 × u16); `posted_at` 47 (4 × i64);",
+        "`final_had_overtime` 79; `marked_at` 80; `bump` 88; `reserved` 89 (64)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "docs": [
+              "PROGRAM §2 game key; part of the seeds."
+            ],
+            "type": {
+              "defined": {
+                "name": "GameKey"
+              }
+            }
+          },
+          {
+            "name": "scheduled_kickoff",
+            "docs": [
+              "Seed value; never changes. The 72-hour update bound and the 30-day reclaim clock are",
+              "measured from this, never from `recorded_kickoff` (ARCHITECTURE › Trust model)."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "recorded_kickoff",
+            "docs": [
+              "Starts equal to `scheduled_kickoff`; moved by `update_kickoff`. Sales close at this time."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "docs": [
+              "PROGRAM §3.2 `GameStatus`, one byte on-chain."
+            ],
+            "type": {
+              "defined": {
+                "name": "GameStatus"
+              }
+            }
+          },
+          {
+            "name": "quarters_posted",
+            "docs": [
+              "0–4: how many `post_scores` have landed."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "home_score",
+            "docs": [
+              "Cumulative home score at the end of Q1..Q3 and final (ARCHITECTURE › Payouts)."
+            ],
+            "type": {
+              "array": [
+                "u16",
+                4
+              ]
+            }
+          },
+          {
+            "name": "away_score",
+            "docs": [
+              "Same for away."
+            ],
+            "type": {
+              "array": [
+                "u16",
+                4
+              ]
+            }
+          },
+          {
+            "name": "posted_at",
+            "docs": [
+              "Unix time each post landed; 0 until it does."
+            ],
+            "type": {
+              "array": [
+                "i64",
+                4
+              ]
+            }
+          },
+          {
+            "name": "final_had_overtime",
+            "docs": [
+              "Informational, set on the final post."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "marked_at",
+            "docs": [
+              "Unix time `mark_game` ran; 0 if never."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "docs": [
+              "PROGRAM §3 preamble: padding so fields can be appended without a migration."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "GameStatus",
+      "docs": [
+        "PROGRAM §3.2 `GameStatus`; the discriminant is the on-chain byte. PROGRAM §9: `Scheduled`",
+        "is the only live state; the other four are terminal."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Scheduled"
+          },
+          {
+            "name": "Postponed"
+          },
+          {
+            "name": "Cancelled"
+          },
+          {
+            "name": "Suspended"
+          },
+          {
+            "name": "Final"
+          }
+        ]
+      }
+    },
+    {
       "name": "InitializeParams",
       "docs": [
         "Every PROGRAM §3.1 field except `admin` (the signer), `bump` and `reserved`."
@@ -1041,6 +1713,45 @@
                 3
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "KickoffUpdated",
+      "docs": [
+        "PROGRAM §7 `KickoffUpdated`: `update_kickoff` moved `recorded_kickoff`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "game",
+            "docs": [
+              "The record's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "old",
+            "docs": [
+              "`recorded_kickoff` before the update."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "new",
+            "docs": [
+              "`recorded_kickoff` after the update."
+            ],
+            "type": "i64"
           }
         ]
       }
@@ -1256,6 +1967,66 @@
                 256
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScoresPosted",
+      "docs": [
+        "PROGRAM §7 `ScoresPosted`: `post_scores` landed a quarter."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "game",
+            "docs": [
+              "The record's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "quarter",
+            "docs": [
+              "1–4; 4 is the final score."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "home",
+            "docs": [
+              "Cumulative home score."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "away",
+            "docs": [
+              "Cumulative away score."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "is_final",
+            "docs": [
+              "True on the fourth post only."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "had_overtime",
+            "docs": [
+              "Informational; only ever true with `is_final`."
+            ],
+            "type": "bool"
           }
         ]
       }
@@ -1548,6 +2319,14 @@
       ],
       "type": "pubkey",
       "value": "3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X"
+    },
+    {
+      "name": "GAME_SEED",
+      "docs": [
+        "PROGRAM §3.2 `GameRecord` seed prefix; season, week, home, away and scheduled kickoff follow."
+      ],
+      "type": "bytes",
+      "value": "[103, 97, 109, 101]"
     },
     {
       "name": "KICKOFF_UPDATE_BOUND",

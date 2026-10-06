@@ -60,6 +60,10 @@ pub const CONFIG_SEED: &[u8] = b"config";
 #[constant]
 pub const OVERRIDE_SEED: &[u8] = b"override";
 
+/// PROGRAM §3.2 `GameRecord` seed prefix; season, week, home, away and scheduled kickoff follow.
+#[constant]
+pub const GAME_SEED: &[u8] = b"game";
+
 /// Native SOL (PROGRAM §2 token index 0): nine decimals.
 #[constant]
 pub const SOL_DECIMALS: u8 = 9;

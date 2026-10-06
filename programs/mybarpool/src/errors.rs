@@ -1,7 +1,9 @@
 //! Errors, PROGRAM §8. Numbered from 6000 in declaration order; names are the
 //! contract and the numbers freeze when the program ships. The 59 §8 names
-//! come first, then `InvalidConfig` (6059) for a violated §3.1 invariant,
-//! which §8 had no error for.
+//! come first, then the ones appended before anything shipped: `InvalidConfig`
+//! (6059, Step 2) for a violated §3.1 invariant, `InvalidGameKey` (6060) and
+//! `InvalidGameStatus` (6061, both Step 3) for the §4.2 key rules and the
+//! `mark_game` status rules, which §8 had no error for.
 
 use anchor_lang::prelude::*;
 
@@ -13,35 +15,45 @@ pub enum MybarpoolError {
     /// 6001: `config.paused` is set; create_pool, buy and sponsor are refused.
     #[msg("MyBarPool is paused; nothing has moved")]
     Paused,
-    /// 6002: the game record is not in the Scheduled state.
-    #[msg("Game is not scheduled")]
+    /// 6002: the game record's status is not `Scheduled` (PROGRAM §4.2, §9): `update_kickoff`
+    /// and `post_scores` on a marked or `Final` record, `mark_game` on a `Final` one, and
+    /// later `create_pool` on a marked one. Terminal records are inert.
+    #[msg("Game is not scheduled: the record is final or has been marked")]
     GameNotScheduled,
-    /// 6003: the game record already carries a mark.
-    #[msg("Game is already marked")]
+    /// 6003: `mark_game` on a record already marked `Postponed`, `Cancelled` or `Suspended`
+    /// (PROGRAM §4.2: marks are irreversible; a corrected game is a new record).
+    #[msg("Game is already marked; marks are irreversible")]
     GameAlreadyMarked,
     /// 6004: now is at or after the recorded kickoff.
     #[msg("Sales closed at kickoff")]
     SalesClosed,
-    /// 6005: the new kickoff is not in the future.
-    #[msg("Kickoff must be in the future")]
+    /// 6005: a kickoff time at or before the current Clock time (PROGRAM §4.2): `create_game`
+    /// with `scheduled_kickoff ≤ now`, `update_kickoff` with `new_time ≤ now`.
+    #[msg("Kickoff must be later than the current time")]
     KickoffInPast,
-    /// 6006: the new kickoff is more than 72 hours after the scheduled one.
-    #[msg("Kickoff is outside the 72-hour bound")]
+    /// 6006: `update_kickoff` with `new_time > scheduled_kickoff + KICKOFF_UPDATE_BOUND`
+    /// (PROGRAM §1: 72 hours), measured from the scheduled kickoff the record was seeded with,
+    /// never from the recorded one. Anything later is a postponement, marked by the admin.
+    #[msg("Kickoff may not move more than 72 hours past the scheduled kickoff")]
     KickoffOutOfBounds,
-    /// 6007: the recorded kickoff has already passed.
-    #[msg("Kickoff can no longer be updated")]
+    /// 6007: `update_kickoff` once `now ≥ recorded_kickoff` (sales have closed) or once any
+    /// quarter has been posted (PROGRAM §4.2).
+    #[msg("Kickoff can no longer be updated: the recorded kickoff has passed")]
     KickoffUpdateTooLate,
-    /// 6008: quarters must be posted and settled in order.
-    #[msg("Quarter is out of order")]
+    /// 6008: `post_scores` with `quarter != quarters_posted + 1` (PROGRAM §4.2): a repeat, a
+    /// skip, quarter 0 or a quarter above 4.
+    #[msg("Quarter must be the next unposted one (1 to 4, in order)")]
     QuarterOutOfOrder,
-    /// 6009: fewer than 15 minutes since kickoff or the previous post.
-    #[msg("Quarter posted too soon")]
+    /// 6009: `post_scores` sooner than `MIN_QUARTER_SECONDS` (PROGRAM §1: 15 minutes) after the
+    /// recorded kickoff (Q1) or after the previous post (Q2–Q4).
+    #[msg("Quarter posted sooner than 15 minutes after kickoff or the previous post")]
     QuarterTooSoon,
-    /// 6010: a cumulative score went down.
-    #[msg("Score decreased")]
+    /// 6010: a cumulative home or away score lower than the previous post's (PROGRAM §4.2).
+    #[msg("A cumulative score is lower than the previous post")]
     ScoreDecreased,
-    /// 6011: `is_final` must be true on the fourth post and false otherwise.
-    #[msg("Final flag does not match the quarter")]
+    /// 6011: `is_final` not equal to `quarter == 4`, or `had_overtime` without `is_final`
+    /// (PROGRAM §4.2: the fourth post is the final score, after any overtime).
+    #[msg("is_final must be set on the fourth post only; had_overtime needs is_final")]
     FinalFlagMismatch,
     /// 6012: the token rule is disabled.
     #[msg("Token is disabled")]
@@ -187,4 +199,13 @@ pub enum MybarpoolError {
     /// 6059: a PROGRAM §3.1 or §3.6 invariant or token-shape rule is violated.
     #[msg("Invalid configuration")]
     InvalidConfig,
+    /// 6060: `create_game` key rules (PROGRAM §2, §4.2): `week` outside 1–22 and not a
+    /// preseason week 101–103 with `preseason_enabled`; a team index of 32 or more; `home == away`.
+    #[msg("Invalid game key: week, team index or home == away")]
+    InvalidGameKey,
+    /// 6061: `mark_game` with a status that is not a mark (`Scheduled`, `Final`), or
+    /// `Postponed` / `Cancelled` once a quarter has been posted (PROGRAM §4.2, §9: only
+    /// `Suspended` applies to a game with scores).
+    #[msg("Invalid game status for mark_game")]
+    InvalidGameStatus,
 }

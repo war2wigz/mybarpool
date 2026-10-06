@@ -1,4 +1,4 @@
-//! Shared Mollusk fixtures for the program's unit tests (build plan Step 2).
+//! Shared Mollusk fixtures for the program's unit tests (build plan Steps 2 and 3).
 //!
 //! Mollusk and Anchor sit on different `solana-pubkey` majors, so keys cross
 //! the boundary by bytes (`to_m` / `to_a`), as Step 0's `mollusk.rs` did.
@@ -24,8 +24,8 @@ use anchor_spl::token_2022::spl_token_2022::extension::{
 use anchor_spl::token_2022::spl_token_2022::state::Mint as Mint2022;
 
 use mybarpool::{
-    constants::{CONFIG_SEED, OVERRIDE_SEED},
-    PlatformConfig, TokenRule, WalletOverride,
+    constants::{CONFIG_SEED, GAME_SEED, OVERRIDE_SEED},
+    GameKey, GameRecord, GameStatus, PlatformConfig, TokenRule, WalletOverride,
 };
 
 pub const PROGRAM_NAME: &str = "mybarpool";
@@ -77,6 +77,187 @@ pub fn event_authority_pda() -> Pubkey {
 
 pub fn mollusk() -> Mollusk {
     Mollusk::new(&program_id(), PROGRAM_NAME)
+}
+
+// ---------------------------------------------------------------------------
+// Clock (Step 3): every test states its `now`; nothing reads the host clock.
+// ---------------------------------------------------------------------------
+
+/// Fixed "now" for the game tests: 2027-01-15T08:00:00Z. Every other time derives from it.
+pub const T0: i64 = 1_800_000_000;
+
+/// A Mollusk whose Clock sysvar reads `unix_timestamp` (and a plausible slot: 400 ms slots
+/// from the Unix epoch, which only has to be monotonic with the timestamp).
+pub fn mollusk_at(unix_timestamp: i64) -> Mollusk {
+    let mut m = mollusk();
+    m.sysvars.clock.unix_timestamp = unix_timestamp;
+    m.sysvars.clock.slot = u64::try_from(unix_timestamp).unwrap_or(0) * 5 / 2;
+    m
+}
+
+// ---------------------------------------------------------------------------
+// Game record fixtures (Step 3)
+// ---------------------------------------------------------------------------
+
+/// The standard game: PROGRAM §2 team table, KC (15) hosting DAL (8), week 1 of 2026.
+pub fn standard_key() -> GameKey {
+    GameKey {
+        season: 2026,
+        week: 1,
+        home: 15,
+        away: 8,
+    }
+}
+
+/// The standard scheduled kickoff: a day after `T0`.
+pub const SCHEDULED: i64 = T0 + 86_400;
+
+pub fn game_pda(key: &GameKey, scheduled_kickoff: i64) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            GAME_SEED,
+            &key.season.to_le_bytes(),
+            &[key.week],
+            &[key.home],
+            &[key.away],
+            &scheduled_kickoff.to_le_bytes(),
+        ],
+        &program_id(),
+    )
+}
+
+/// A fresh `Scheduled` record for `key` at `scheduled_kickoff`, as `create_game` writes it.
+pub fn fresh_record(key: GameKey, scheduled_kickoff: i64) -> GameRecord {
+    GameRecord {
+        key,
+        scheduled_kickoff,
+        recorded_kickoff: scheduled_kickoff,
+        status: GameStatus::Scheduled,
+        quarters_posted: 0,
+        home_score: [0; 4],
+        away_score: [0; 4],
+        posted_at: [0; 4],
+        final_had_overtime: false,
+        marked_at: 0,
+        bump: game_pda(&key, scheduled_kickoff).1,
+        reserved: [0; 64],
+    }
+}
+
+/// The standard record, `Scheduled`, nothing posted.
+pub fn standard_record() -> GameRecord {
+    fresh_record(standard_key(), SCHEDULED)
+}
+
+/// The standard record with `n` quarters posted at 45-minute spacing from kickoff, with the
+/// brief's scores 7–3, 14–10, 17–17, 24–20 (the fourth sets `Final`).
+pub fn record_with_quarters(n: u8) -> GameRecord {
+    let mut r = standard_record();
+    let scores = [(7u16, 3u16), (14, 10), (17, 17), (24, 20)];
+    for q in 0..usize::from(n) {
+        r.home_score[q] = scores[q].0;
+        r.away_score[q] = scores[q].1;
+        r.posted_at[q] = r.recorded_kickoff + 2_700 * (q as i64 + 1);
+    }
+    r.quarters_posted = n;
+    if n == 4 {
+        r.status = GameStatus::Final;
+        r.final_had_overtime = true;
+    }
+    r
+}
+
+pub fn game_record_account(record: &GameRecord) -> Account {
+    account_for(record, &program_id(), GameRecord::SIZE)
+}
+
+pub fn decode_game(account: &Account) -> GameRecord {
+    let mut slice: &[u8] = &account.data;
+    <GameRecord as anchor_lang::AccountDeserialize>::try_deserialize(&mut slice)
+        .expect("decode game record")
+}
+
+pub fn create_game_ix(signer: &Pubkey, key: GameKey, scheduled_kickoff: i64) -> Instruction {
+    instruction(
+        mybarpool::accounts::CreateGame {
+            score_authority: to_a(signer),
+            config: to_a(&config_pda().0),
+            game: to_a(&game_pda(&key, scheduled_kickoff).0),
+            system_program: anchor_lang::system_program::ID,
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::CreateGame {
+            key,
+            scheduled_kickoff,
+        },
+    )
+}
+
+pub fn update_kickoff_ix(signer: &Pubkey, game: &Pubkey, new_time: i64) -> Instruction {
+    instruction(
+        mybarpool::accounts::UpdateKickoff {
+            score_authority: to_a(signer),
+            config: to_a(&config_pda().0),
+            game: to_a(game),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::UpdateKickoff { new_time },
+    )
+}
+
+pub fn post_scores_ix(
+    signer: &Pubkey,
+    game: &Pubkey,
+    quarter: u8,
+    home: u16,
+    away: u16,
+    is_final: bool,
+    had_overtime: bool,
+) -> Instruction {
+    instruction(
+        mybarpool::accounts::PostScores {
+            score_authority: to_a(signer),
+            config: to_a(&config_pda().0),
+            game: to_a(game),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::PostScores {
+            quarter,
+            home,
+            away,
+            is_final,
+            had_overtime,
+        },
+    )
+}
+
+pub fn mark_game_ix(signer: &Pubkey, game: &Pubkey, new_status: GameStatus) -> Instruction {
+    instruction(
+        mybarpool::accounts::MarkGame {
+            admin: to_a(signer),
+            config: to_a(&config_pda().0),
+            game: to_a(game),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::MarkGame { new_status },
+    )
+}
+
+/// `base_accounts` with the initial config plus a game record (or an empty slot at its PDA).
+pub fn game_accounts(f: &Fixture, record: Option<&GameRecord>) -> Vec<(Pubkey, Account)> {
+    let mut accounts = base_accounts(f, Some(&f.expected_config()));
+    match record {
+        Some(r) => accounts.push((
+            game_pda(&r.key, r.scheduled_kickoff).0,
+            game_record_account(r),
+        )),
+        None => accounts.push((game_pda(&standard_key(), SCHEDULED).0, system_account(0))),
+    }
+    accounts
 }
 
 pub fn system_account(lamports: u64) -> Account {
@@ -177,6 +358,8 @@ pub struct Fixture {
     pub entropy_provider: Pubkey,
     pub fee_wallet: Pubkey,
     pub ore_mint: Pubkey,
+    /// A funded key that is neither admin nor keeper.
+    pub stranger: Pubkey,
 }
 
 impl Fixture {
@@ -187,6 +370,7 @@ impl Fixture {
             entropy_provider: Pubkey::new_unique(),
             fee_wallet: Pubkey::new_unique(),
             ore_mint: ore_mint(),
+            stranger: Pubkey::new_unique(),
         }
     }
 
@@ -445,6 +629,7 @@ pub fn base_accounts(f: &Fixture, config: Option<&PlatformConfig>) -> Vec<(Pubke
     let mut accounts = vec![
         (f.admin, system_account(10 * LAMPORTS_PER_SOL)),
         (f.keeper, system_account(10 * LAMPORTS_PER_SOL)),
+        (f.stranger, system_account(10 * LAMPORTS_PER_SOL)),
         (program_data_pda(), program_data_account(Some(&f.admin))),
         (f.ore_mint, f.ore_mint_account()),
         keyed_account_for_system_program(),

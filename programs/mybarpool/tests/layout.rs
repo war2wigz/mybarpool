@@ -1,4 +1,4 @@
-//! Account layouts, PROGRAM §3 preamble, §3.1, §3.6. Every field holds a
+//! Account layouts, PROGRAM §3 preamble, §3.1, §3.2, §3.6. Every field holds a
 //! distinct sentinel; each is asserted at the offset the brief's table gives.
 
 mod common;
@@ -6,7 +6,7 @@ mod common;
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::{AccountSerialize, Discriminator};
 use mybarpool::constants::*;
-use mybarpool::{PlatformConfig, TokenRule, WalletOverride};
+use mybarpool::{GameKey, GameRecord, GameStatus, PlatformConfig, TokenRule, WalletOverride};
 
 fn key(byte: u8) -> Pubkey {
     Pubkey::new_from_array([byte; 32])
@@ -115,6 +115,152 @@ fn wallet_override_is_43_bytes_at_the_documented_offsets() {
 }
 
 #[test]
+fn game_key_is_5_bytes_matching_mybarpool_shared() {
+    // PROGRAM §2; `encodeGameKey({2026, 1, 15, 8})` in @mybarpool/shared is ea 07 01 0f 08
+    // (2026 = 0x07EA little-endian; the brief's "e2 07" was a typo, see NOTES).
+    assert_eq!(GameKey::SIZE, 5);
+    let key = GameKey {
+        season: 2026,
+        week: 1,
+        home: 15,
+        away: 8,
+    };
+    let mut data = Vec::new();
+    anchor_lang::AnchorSerialize::serialize(&key, &mut data).unwrap();
+    assert_eq!(data, [0xea, 0x07, 0x01, 0x0f, 0x08]);
+}
+
+#[test]
+fn game_status_is_one_byte_with_the_section_3_2_discriminants() {
+    // PROGRAM §3.2: Scheduled 0, Postponed 1, Cancelled 2, Suspended 3, Final 4.
+    for (status, byte) in [
+        (GameStatus::Scheduled, 0u8),
+        (GameStatus::Postponed, 1),
+        (GameStatus::Cancelled, 2),
+        (GameStatus::Suspended, 3),
+        (GameStatus::Final, 4),
+    ] {
+        let mut data = Vec::new();
+        anchor_lang::AnchorSerialize::serialize(&status, &mut data).unwrap();
+        assert_eq!(data, [byte], "{status:?}");
+        let back: GameStatus = anchor_lang::AnchorDeserialize::deserialize(&mut &data[..]).unwrap();
+        assert_eq!(back, status);
+    }
+    assert!(<GameStatus as anchor_lang::AnchorDeserialize>::deserialize(&mut &[5u8][..]).is_err());
+}
+
+#[test]
+fn game_record_is_153_bytes_at_the_documented_offsets() {
+    assert_eq!(GameRecord::SIZE, 153); // PROGRAM §3.2: 8 + 145
+    let record = GameRecord {
+        key: GameKey {
+            season: 0x1234,
+            week: 0x56,
+            home: 0x78,
+            away: 0x9A,
+        },
+        scheduled_kickoff: 0x0101_0101_0101_0101,
+        recorded_kickoff: 0x0202_0202_0202_0202,
+        status: GameStatus::Suspended,
+        quarters_posted: 0xBC,
+        home_score: [0x1111, 0x2222, 0x3333, 0x4444],
+        away_score: [0x5555, 0x6666, 0x7777, 0x8888],
+        posted_at: [
+            0x0303_0303_0303_0303,
+            0x0404_0404_0404_0404,
+            0x0505_0505_0505_0505,
+            0x0606_0606_0606_0606,
+        ],
+        final_had_overtime: true,
+        marked_at: 0x0707_0707_0707_0707,
+        bump: 0xDE,
+        reserved: [0xEE; 64],
+    };
+    let data = serialize(&record);
+    assert_eq!(data.len(), 153);
+    assert_eq!(&data[0..8], GameRecord::DISCRIMINATOR);
+    assert_eq!(&data[8..10], &0x1234u16.to_le_bytes()); // key.season
+    assert_eq!(data[10], 0x56); // key.week
+    assert_eq!(data[11], 0x78); // key.home
+    assert_eq!(data[12], 0x9A); // key.away
+    assert_eq!(&data[13..21], &0x0101_0101_0101_0101i64.to_le_bytes()); // scheduled_kickoff
+    assert_eq!(&data[21..29], &0x0202_0202_0202_0202i64.to_le_bytes()); // recorded_kickoff
+    assert_eq!(data[29], 3); // status = Suspended
+    assert_eq!(data[30], 0xBC); // quarters_posted
+    for (i, score) in [0x1111u16, 0x2222, 0x3333, 0x4444].iter().enumerate() {
+        let at = 31 + 2 * i;
+        assert_eq!(
+            &data[at..at + 2],
+            &score.to_le_bytes(),
+            "home_score[{i}] at {at}"
+        );
+    }
+    for (i, score) in [0x5555u16, 0x6666, 0x7777, 0x8888].iter().enumerate() {
+        let at = 39 + 2 * i;
+        assert_eq!(
+            &data[at..at + 2],
+            &score.to_le_bytes(),
+            "away_score[{i}] at {at}"
+        );
+    }
+    for (i, at_time) in [
+        0x0303_0303_0303_0303i64,
+        0x0404_0404_0404_0404,
+        0x0505_0505_0505_0505,
+        0x0606_0606_0606_0606,
+    ]
+    .iter()
+    .enumerate()
+    {
+        let at = 47 + 8 * i;
+        assert_eq!(
+            &data[at..at + 8],
+            &at_time.to_le_bytes(),
+            "posted_at[{i}] at {at}"
+        );
+    }
+    assert_eq!(data[79], 1); // final_had_overtime
+    assert_eq!(&data[80..88], &0x0707_0707_0707_0707i64.to_le_bytes()); // marked_at
+    assert_eq!(data[88], 0xDE); // bump
+    assert_eq!(&data[89..153], &[0xEEu8; 64]); // reserved
+}
+
+#[test]
+fn game_record_pda_matches_mybarpool_shared_seeds() {
+    // PROGRAM §3.2 seeds, in the order gameRecordSeeds() produces them; the localnet suite
+    // asserts the same address from the TypeScript side.
+    let key = GameKey {
+        season: 2026,
+        week: 1,
+        home: 15,
+        away: 8,
+    };
+    let kickoff: i64 = 1_800_086_400;
+    // The bytes `gameRecordSeeds` yields for these inputs: "game", ea 07, 01, 0f, 08, kickoff LE.
+    let mut seeds: Vec<Vec<u8>> = vec![b"game".to_vec()];
+    seeds.push(vec![0xea, 0x07]);
+    seeds.push(vec![1]);
+    seeds.push(vec![15]);
+    seeds.push(vec![8]);
+    seeds.push(vec![0x80, 0x23, 0x4b, 0x6b, 0, 0, 0, 0]);
+    assert_eq!(seeds[5], kickoff.to_le_bytes().to_vec());
+    let seed_refs: Vec<&[u8]> = seeds.iter().map(|s| s.as_slice()).collect();
+    let expected = Pubkey::find_program_address(&seed_refs, &mybarpool::ID);
+    let from_fields = Pubkey::find_program_address(
+        &[
+            GAME_SEED,
+            &key.season.to_le_bytes(),
+            &[key.week],
+            &[key.home],
+            &[key.away],
+            &kickoff.to_le_bytes(),
+        ],
+        &mybarpool::ID,
+    );
+    assert_eq!(expected, from_fields);
+}
+
+#[test]
 fn constants_match_program_section_1() {
     assert_eq!(BOXES, 25);
     assert_eq!(LANES, 5);
@@ -133,6 +279,7 @@ fn constants_match_program_section_1() {
     );
     assert_eq!(CONFIG_SEED, b"config");
     assert_eq!(OVERRIDE_SEED, b"override");
+    assert_eq!(GAME_SEED, b"game");
     assert_eq!(SOL_DECIMALS, 9);
     for split in PRESET_SPLITS {
         assert_eq!(split.iter().map(|&p| u32::from(p)).sum::<u32>(), 100);
