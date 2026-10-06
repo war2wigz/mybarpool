@@ -299,6 +299,21 @@ describe("game instructions (Surfpool, mainnet fork)", () => {
     ]);
 
     // Order, decrease, final flag, authority.
+    // Q2 at once, right after the Q1 post: the 15-minute floor runs from posted_at[0]
+    // (PROGRAM §4.2; Step 3 audit L4).
+    expect(
+      await sendExpectingError(
+        keeper,
+        await postScoresInstruction(keeper, game, {
+          quarter: 2,
+          home: 14,
+          away: 10,
+          isFinal: false,
+          hadOvertime: false,
+        }),
+      ),
+    ).toBe(errorCode("QuarterTooSoon"));
+
     const q1At = stored.postedAt[0]!;
     await travelTo(q1At + 16n * MINUTE);
     expect(
@@ -359,6 +374,20 @@ describe("game instructions (Surfpool, mainnet fork)", () => {
     for (const post of rest) {
       const previous = (await fetchGame(game)).postedAt[post.quarter - 2]!;
       await travelTo(previous + 16n * MINUTE);
+      if (post.quarter === 4) {
+        // Q4 with is_final = false (PROGRAM §4.2; Step 3 audit L4).
+        expect(
+          await sendExpectingError(
+            keeper,
+            await postScoresInstruction(keeper, game, {
+              ...post,
+              isFinal: false,
+              hadOvertime: false,
+            }),
+          ),
+        ).toBe(errorCode("FinalFlagMismatch"));
+        expect(errorCode("FinalFlagMismatch")).toBe(6011);
+      }
       await send(keeper, await postScoresInstruction(keeper, game, post));
     }
     stored = await fetchGame(game);

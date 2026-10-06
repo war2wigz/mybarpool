@@ -226,9 +226,11 @@ fn game_record_is_153_bytes_at_the_documented_offsets() {
 }
 
 #[test]
-fn game_record_pda_matches_mybarpool_shared_seeds() {
-    // PROGRAM §3.2 seeds, in the order gameRecordSeeds() produces them; the localnet suite
-    // asserts the same address from the TypeScript side.
+fn game_record_seed_bytes_are_the_section_3_2_layout() {
+    // PROGRAM §3.2 seeds as bytes: "game", season u16 LE, week, home, away, kickoff i64 LE.
+    // This freezes the Rust seed layout against hand-written bytes; the cross-language check
+    // (the address `@mybarpool/shared`'s gameRecordSeeds derives equals the record's) is in the
+    // localnet suite, games.test.ts test 2 (Step 3 audit L3).
     let key = GameKey {
         season: 2026,
         week: 1,
