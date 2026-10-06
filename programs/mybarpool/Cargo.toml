@@ -37,8 +37,14 @@ solana-sdk-ids = "3.1"
 [dev-dependencies]
 mollusk-svm = { workspace = true, features = ["inner-instructions"] }
 mollusk-svm-bencher = { workspace = true }
+# Loads the Token and Token-2022 programs into Mollusk for the SPL pool tests (Step 4).
+mollusk-svm-programs-token = "=0.16.0"
+# Reads the shared vector files (packages/shared/src/vectors/*.json) in the cross-language tests.
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
 # The Solana crate majors Mollusk 0.16.0 exposes in its public API.
 solana-account = "4.3"
+solana-hash = "4.7"
 solana-instruction = "3.2"
 solana-program-error = "3.0"
 solana-pubkey = "4.1"

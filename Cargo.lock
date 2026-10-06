@@ -1858,6 +1858,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "mollusk-svm-programs-token"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca3650f15424e245d0e5b3672f24c29c88b10310177a39579ae613153eee8243"
+dependencies = [
+ "mollusk-svm",
+ "mollusk-svm-programs-token-2022",
+ "solana-account",
+ "solana-program-pack",
+ "solana-pubkey 4.4.0",
+ "solana-rent 4.5.0",
+ "spl-associated-token-account-interface",
+ "spl-token-interface",
+]
+
+[[package]]
+name = "mollusk-svm-programs-token-2022"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5e236a70f8e3ee0ccee0d57cbcb3772525f6e6b25bb2ba7d67b4a79ff7d3cc9"
+dependencies = [
+ "mollusk-svm",
+ "solana-account",
+ "solana-program-pack",
+ "solana-pubkey 4.4.0",
+ "solana-rent 4.5.0",
+ "spl-token-interface",
+]
+
+[[package]]
 name = "mollusk-svm-result"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1882,7 +1912,11 @@ dependencies = [
  "bincode",
  "mollusk-svm",
  "mollusk-svm-bencher",
+ "mollusk-svm-programs-token",
+ "serde",
+ "serde_json",
  "solana-account",
+ "solana-hash",
  "solana-instruction 3.5.1",
  "solana-loader-v3-interface 6.1.1",
  "solana-program-error",
@@ -3909,6 +3943,16 @@ checksum = "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d"
 dependencies = [
  "base64ct",
  "der",
+]
+
+[[package]]
+name = "spl-associated-token-account-interface"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6433917b60441d68d99a17e121d9db0ea15a9a69c0e5afa34649cf5ba12612f"
+dependencies = [
+ "solana-instruction 3.5.1",
+ "solana-pubkey 3.0.0",
 ]
 
 [[package]]

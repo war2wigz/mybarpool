@@ -23,9 +23,19 @@ use anchor_spl::token_2022::spl_token_2022::extension::{
 };
 use anchor_spl::token_2022::spl_token_2022::state::Mint as Mint2022;
 
+use anchor_lang::prelude::SlotHashes;
+use anchor_lang::solana_program::program_pack::Pack;
+use anchor_spl::token::spl_token::state::{Account as TokenAccountLegacy, AccountState};
+use anchor_spl::token_2022::spl_token_2022::state::Account as TokenAccount2022;
+use mollusk_svm::sysvar::Sysvars;
+
 use mybarpool::{
-    constants::{CONFIG_SEED, GAME_SEED, OVERRIDE_SEED},
-    GameKey, GameRecord, GameStatus, PlatformConfig, TokenRule, WalletOverride,
+    constants::{
+        PayoutPreset, BOXES, CONFIG_SEED, COUNTER_SEED, GAME_SEED, NO_WINNING_BOX, OVERRIDE_SEED,
+        POOL_SEED, QUARTERS, SPONSORSHIP_SEED, VAULT_SEED,
+    },
+    AccessType, CreatePoolParams, CreatorCounter, GameKey, GameRecord, GameStatus, PlatformConfig,
+    Pool, PoolStatus, Sponsorship, TokenRule, WalletOverride,
 };
 
 pub const PROGRAM_NAME: &str = "mybarpool";
@@ -360,6 +370,14 @@ pub struct Fixture {
     pub ore_mint: Pubkey,
     /// A funded key that is neither admin nor keeper.
     pub stranger: Pubkey,
+    /// Step 4 wallets, 100 SOL each in `base_accounts` so a 25 SOL sponsorship cap can be hit.
+    pub creator: Pubkey,
+    pub buyer: Pubkey,
+    pub buyer_2: Pubkey,
+    pub sponsor: Pubkey,
+    pub integrator: Pubkey,
+    /// A Token-2022 mint at 6 decimals standing in for SKR in tests (`skr_rule_2022`).
+    pub skr_mint: Pubkey,
 }
 
 impl Fixture {
@@ -371,6 +389,12 @@ impl Fixture {
             fee_wallet: Pubkey::new_unique(),
             ore_mint: ore_mint(),
             stranger: Pubkey::new_unique(),
+            creator: Pubkey::new_unique(),
+            buyer: Pubkey::new_unique(),
+            buyer_2: Pubkey::new_unique(),
+            sponsor: Pubkey::new_unique(),
+            integrator: Pubkey::new_unique(),
+            skr_mint: Pubkey::new_unique(),
         }
     }
 
@@ -414,6 +438,39 @@ impl Fixture {
             max_price: 100_000_000_000,
             max_sponsorship: 2_500_000_000_000,
         }
+    }
+
+    /// The "SKR@6" ladder of the shared vectors: 100 / 100 / 5 000 whole tokens at 6 decimals,
+    /// under Token-2022 (the audit-focus "Token vs Token-2022" case); `max_sponsorship = 25 × max`.
+    pub fn skr_rule_2022(&self) -> TokenRule {
+        TokenRule {
+            enabled: true,
+            mint: to_a(&self.skr_mint),
+            token_program: anchor_spl::token_2022::ID,
+            decimals: 6,
+            min_price: 100_000_000,
+            step: 100_000_000,
+            max_price: 5_000_000_000,
+            max_sponsorship: 125_000_000_000,
+        }
+    }
+
+    /// `initialize_params` with the SKR slot enabled as a Token-2022 rule.
+    pub fn initialize_params_with_skr(&self) -> mybarpool::InitializeParams {
+        let mut p = self.initialize_params();
+        p.tokens[1] = self.skr_rule_2022();
+        p
+    }
+
+    /// `expected_config` with the SKR slot enabled as a Token-2022 rule.
+    pub fn config_with_skr(&self) -> PlatformConfig {
+        let mut c = self.expected_config();
+        c.tokens[1] = self.skr_rule_2022();
+        c
+    }
+
+    pub fn skr_mint_account(&self) -> Account {
+        token_2022_mint_account(6, &[ExtensionType::MetadataPointer])
     }
 
     /// PROGRAM §3.1 "initial" column: 500 / 500 / 500, preset 0, 3 open pools, 5 own boxes.
@@ -630,8 +687,14 @@ pub fn base_accounts(f: &Fixture, config: Option<&PlatformConfig>) -> Vec<(Pubke
         (f.admin, system_account(10 * LAMPORTS_PER_SOL)),
         (f.keeper, system_account(10 * LAMPORTS_PER_SOL)),
         (f.stranger, system_account(10 * LAMPORTS_PER_SOL)),
+        (f.creator, system_account(100 * LAMPORTS_PER_SOL)),
+        (f.buyer, system_account(100 * LAMPORTS_PER_SOL)),
+        (f.buyer_2, system_account(100 * LAMPORTS_PER_SOL)),
+        (f.sponsor, system_account(100 * LAMPORTS_PER_SOL)),
+        (f.integrator, system_account(LAMPORTS_PER_SOL)),
         (program_data_pda(), program_data_account(Some(&f.admin))),
         (f.ore_mint, f.ore_mint_account()),
+        (f.skr_mint, f.skr_mint_account()),
         keyed_account_for_system_program(),
     ];
     accounts.extend(event_cpi_accounts());
@@ -699,4 +762,492 @@ pub fn emitted_event<E: AnchorDeserialize + Discriminator>(
 /// Inner instructions that are `emit_cpi!` self-calls.
 pub fn emitted_event_count(result: &InstructionResult) -> usize {
     event_payloads(result).len()
+}
+
+// ---------------------------------------------------------------------------
+// Pool fixtures (Step 4)
+// ---------------------------------------------------------------------------
+
+/// ARCHITECTURE › Buying: the SOL minimum, 0.05 SOL.
+pub const PRICE: u64 = 50_000_000;
+/// ARCHITECTURE › Buying: the ORE minimum, 0.05 ORE at 11 decimals.
+pub const PRICE_ORE: u64 = 5_000_000_000;
+/// The SKR@6 minimum: 100 SKR at 6 decimals.
+pub const PRICE_SKR: u64 = 100_000_000;
+pub const NONCE: u64 = 7;
+/// A known slot hash for the SlotHashes fixture.
+pub const SLOT_HASH: [u8; 32] = [0x5A; 32];
+pub const SLOT: u64 = 454_000_000;
+
+pub fn pool_pda(game: &Pubkey, creator: &Pubkey, nonce: u64) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            POOL_SEED,
+            game.as_ref(),
+            creator.as_ref(),
+            &nonce.to_le_bytes(),
+        ],
+        &program_id(),
+    )
+}
+
+pub fn vault_pda(pool: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[VAULT_SEED, pool.as_ref()], &program_id())
+}
+
+pub fn counter_pda(creator: &Pubkey, game: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[COUNTER_SEED, creator.as_ref(), game.as_ref()],
+        &program_id(),
+    )
+}
+
+pub fn sponsorship_pda(pool: &Pubkey, wallet: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[SPONSORSHIP_SEED, pool.as_ref(), wallet.as_ref()],
+        &program_id(),
+    )
+}
+
+/// The standard game's address.
+pub fn standard_game() -> Pubkey {
+    game_pda(&standard_key(), SCHEDULED).0
+}
+
+/// `CreatePoolParams` for a SOL pool: `PRICE`, `Standard`, `Public`, 2 % add-on, no integrator.
+pub fn sol_params(initial_boxes: u8) -> CreatePoolParams {
+    CreatePoolParams {
+        nonce: NONCE,
+        token: 0,
+        price: PRICE,
+        preset: PayoutPreset::Standard,
+        access_type: AccessType::Public,
+        gate_key: APubkey::default(),
+        allowlist_root: [0u8; 32],
+        creator_addon_bps: 200,
+        integrator: APubkey::default(),
+        integrator_bps: 0,
+        initial_boxes,
+    }
+}
+
+/// `CreatePoolParams` for an ORE pool (token 2).
+pub fn ore_params(initial_boxes: u8) -> CreatePoolParams {
+    CreatePoolParams {
+        token: 2,
+        price: PRICE_ORE,
+        ..sol_params(initial_boxes)
+    }
+}
+
+/// `CreatePoolParams` for an SKR pool (token 1, Token-2022 in tests).
+pub fn skr_params(initial_boxes: u8) -> CreatePoolParams {
+    CreatePoolParams {
+        token: 1,
+        price: PRICE_SKR,
+        ..sol_params(initial_boxes)
+    }
+}
+
+/// A `Pool` as `create_pool` writes it for `creator` on the standard game with `params`, under
+/// `config`'s fee bps, before any initial boxes. `created_at = T0`.
+pub fn fresh_pool(f: &Fixture, config: &PlatformConfig, params: &CreatePoolParams) -> Pool {
+    let game = standard_game();
+    let (pool, bump) = pool_pda(&game, &f.creator, params.nonce);
+    let (vault, vault_bump) = vault_pda(&pool);
+    let rule = config.tokens[usize::from(params.token)];
+    let fees = mybarpool::money::fee_amounts(
+        params.price,
+        config.platform_bps,
+        config.creator_bps,
+        params.creator_addon_bps,
+        params.integrator_bps,
+    )
+    .expect("fees");
+    Pool {
+        game: to_a(&game),
+        creator: to_a(&f.creator),
+        nonce: params.nonce,
+        token: params.token,
+        mint: rule.mint,
+        token_program: rule.token_program,
+        vault: to_a(&vault),
+        price: params.price,
+        preset: params.preset,
+        access_type: params.access_type,
+        gate_key: params.gate_key,
+        allowlist_root: params.allowlist_root,
+        creator_addon_bps: params.creator_addon_bps,
+        integrator: params.integrator,
+        integrator_bps: params.integrator_bps,
+        platform_fee: fees.platform_fee,
+        creator_fee: fees.creator_fee,
+        integrator_fee: fees.integrator_fee,
+        status: PoolStatus::Open,
+        sold: 0,
+        owners: [APubkey::default(); BOXES as usize],
+        creator_boxes: 0,
+        sponsored_total: 0,
+        sponsor_count: 0,
+        sponsorships_open: 0,
+        var: APubkey::default(),
+        var_end_at: 0,
+        sampled_slot: 0,
+        sampled_hash: [0u8; 32],
+        var_replacements: 0,
+        drawn: false,
+        home_axis: [0u8; 10],
+        away_axis: [0u8; 10],
+        prize_pool: 0,
+        quarter_prize: [0u64; QUARTERS as usize],
+        quarters_settled: 0,
+        winning_box: [NO_WINNING_BOX; QUARTERS as usize],
+        fees_paid: false,
+        unpaid_prize_pool: 0,
+        returned: 0,
+        split_amount: 0,
+        cancelled_by_admin: false,
+        abandoned: false,
+        created_at: T0,
+        locked_at: 0,
+        bump,
+        vault_bump,
+        reserved: [0u8; 128],
+    }
+}
+
+/// `fresh_pool` with `sold` boxes owned by `owner` (the first `sold` indices) and a status.
+pub fn pool_with(f: &Fixture, status: PoolStatus, sold: u8, owner: &Pubkey) -> Pool {
+    let mut pool = fresh_pool(f, &f.expected_config(), &sol_params(0));
+    for i in 0..usize::from(sold) {
+        pool.owners[i] = to_a(owner);
+    }
+    pool.sold = sold;
+    if *owner == f.creator {
+        pool.creator_boxes = sold;
+    }
+    pool.status = status;
+    if status != PoolStatus::Open {
+        pool.locked_at = T0 - 3_600;
+    }
+    pool
+}
+
+pub fn pool_account(pool: &Pool) -> Account {
+    account_for(pool, &program_id(), Pool::SIZE)
+}
+
+pub fn counter_account(creator: &Pubkey, game: &Pubkey, open_count: u8) -> Account {
+    let counter = CreatorCounter {
+        creator: to_a(creator),
+        game: to_a(game),
+        open_count,
+        bump: counter_pda(creator, game).1,
+    };
+    account_for(&counter, &program_id(), CreatorCounter::SIZE)
+}
+
+pub fn override_account(wallet: &Pubkey, max_open_pools: u8, max_own_boxes: u8) -> Account {
+    let value = WalletOverride {
+        wallet: to_a(wallet),
+        max_open_pools,
+        max_own_boxes,
+        bump: override_pda(wallet).1,
+    };
+    account_for(&value, &program_id(), WalletOverride::SIZE)
+}
+
+/// A system-owned SOL vault holding `lamports` (rent floor + purchases).
+pub fn sol_vault_account(lamports: u64) -> Account {
+    system_account(lamports)
+}
+
+/// Rent floor of a zero-byte account under Mollusk's default rent.
+pub fn rent_for(size: usize) -> u64 {
+    anchor_lang::prelude::Rent::default().minimum_balance(size)
+}
+
+/// A classic Token account for `mint` owned by `owner` holding `amount`.
+pub fn token_account(mint: &Pubkey, owner: &Pubkey, amount: u64) -> Account {
+    let state = TokenAccountLegacy {
+        mint: to_a(mint),
+        owner: to_a(owner),
+        amount,
+        delegate: None.into(),
+        state: AccountState::Initialized,
+        is_native: None.into(),
+        delegated_amount: 0,
+        close_authority: None.into(),
+    };
+    let mut data = vec![0u8; TokenAccountLegacy::LEN];
+    TokenAccountLegacy::pack(state, &mut data).expect("pack token account");
+    Account {
+        lamports: rent_for(TokenAccountLegacy::LEN),
+        data,
+        owner: token_program_id(),
+        executable: false,
+        rent_epoch: 0,
+    }
+}
+
+/// A Token-2022 account (no extensions) for `mint` owned by `owner` holding `amount`.
+pub fn token_2022_account(mint: &Pubkey, owner: &Pubkey, amount: u64) -> Account {
+    let state = TokenAccount2022 {
+        mint: to_a(mint),
+        owner: to_a(owner),
+        amount,
+        delegate: None.into(),
+        state: anchor_spl::token_2022::spl_token_2022::state::AccountState::Initialized,
+        is_native: None.into(),
+        delegated_amount: 0,
+        close_authority: None.into(),
+    };
+    let mut data = vec![0u8; TokenAccount2022::LEN];
+    TokenAccount2022::pack(state, &mut data).expect("pack token-2022 account");
+    Account {
+        lamports: rent_for(TokenAccount2022::LEN),
+        data,
+        owner: token_2022_program_id(),
+        executable: false,
+        rent_epoch: 0,
+    }
+}
+
+pub fn decode_token_amount(account: &Account) -> u64 {
+    TokenAccountLegacy::unpack_from_slice(&account.data[..TokenAccountLegacy::LEN])
+        .expect("token account")
+        .amount
+}
+
+pub fn decode_token_owner(account: &Account) -> Pubkey {
+    to_m(
+        &TokenAccountLegacy::unpack_from_slice(&account.data[..TokenAccountLegacy::LEN])
+            .expect("token account")
+            .owner,
+    )
+}
+
+pub fn decode_pool(account: &Account) -> Pool {
+    let mut slice: &[u8] = &account.data;
+    <Pool as anchor_lang::AccountDeserialize>::try_deserialize(&mut slice).expect("decode pool")
+}
+
+pub fn decode_counter(account: &Account) -> CreatorCounter {
+    let mut slice: &[u8] = &account.data;
+    <CreatorCounter as anchor_lang::AccountDeserialize>::try_deserialize(&mut slice)
+        .expect("decode counter")
+}
+
+pub fn decode_sponsorship(account: &Account) -> Sponsorship {
+    let mut slice: &[u8] = &account.data;
+    <Sponsorship as anchor_lang::AccountDeserialize>::try_deserialize(&mut slice)
+        .expect("decode sponsorship")
+}
+
+/// A Mollusk at `unix_timestamp` with the Token and Token-2022 programs loaded and the
+/// SlotHashes sysvar holding one entry `(SLOT, hash)`.
+pub fn mollusk_for_pools(unix_timestamp: i64, hash: [u8; 32]) -> Mollusk {
+    let mut m = mollusk_at(unix_timestamp);
+    mollusk_svm_programs_token::token::add_program(&mut m);
+    mollusk_svm_programs_token::token2022::add_program(&mut m);
+    set_slot_hash(&mut m, hash);
+    m
+}
+
+pub fn set_slot_hash(m: &mut Mollusk, hash: [u8; 32]) {
+    let Sysvars { slot_hashes, .. } = &mut m.sysvars;
+    *slot_hashes = SlotHashes::new(&[(SLOT, solana_hash::Hash::new_from_array(hash))]);
+}
+
+/// The SlotHashes keyed account from the Mollusk's sysvars.
+pub fn slot_hashes_account(m: &Mollusk) -> (Pubkey, Account) {
+    m.sysvars.keyed_account_for_slot_hashes_sysvar()
+}
+
+/// `base_accounts` with `config`, plus the standard game record, the Step 4 token programs,
+/// the SlotHashes account, an empty `wallet_override` slot for the creator, and an empty slot
+/// for the standard pool, its vault and the creator's counter (so `create_pool` can `init`).
+pub fn pool_base(f: &Fixture, m: &Mollusk, config: &PlatformConfig) -> Vec<(Pubkey, Account)> {
+    let mut accounts = base_accounts(f, Some(config));
+    accounts.push((standard_game(), game_record_account(&standard_record())));
+    accounts.push(mollusk_svm_programs_token::token::keyed_account());
+    accounts.push(mollusk_svm_programs_token::token2022::keyed_account());
+    accounts.push(slot_hashes_account(m));
+    accounts.push((override_pda(&f.creator).0, system_account(0)));
+    let pool = pool_pda(&standard_game(), &f.creator, NONCE).0;
+    accounts.push((pool, system_account(0)));
+    accounts.push((vault_pda(&pool).0, system_account(0)));
+    accounts.push((
+        counter_pda(&f.creator, &standard_game()).0,
+        system_account(0),
+    ));
+    accounts
+}
+
+/// Replace (or add) the account at `key`.
+pub fn set_account(accounts: &mut Vec<(Pubkey, Account)>, key: Pubkey, account: Account) {
+    if let Some(slot) = accounts.iter_mut().find(|(k, _)| *k == key) {
+        slot.1 = account;
+    } else {
+        accounts.push((key, account));
+    }
+}
+
+/// `pool_base` with an existing pool, its SOL vault, the counter at `open_count`, and an empty
+/// sponsorship slot for `f.sponsor` and `f.buyer`.
+pub fn pool_accounts(
+    f: &Fixture,
+    m: &Mollusk,
+    config: &PlatformConfig,
+    pool: &Pool,
+    vault_lamports: u64,
+    open_count: u8,
+) -> Vec<(Pubkey, Account)> {
+    let mut accounts = pool_base(f, m, config);
+    let pool_key = pool_pda(&standard_game(), &f.creator, pool.nonce).0;
+    set_account(&mut accounts, pool_key, pool_account(pool));
+    set_account(
+        &mut accounts,
+        vault_pda(&pool_key).0,
+        sol_vault_account(vault_lamports),
+    );
+    set_account(
+        &mut accounts,
+        counter_pda(&f.creator, &standard_game()).0,
+        counter_account(&f.creator, &standard_game(), open_count),
+    );
+    accounts.push((sponsorship_pda(&pool_key, &f.sponsor).0, system_account(0)));
+    accounts.push((sponsorship_pda(&pool_key, &f.buyer).0, system_account(0)));
+    accounts.push((sponsorship_pda(&pool_key, &f.creator).0, system_account(0)));
+    accounts
+}
+
+/// The three optional token-path accounts, `None` for SOL.
+#[derive(Clone, Copy, Default)]
+pub struct TokenPath {
+    pub mint: Option<Pubkey>,
+    pub token_account: Option<Pubkey>,
+    pub token_program: Option<Pubkey>,
+}
+
+pub fn create_pool_ix(
+    creator: &Pubkey,
+    game: &Pubkey,
+    params: CreatePoolParams,
+    token: TokenPath,
+) -> Instruction {
+    let pool = pool_pda(game, creator, params.nonce).0;
+    instruction(
+        mybarpool::accounts::CreatePool {
+            creator: to_a(creator),
+            config: to_a(&config_pda().0),
+            game: to_a(game),
+            pool: to_a(&pool),
+            vault: to_a(&vault_pda(&pool).0),
+            counter: to_a(&counter_pda(creator, game).0),
+            wallet_override: to_a(&override_pda(creator).0),
+            mint: token.mint.map(|k| to_a(&k)),
+            creator_token_account: token.token_account.map(|k| to_a(&k)),
+            token_program: token.token_program.map(|k| to_a(&k)),
+            slot_hashes: to_a(&solana_sdk_ids::sysvar::slot_hashes::ID),
+            system_program: anchor_lang::system_program::ID,
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::CreatePool { params },
+    )
+}
+
+pub fn buy_ix(buyer: &Pubkey, pool: &Pool, count: u8, token: TokenPath) -> Instruction {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    instruction(
+        mybarpool::accounts::Buy {
+            buyer: to_a(buyer),
+            config: to_a(&config_pda().0),
+            game: pool.game,
+            pool: to_a(&pool_key),
+            vault: to_a(&vault_pda(&pool_key).0),
+            counter: to_a(&counter_pda(&to_m(&pool.creator), &to_m(&pool.game)).0),
+            wallet_override: to_a(&override_pda(&to_m(&pool.creator)).0),
+            mint: token.mint.map(|k| to_a(&k)),
+            buyer_token_account: token.token_account.map(|k| to_a(&k)),
+            token_program: token.token_program.map(|k| to_a(&k)),
+            slot_hashes: to_a(&solana_sdk_ids::sysvar::slot_hashes::ID),
+            system_program: anchor_lang::system_program::ID,
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::Buy { count },
+    )
+}
+
+pub fn sponsor_ix(sponsor: &Pubkey, pool: &Pool, amount: u64, token: TokenPath) -> Instruction {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    instruction(
+        mybarpool::accounts::Sponsor {
+            sponsor: to_a(sponsor),
+            config: to_a(&config_pda().0),
+            game: pool.game,
+            pool: to_a(&pool_key),
+            vault: to_a(&vault_pda(&pool_key).0),
+            sponsorship: to_a(&sponsorship_pda(&pool_key, sponsor).0),
+            mint: token.mint.map(|k| to_a(&k)),
+            sponsor_token_account: token.token_account.map(|k| to_a(&k)),
+            token_program: token.token_program.map(|k| to_a(&k)),
+            system_program: anchor_lang::system_program::ID,
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::Sponsor { amount },
+    )
+}
+
+pub fn rotate_gate_key_ix(creator: &Pubkey, pool: &Pool, new_key: &Pubkey) -> Instruction {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    instruction(
+        mybarpool::accounts::RotateGateKey {
+            creator: to_a(creator),
+            pool: to_a(&pool_key),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::RotateGateKey {
+            new_key: to_a(new_key),
+        },
+    )
+}
+
+pub fn close_counter_ix(creator: &Pubkey, game: &Pubkey, fee_wallet: &Pubkey) -> Instruction {
+    instruction(
+        mybarpool::accounts::CloseCounter {
+            counter: to_a(&counter_pda(creator, game).0),
+            config: to_a(&config_pda().0),
+            fee_wallet: to_a(fee_wallet),
+        },
+        mybarpool::instruction::CloseCounter {},
+    )
+}
+
+/// All event payloads of a result as `(event discriminator, body)` for order assertions.
+pub fn event_names(result: &InstructionResult) -> Vec<&'static str> {
+    use anchor_lang::Discriminator;
+    event_payloads(result)
+        .into_iter()
+        .map(|p| {
+            let d = &p[..8];
+            if d == mybarpool::PoolCreated::DISCRIMINATOR {
+                "PoolCreated"
+            } else if d == mybarpool::BoxesBought::DISCRIMINATOR {
+                "BoxesBought"
+            } else if d == mybarpool::PoolLocked::DISCRIMINATOR {
+                "PoolLocked"
+            } else if d == mybarpool::Sponsored::DISCRIMINATOR {
+                "Sponsored"
+            } else if d == mybarpool::GateKeyRotated::DISCRIMINATOR {
+                "GateKeyRotated"
+            } else {
+                "other"
+            }
+        })
+        .collect()
 }

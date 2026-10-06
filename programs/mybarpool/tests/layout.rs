@@ -1,4 +1,4 @@
-//! Account layouts, PROGRAM §3 preamble, §3.1, §3.2, §3.6. Every field holds a
+//! Account layouts, PROGRAM §3 preamble, §3.1–§3.3, §3.5–§3.7. Every field holds a
 //! distinct sentinel; each is asserted at the offset the brief's table gives.
 
 mod common;
@@ -6,7 +6,10 @@ mod common;
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::{AccountSerialize, Discriminator};
 use mybarpool::constants::*;
-use mybarpool::{GameKey, GameRecord, GameStatus, PlatformConfig, TokenRule, WalletOverride};
+use mybarpool::{
+    AccessType, CreatorCounter, GameKey, GameRecord, GameStatus, PlatformConfig, Pool, PoolStatus,
+    Sponsorship, TokenRule, WalletOverride,
+};
 
 fn key(byte: u8) -> Pubkey {
     Pubkey::new_from_array([byte; 32])
@@ -304,4 +307,249 @@ fn constants_match_program_section_1() {
             "preset {bad} must be InvalidPreset (6014), got {error:?}"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// Step 4: Pool, CreatorCounter, Sponsorship, and the three enums
+// ---------------------------------------------------------------------------
+
+fn round_trip_one_byte<T>(cases: &[(T, u8)], next: u8)
+where
+    T: anchor_lang::AnchorSerialize + anchor_lang::AnchorDeserialize + PartialEq + std::fmt::Debug,
+{
+    for (value, byte) in cases {
+        let mut data = Vec::new();
+        anchor_lang::AnchorSerialize::serialize(value, &mut data).unwrap();
+        assert_eq!(data, [*byte], "{value:?}");
+        let back: T = anchor_lang::AnchorDeserialize::deserialize(&mut &data[..]).unwrap();
+        assert_eq!(&back, value);
+    }
+    assert!(<T as anchor_lang::AnchorDeserialize>::deserialize(&mut &[next][..]).is_err());
+}
+
+#[test]
+fn pool_status_access_type_and_payout_preset_are_one_byte_each() {
+    // PROGRAM §3.3: Open 0 … Split 5; Public 0, Link 1, Allowlist 2; §1: Standard 0, Even 1, FinalOnly 2.
+    round_trip_one_byte(
+        &[
+            (PoolStatus::Open, 0u8),
+            (PoolStatus::Locked, 1),
+            (PoolStatus::Drawn, 2),
+            (PoolStatus::Settled, 3),
+            (PoolStatus::Returned, 4),
+            (PoolStatus::Split, 5),
+        ],
+        6,
+    );
+    round_trip_one_byte(
+        &[
+            (AccessType::Public, 0u8),
+            (AccessType::Link, 1),
+            (AccessType::Allowlist, 2),
+        ],
+        3,
+    );
+    round_trip_one_byte(
+        &[
+            (PayoutPreset::Standard, 0u8),
+            (PayoutPreset::Even, 1),
+            (PayoutPreset::FinalOnly, 2),
+        ],
+        3,
+    );
+}
+
+#[test]
+fn pool_is_1442_bytes_at_the_documented_offsets() {
+    assert_eq!(Pool::SIZE, 1442); // PROGRAM §3.3: 8 + 1,434
+    let mut owners = [Pubkey::default(); 25];
+    for (i, o) in owners.iter_mut().enumerate() {
+        *o = key(0x40 + i as u8);
+    }
+    let pool = Pool {
+        game: key(0x01),
+        creator: key(0x02),
+        nonce: 0x0303_0303_0303_0303,
+        token: 0x04,
+        mint: key(0x05),
+        token_program: key(0x06),
+        vault: key(0x07),
+        price: 0x0808_0808_0808_0808,
+        preset: PayoutPreset::FinalOnly,
+        access_type: AccessType::Link,
+        gate_key: key(0x09),
+        allowlist_root: [0x0A; 32],
+        creator_addon_bps: 0x0B0B,
+        integrator: key(0x0C),
+        integrator_bps: 0x0D0D,
+        platform_fee: 0x0E0E_0E0E_0E0E_0E0E,
+        creator_fee: 0x0F0F_0F0F_0F0F_0F0F,
+        integrator_fee: 0x1010_1010_1010_1010,
+        status: PoolStatus::Split,
+        sold: 0x11,
+        owners,
+        creator_boxes: 0x12,
+        sponsored_total: 0x1313_1313_1313_1313,
+        sponsor_count: 0x1414,
+        sponsorships_open: 0x1515,
+        var: key(0x16),
+        var_end_at: 0x1717_1717_1717_1717,
+        sampled_slot: 0x1818_1818_1818_1818,
+        sampled_hash: [0x19; 32],
+        var_replacements: 0x1A,
+        drawn: true,
+        home_axis: [0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24],
+        away_axis: [0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E],
+        prize_pool: 0x2F2F_2F2F_2F2F_2F2F,
+        quarter_prize: [
+            0x3030_3030_3030_3030,
+            0x3131_3131_3131_3131,
+            0x3232_3232_3232_3232,
+            0x3333_3333_3333_3333,
+        ],
+        quarters_settled: 0x34,
+        winning_box: [0x35, 0x36, 0x37, 0x38],
+        fees_paid: true,
+        unpaid_prize_pool: 0x3939_3939_3939_3939,
+        returned: 0x3A3A_3A3A,
+        split_amount: 0x3B3B_3B3B_3B3B_3B3B,
+        cancelled_by_admin: true,
+        abandoned: true,
+        created_at: 0x3C3C_3C3C_3C3C_3C3C,
+        locked_at: 0x3D3D_3D3D_3D3D_3D3D,
+        bump: 0x3E,
+        vault_bump: 0x3F,
+        reserved: [0xEE; 128],
+    };
+    let data = serialize(&pool);
+    assert_eq!(data.len(), 1442);
+    assert_eq!(&data[0..8], Pool::DISCRIMINATOR);
+    assert_eq!(&data[8..40], &[0x01u8; 32]); // game
+    assert_eq!(&data[40..72], &[0x02u8; 32]); // creator
+    assert_eq!(&data[72..80], &0x0303_0303_0303_0303u64.to_le_bytes()); // nonce
+    assert_eq!(data[80], 0x04); // token
+    assert_eq!(&data[81..113], &[0x05u8; 32]); // mint
+    assert_eq!(&data[113..145], &[0x06u8; 32]); // token_program
+    assert_eq!(&data[145..177], &[0x07u8; 32]); // vault
+    assert_eq!(&data[177..185], &0x0808_0808_0808_0808u64.to_le_bytes()); // price
+    assert_eq!(data[185], 2); // preset = FinalOnly
+    assert_eq!(data[186], 1); // access_type = Link
+    assert_eq!(&data[187..219], &[0x09u8; 32]); // gate_key
+    assert_eq!(&data[219..251], &[0x0Au8; 32]); // allowlist_root
+    assert_eq!(&data[251..253], &0x0B0Bu16.to_le_bytes()); // creator_addon_bps
+    assert_eq!(&data[253..285], &[0x0Cu8; 32]); // integrator
+    assert_eq!(&data[285..287], &0x0D0Du16.to_le_bytes()); // integrator_bps
+    assert_eq!(&data[287..295], &0x0E0E_0E0E_0E0E_0E0Eu64.to_le_bytes()); // platform_fee
+    assert_eq!(&data[295..303], &0x0F0F_0F0F_0F0F_0F0Fu64.to_le_bytes()); // creator_fee
+    assert_eq!(&data[303..311], &0x1010_1010_1010_1010u64.to_le_bytes()); // integrator_fee
+    assert_eq!(data[311], 5); // status = Split
+    assert_eq!(data[312], 0x11); // sold
+    for i in 0..25 {
+        let at = 313 + 32 * i;
+        assert_eq!(
+            &data[at..at + 32],
+            &[0x40 + i as u8; 32],
+            "owners[{i}] at {at}"
+        );
+    }
+    assert_eq!(data[1113], 0x12); // creator_boxes
+    assert_eq!(&data[1114..1122], &0x1313_1313_1313_1313u64.to_le_bytes()); // sponsored_total
+    assert_eq!(&data[1122..1124], &0x1414u16.to_le_bytes()); // sponsor_count
+    assert_eq!(&data[1124..1126], &0x1515u16.to_le_bytes()); // sponsorships_open
+    assert_eq!(&data[1126..1158], &[0x16u8; 32]); // var
+    assert_eq!(&data[1158..1166], &0x1717_1717_1717_1717u64.to_le_bytes()); // var_end_at
+    assert_eq!(&data[1166..1174], &0x1818_1818_1818_1818u64.to_le_bytes()); // sampled_slot
+    assert_eq!(&data[1174..1206], &[0x19u8; 32]); // sampled_hash
+    assert_eq!(data[1206], 0x1A); // var_replacements
+    assert_eq!(data[1207], 1); // drawn
+    assert_eq!(&data[1208..1218], &pool.home_axis); // home_axis
+    assert_eq!(&data[1218..1228], &pool.away_axis); // away_axis
+    assert_eq!(&data[1228..1236], &0x2F2F_2F2F_2F2F_2F2Fu64.to_le_bytes()); // prize_pool
+    for (i, q) in pool.quarter_prize.iter().enumerate() {
+        let at = 1236 + 8 * i;
+        assert_eq!(
+            &data[at..at + 8],
+            &q.to_le_bytes(),
+            "quarter_prize[{i}] at {at}"
+        );
+    }
+    assert_eq!(data[1268], 0x34); // quarters_settled
+    assert_eq!(&data[1269..1273], &[0x35, 0x36, 0x37, 0x38]); // winning_box
+    assert_eq!(data[1273], 1); // fees_paid
+    assert_eq!(&data[1274..1282], &0x3939_3939_3939_3939u64.to_le_bytes()); // unpaid_prize_pool
+    assert_eq!(&data[1282..1286], &0x3A3A_3A3Au32.to_le_bytes()); // returned
+    assert_eq!(&data[1286..1294], &0x3B3B_3B3B_3B3B_3B3Bu64.to_le_bytes()); // split_amount
+    assert_eq!(data[1294], 1); // cancelled_by_admin
+    assert_eq!(data[1295], 1); // abandoned
+    assert_eq!(&data[1296..1304], &0x3C3C_3C3C_3C3C_3C3Ci64.to_le_bytes()); // created_at
+    assert_eq!(&data[1304..1312], &0x3D3D_3D3D_3D3D_3D3Di64.to_le_bytes()); // locked_at
+    assert_eq!(data[1312], 0x3E); // bump
+    assert_eq!(data[1313], 0x3F); // vault_bump
+    assert_eq!(&data[1314..1442], &[0xEEu8; 128]); // reserved
+}
+
+#[test]
+fn creator_counter_is_74_bytes_at_the_documented_offsets() {
+    assert_eq!(CreatorCounter::SIZE, 74); // PROGRAM §3.5: 8 + 66
+    let value = CreatorCounter {
+        creator: key(0xC1),
+        game: key(0xC2),
+        open_count: 0xC3,
+        bump: 0xC4,
+    };
+    let data = serialize(&value);
+    assert_eq!(data.len(), 74);
+    assert_eq!(&data[0..8], CreatorCounter::DISCRIMINATOR);
+    assert_eq!(&data[8..40], &[0xC1u8; 32]); // creator
+    assert_eq!(&data[40..72], &[0xC2u8; 32]); // game
+    assert_eq!(data[72], 0xC3); // open_count
+    assert_eq!(data[73], 0xC4); // bump
+}
+
+#[test]
+fn sponsorship_is_81_bytes_at_the_documented_offsets() {
+    assert_eq!(Sponsorship::SIZE, 81); // PROGRAM §3.7: 8 + 73
+    let value = Sponsorship {
+        pool: key(0xD1),
+        wallet: key(0xD2),
+        amount: 0xD3D3_D3D3_D3D3_D3D3,
+        bump: 0xD4,
+    };
+    let data = serialize(&value);
+    assert_eq!(data.len(), 81);
+    assert_eq!(&data[0..8], Sponsorship::DISCRIMINATOR);
+    assert_eq!(&data[8..40], &[0xD1u8; 32]); // pool
+    assert_eq!(&data[40..72], &[0xD2u8; 32]); // wallet
+    assert_eq!(&data[72..80], &0xD3D3_D3D3_D3D3_D3D3u64.to_le_bytes()); // amount
+    assert_eq!(data[80], 0xD4); // bump
+}
+
+#[test]
+fn step_4_seed_prefixes_match_program_section_3() {
+    // PROGRAM §3.3–§3.7; the byte layouts of the four PDAs' seeds, in the order
+    // poolSeeds / vaultSeeds / counterSeeds / sponsorshipSeeds in @mybarpool/shared produce them
+    // (the address-level cross-check is in the localnet suite, pools.test.ts).
+    assert_eq!(POOL_SEED, b"pool");
+    assert_eq!(VAULT_SEED, b"vault");
+    assert_eq!(COUNTER_SEED, b"counter");
+    assert_eq!(SPONSORSHIP_SEED, b"sponsorship");
+    assert_eq!(BPS_DENOMINATOR, 10_000);
+    assert_eq!(NO_WINNING_BOX, 255);
+    let game = key(0xAA);
+    let creator = key(0xBB);
+    let nonce: u64 = 7;
+    let pool = Pubkey::find_program_address(
+        &[
+            POOL_SEED,
+            game.as_ref(),
+            creator.as_ref(),
+            &nonce.to_le_bytes(),
+        ],
+        &mybarpool::ID,
+    );
+    let by_bytes = Pubkey::find_program_address(
+        &[b"pool", &[0xAA; 32], &[0xBB; 32], &[7, 0, 0, 0, 0, 0, 0, 0]],
+        &mybarpool::ID,
+    );
+    assert_eq!(pool, by_bytes);
 }
