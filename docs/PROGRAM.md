@@ -104,7 +104,7 @@ One per scheduled game. Created and rent-paid by the platform. Never closed.
 | `key` | GameKey | |
 | `scheduled_kickoff` | i64 | Seed value; never changes |
 | `recorded_kickoff` | i64 | Starts equal to `scheduled_kickoff`; moved by `update_kickoff` |
-| `status` | u8 | `GameStatus` |
+| `status` | u8 | `GameStatus`; an enum in the program and the IDL, stored as its one-byte discriminant |
 | `quarters_posted` | u8 | 0–4 |
 | `home_score` | [u16; 4] | Cumulative home score at the end of Q1..Q3 and final |
 | `away_score` | [u16; 4] | Same for away |
@@ -234,16 +234,16 @@ Any subset of: `admin`, `score_authority`, `entropy_provider`, `fee_wallet`, `pl
 ### 4.2 Games
 
 **`create_game(key, scheduled_kickoff)`** — signer: keeper; payer: keeper.
-Checks: `scheduled_kickoff > now`; `key.week` is 1–22, or 101–103 with `preseason_enabled`; `home != away`; both < 32. Creates `GameRecord` with `recorded_kickoff = scheduled_kickoff`, `status = Scheduled`. Emits `GameCreated`.
+Checks: `scheduled_kickoff > now` (`KickoffInPast`); `key.week` is 1–22, or 101–103 with `preseason_enabled`; `home != away`; both < 32 (each `InvalidGameKey`). `paused` is not consulted (§3.1). Creates `GameRecord` with `recorded_kickoff = scheduled_kickoff`, `status = Scheduled`. Emits `GameCreated`.
 
 **`update_kickoff(new_time)`** — signer: keeper.
-Checks, all required: `status == Scheduled`; `quarters_posted == 0`; `now < recorded_kickoff`; `new_time > now`; `new_time ≤ scheduled_kickoff + KICKOFF_UPDATE_BOUND`. Sets `recorded_kickoff = new_time`. Emits `KickoffUpdated { old, new }`. Earlier moves are allowed under the same checks.
+Checks, all required, in this order: `status == Scheduled` (`GameNotScheduled`); `quarters_posted == 0` and `now < recorded_kickoff` (both `KickoffUpdateTooLate`); `new_time > now` (`KickoffInPast`); `new_time ≤ scheduled_kickoff + KICKOFF_UPDATE_BOUND` (`KickoffOutOfBounds`; the bound is from the scheduled kickoff, never the recorded one). Sets `recorded_kickoff = new_time`. Emits `KickoffUpdated { old, new }`. Earlier moves are allowed under the same checks; `new_time == recorded_kickoff` is accepted and still emits.
 
 **`post_scores(quarter, home, away, is_final, had_overtime)`** — signer: keeper. `quarter` is 1–4; `had_overtime` must be `false` unless `is_final`.
-Checks: `status == Scheduled`; `quarter == quarters_posted + 1`; if `quarter == 1`, `now ≥ recorded_kickoff + MIN_QUARTER_SECONDS`, else `now ≥ posted_at[quarter − 2] + MIN_QUARTER_SECONDS`; `home ≥ home_score[quarter − 2]` and `away ≥ away_score[quarter − 2]` when `quarter > 1`; `is_final` must be `true` when `quarter == 4` and `false` otherwise (the fourth post is the final score, after any overtime; the keeper waits for the sources to report final). Sets the scores and `posted_at`, increments `quarters_posted`; when `quarter == 4` sets `status = Final` and `final_had_overtime = had_overtime`. Emits `ScoresPosted`.
+Checks, in this order: `status == Scheduled` (`GameNotScheduled`, so a terminal record is inert whatever the arguments); `quarter == quarters_posted + 1` (`QuarterOutOfOrder`: a repeat, a skip, 0 or above 4); if `quarter == 1`, `now ≥ recorded_kickoff + MIN_QUARTER_SECONDS`, else `now ≥ posted_at[quarter − 2] + MIN_QUARTER_SECONDS` (`QuarterTooSoon`); `home ≥ home_score[quarter − 2]` and `away ≥ away_score[quarter − 2]` when `quarter > 1` (`ScoreDecreased`); `is_final` must be `true` when `quarter == 4` and `false` otherwise, and `had_overtime` needs `is_final` (both `FinalFlagMismatch`; the fourth post is the final score, after any overtime; the keeper waits for the sources to report final). Sets the scores and `posted_at`, increments `quarters_posted`; when `quarter == 4` sets `status = Final` and `final_had_overtime = had_overtime`. Emits `ScoresPosted`.
 
-**`mark_game(new_status)`** — signer: admin. `new_status ∈ {Postponed, Cancelled, Suspended}`.
-Checks: `status == Scheduled`; for `Postponed` and `Cancelled`, `quarters_posted == 0`. Sets status and `marked_at`. Emits `GameMarked`. Irreversible; a game marked in error stays marked and its pools are returned; the corrected game is a new record.
+**`mark_game(new_status)`** — signer: admin. `new_status ∈ {Postponed, Cancelled, Suspended}`; `Scheduled` and `Final` are `InvalidGameStatus`, and a discriminant outside the enum does not deserialise.
+Checks: `status == Scheduled` (`GameNotScheduled` for a `Final` record, `GameAlreadyMarked` for one already marked); for `Postponed` and `Cancelled`, `quarters_posted == 0` (`InvalidGameStatus`; a game with scores can only be suspended). Sets status and `marked_at`. Emits `GameMarked`. Irreversible; a game marked in error stays marked and its pools are returned; the corrected game is a new record.
 
 ### 4.3 Pool creation and buying
 
@@ -457,9 +457,11 @@ Clients show a box as **won** only on `QuarterSettled`; nothing else is a result
 
 Numbered from 6000 (Anchor custom errors). Names are the contract; numbers follow declaration order and are frozen once the program ships.
 
-`Unauthorized`, `Paused`, `GameNotScheduled`, `GameAlreadyMarked`, `SalesClosed`, `KickoffInPast`, `KickoffOutOfBounds`, `KickoffUpdateTooLate`, `QuarterOutOfOrder`, `QuarterTooSoon`, `ScoreDecreased`, `FinalFlagMismatch`, `TokenDisabled`, `PriceOffLadder`, `InvalidPreset`, `InvalidAccessType`, `GateKeyMissing`, `GateKeyNotSigner`, `AllowlistProofInvalid`, `AddonBudgetExceeded`, `IntegratorMismatch`, `OpenPoolLimit`, `OwnBoxLimit`, `OverrideRequired`, `NothingToBuy`, `TooManyBoxes`, `PoolNotOpen`, `PoolNotLocked`, `PoolNotDrawn`, `SponsorshipTooSmall`, `SponsorshipCapExceeded`, `VarAlreadySet`, `VarNotSet`, `VarMismatch`, `VarNotEntropy`, `VarProviderMismatch`, `VarNotFresh`, `VarNotRevealed`, `VarNotSampledHere`, `SampleWindowMissed`, `VarFallbackHash`, `TooManyVarReplacements`, `AlreadyDrawn`, `ScoresNotPosted`, `WinnerMismatch`, `FeeAccountMismatch`, `NotReturnable`, `FeesAlreadyPaid`, `NotSuspended`, `NotSplittable`, `ReclaimTooEarly`, `NotOwner`, `NothingToReturn`, `SponsorshipsStillOpen`, `BoxesStillOutstanding`, `PoolNotTerminal`, `CounterNotEmpty`, `UnsupportedMintExtension`, `MathOverflow`, `InvalidConfig`.
+`Unauthorized`, `Paused`, `GameNotScheduled`, `GameAlreadyMarked`, `SalesClosed`, `KickoffInPast`, `KickoffOutOfBounds`, `KickoffUpdateTooLate`, `QuarterOutOfOrder`, `QuarterTooSoon`, `ScoreDecreased`, `FinalFlagMismatch`, `TokenDisabled`, `PriceOffLadder`, `InvalidPreset`, `InvalidAccessType`, `GateKeyMissing`, `GateKeyNotSigner`, `AllowlistProofInvalid`, `AddonBudgetExceeded`, `IntegratorMismatch`, `OpenPoolLimit`, `OwnBoxLimit`, `OverrideRequired`, `NothingToBuy`, `TooManyBoxes`, `PoolNotOpen`, `PoolNotLocked`, `PoolNotDrawn`, `SponsorshipTooSmall`, `SponsorshipCapExceeded`, `VarAlreadySet`, `VarNotSet`, `VarMismatch`, `VarNotEntropy`, `VarProviderMismatch`, `VarNotFresh`, `VarNotRevealed`, `VarNotSampledHere`, `SampleWindowMissed`, `VarFallbackHash`, `TooManyVarReplacements`, `AlreadyDrawn`, `ScoresNotPosted`, `WinnerMismatch`, `FeeAccountMismatch`, `NotReturnable`, `FeesAlreadyPaid`, `NotSuspended`, `NotSplittable`, `ReclaimTooEarly`, `NotOwner`, `NothingToReturn`, `SponsorshipsStillOpen`, `BoxesStillOutstanding`, `PoolNotTerminal`, `CounterNotEmpty`, `UnsupportedMintExtension`, `MathOverflow`, `InvalidConfig`, `InvalidGameKey`, `InvalidGameStatus`.
 
 `InvalidConfig` (6059) is the error for a violated §3.1 or §3.6 invariant on any write (`initialize`, `update_config`, `set_wallet_override`), and for a `TokenRule` whose shape does not fit its index (index 0 is native SOL with the default mint and program; a rule with the default mint elsewhere is a disabled placeholder; a rule with a mint needs that mint account passed, matching key, owner and decimals). `default_preset` outside 0–2 is `InvalidPreset`; a transfer-fee or transfer-hook mint is `UnsupportedMintExtension`. It was added in Step 2, after the list above had been written and before anything shipped, so every other number is unchanged.
+
+`InvalidGameKey` (6060) is the error for a `create_game` key that breaks the §2 rules (`week` outside 1–22 and not a preseason week with `preseason_enabled`; a team index of 32 or more; `home == away`). `InvalidGameStatus` (6061) is the error for a `mark_game` whose `new_status` is not a mark (`Scheduled`, `Final`) or is `Postponed`/`Cancelled` once a quarter has been posted. Both were added in Step 3, the same way, before anything shipped.
 
 ## 9. State machines
 
@@ -469,6 +471,8 @@ Numbered from 6000 (Anchor custom errors). Names are the contract; numbers follo
 Scheduled --mark--> Postponed | Cancelled      (only while quarters_posted == 0)
 Scheduled --mark--> Suspended                  (any time before Final)
 Scheduled --post_scores(4)--> Final
+Scheduled --update_kickoff--> Scheduled   (only while quarters_posted == 0 and now < recorded_kickoff)
+Scheduled --post_scores(1..3)--> Scheduled
 ```
 
 Terminal: `Postponed`, `Cancelled`, `Suspended`, `Final`.
