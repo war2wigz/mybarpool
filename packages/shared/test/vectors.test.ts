@@ -204,11 +204,67 @@ function feeVectors() {
   };
 }
 
+/**
+ * Step 4's 1,000-vector acceptance check, compact: the owner keys are irrelevant to the
+ * algorithm (only which boxes are taken matters), so `owned` lists the taken indices and the
+ * program plants arbitrary keys there.
+ */
+function assignmentBulkVectors() {
+  const rng = new Prng("vectors/assignment-bulk");
+  const entries = [];
+  for (let t = 0; t < 1_000; t++) {
+    const sold = rng.int(BOXES);
+    const taken = new Set<number>();
+    while (taken.size < sold) taken.add(rng.int(BOXES));
+    const owned = [...taken].sort((a, b) => a - b);
+    const owners: Owner[] = Array.from({ length: BOXES }, () => null);
+    for (const i of owned) owners[i] = rng.pubkey();
+    const count = rng.between(1, BOXES - sold);
+    const slothash = rng.bytes(32);
+    const buyer = rng.pubkey();
+    const { boxes } = assignBoxes({ slothash, buyer, sold, count, owners });
+    entries.push({ slothash: toHex(slothash), buyer: toHex(buyer), sold, count, owned, boxes });
+  }
+  return { spec: "PROGRAM §6.1 box assignment, 1,000 random purchases", entries };
+}
+
+/** Step 4's fee cross-check over random inputs; §5.1 amounts only, no prize split. */
+function feeBulkVectors() {
+  const rng = new Prng("vectors/fees-bulk");
+  const ladders = [INITIAL_LADDERS.SOL, INITIAL_LADDERS.ORE, skrLadder(6)];
+  const entries = [];
+  for (let t = 0; t < 200; t++) {
+    const price = rng.pick(priceLadderSteps(rng.pick(ladders)));
+    const creatorAddonBps = rng.int(501);
+    const c = {
+      price,
+      platformBps: rng.int(501),
+      creatorBps: rng.int(501),
+      creatorAddonBps,
+      integratorBps: rng.int(501 - creatorAddonBps),
+    };
+    const fees = feeAmounts(c);
+    entries.push({
+      price: price.toString(),
+      platformBps: c.platformBps,
+      creatorBps: c.creatorBps,
+      creatorAddonBps: c.creatorAddonBps,
+      integratorBps: c.integratorBps,
+      platformFee: fees.platformFee.toString(),
+      creatorFee: fees.creatorFee.toString(),
+      integratorFee: fees.integratorFee.toString(),
+    });
+  }
+  return { spec: "PROGRAM §5.1 fee amounts, 200 random inputs; u64 as decimal strings", entries };
+}
+
 const FILES = {
   "assignment.json": assignmentVectors,
   "axes.json": axesVectors,
   "winner.json": winnerVectors,
   "fees.json": feeVectors,
+  "assignment-bulk.json": assignmentBulkVectors,
+  "fees-bulk.json": feeBulkVectors,
 } as const;
 
 describe("shared vector files (PROGRAM §6)", () => {

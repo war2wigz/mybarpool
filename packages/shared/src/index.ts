@@ -14,6 +14,7 @@ export * from "./assignment.js";
 export * from "./axes.js";
 export * from "./winner.js";
 export * from "./gameKey.js";
+export * from "./seeds.js";
 export * from "./teams.js";
 export * from "./price.js";
 export * from "./fees.js";

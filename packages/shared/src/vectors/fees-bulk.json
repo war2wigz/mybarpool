@@ -1,0 +1,2005 @@
+{
+  "spec": "PROGRAM §5.1 fee amounts, 200 random inputs; u64 as decimal strings",
+  "entries": [
+    {
+      "price": "60000000000",
+      "platformBps": 350,
+      "creatorBps": 410,
+      "creatorAddonBps": 69,
+      "integratorBps": 9,
+      "platformFee": "52500000000",
+      "creatorFee": "71850000000",
+      "integratorFee": "1350000000"
+    },
+    {
+      "price": "600000000",
+      "platformBps": 265,
+      "creatorBps": 256,
+      "creatorAddonBps": 13,
+      "integratorBps": 425,
+      "platformFee": "397500000",
+      "creatorFee": "403500000",
+      "integratorFee": "637500000"
+    },
+    {
+      "price": "85000000000",
+      "platformBps": 487,
+      "creatorBps": 370,
+      "creatorAddonBps": 145,
+      "integratorBps": 351,
+      "platformFee": "103487500000",
+      "creatorFee": "109437500000",
+      "integratorFee": "74587500000"
+    },
+    {
+      "price": "60000000000",
+      "platformBps": 137,
+      "creatorBps": 154,
+      "creatorAddonBps": 305,
+      "integratorBps": 47,
+      "platformFee": "20550000000",
+      "creatorFee": "68850000000",
+      "integratorFee": "7050000000"
+    },
+    {
+      "price": "950000000",
+      "platformBps": 314,
+      "creatorBps": 184,
+      "creatorAddonBps": 1,
+      "integratorBps": 477,
+      "platformFee": "745750000",
+      "creatorFee": "439375000",
+      "integratorFee": "1132875000"
+    },
+    {
+      "price": "450000000",
+      "platformBps": 445,
+      "creatorBps": 185,
+      "creatorAddonBps": 237,
+      "integratorBps": 42,
+      "platformFee": "500625000",
+      "creatorFee": "474750000",
+      "integratorFee": "47250000"
+    },
+    {
+      "price": "750000000",
+      "platformBps": 174,
+      "creatorBps": 494,
+      "creatorAddonBps": 410,
+      "integratorBps": 58,
+      "platformFee": "326250000",
+      "creatorFee": "1695000000",
+      "integratorFee": "108750000"
+    },
+    {
+      "price": "100000000000",
+      "platformBps": 394,
+      "creatorBps": 250,
+      "creatorAddonBps": 149,
+      "integratorBps": 70,
+      "platformFee": "98500000000",
+      "creatorFee": "99750000000",
+      "integratorFee": "17500000000"
+    },
+    {
+      "price": "15000000000",
+      "platformBps": 496,
+      "creatorBps": 120,
+      "creatorAddonBps": 234,
+      "integratorBps": 134,
+      "platformFee": "18600000000",
+      "creatorFee": "13275000000",
+      "integratorFee": "5025000000"
+    },
+    {
+      "price": "500000000",
+      "platformBps": 75,
+      "creatorBps": 312,
+      "creatorAddonBps": 376,
+      "integratorBps": 37,
+      "platformFee": "93750000",
+      "creatorFee": "860000000",
+      "integratorFee": "46250000"
+    },
+    {
+      "price": "4800000000",
+      "platformBps": 397,
+      "creatorBps": 319,
+      "creatorAddonBps": 66,
+      "integratorBps": 8,
+      "platformFee": "4764000000",
+      "creatorFee": "4620000000",
+      "integratorFee": "96000000"
+    },
+    {
+      "price": "4200000000",
+      "platformBps": 101,
+      "creatorBps": 261,
+      "creatorAddonBps": 68,
+      "integratorBps": 143,
+      "platformFee": "1060500000",
+      "creatorFee": "3454500000",
+      "integratorFee": "1501500000"
+    },
+    {
+      "price": "1900000000",
+      "platformBps": 457,
+      "creatorBps": 133,
+      "creatorAddonBps": 195,
+      "integratorBps": 51,
+      "platformFee": "2170750000",
+      "creatorFee": "1558000000",
+      "integratorFee": "242250000"
+    },
+    {
+      "price": "900000000",
+      "platformBps": 61,
+      "creatorBps": 398,
+      "creatorAddonBps": 150,
+      "integratorBps": 163,
+      "platformFee": "137250000",
+      "creatorFee": "1233000000",
+      "integratorFee": "366750000"
+    },
+    {
+      "price": "1000000000",
+      "platformBps": 167,
+      "creatorBps": 345,
+      "creatorAddonBps": 303,
+      "integratorBps": 177,
+      "platformFee": "417500000",
+      "creatorFee": "1620000000",
+      "integratorFee": "442500000"
+    },
+    {
+      "price": "2900000000",
+      "platformBps": 47,
+      "creatorBps": 219,
+      "creatorAddonBps": 469,
+      "integratorBps": 20,
+      "platformFee": "340750000",
+      "creatorFee": "4988000000",
+      "integratorFee": "145000000"
+    },
+    {
+      "price": "5000000000",
+      "platformBps": 136,
+      "creatorBps": 456,
+      "creatorAddonBps": 407,
+      "integratorBps": 16,
+      "platformFee": "1700000000",
+      "creatorFee": "10787500000",
+      "integratorFee": "200000000"
+    },
+    {
+      "price": "95000000000",
+      "platformBps": 20,
+      "creatorBps": 414,
+      "creatorAddonBps": 302,
+      "integratorBps": 19,
+      "platformFee": "4750000000",
+      "creatorFee": "170050000000",
+      "integratorFee": "4512500000"
+    },
+    {
+      "price": "400000000",
+      "platformBps": 333,
+      "creatorBps": 203,
+      "creatorAddonBps": 99,
+      "integratorBps": 29,
+      "platformFee": "333000000",
+      "creatorFee": "302000000",
+      "integratorFee": "29000000"
+    },
+    {
+      "price": "150000000",
+      "platformBps": 173,
+      "creatorBps": 480,
+      "creatorAddonBps": 35,
+      "integratorBps": 193,
+      "platformFee": "64875000",
+      "creatorFee": "193125000",
+      "integratorFee": "72375000"
+    },
+    {
+      "price": "600000000",
+      "platformBps": 6,
+      "creatorBps": 358,
+      "creatorAddonBps": 163,
+      "integratorBps": 180,
+      "platformFee": "9000000",
+      "creatorFee": "781500000",
+      "integratorFee": "270000000"
+    },
+    {
+      "price": "75000000000",
+      "platformBps": 170,
+      "creatorBps": 257,
+      "creatorAddonBps": 225,
+      "integratorBps": 65,
+      "platformFee": "31875000000",
+      "creatorFee": "90375000000",
+      "integratorFee": "12187500000"
+    },
+    {
+      "price": "4300000000",
+      "platformBps": 438,
+      "creatorBps": 6,
+      "creatorAddonBps": 121,
+      "integratorBps": 118,
+      "platformFee": "4708500000",
+      "creatorFee": "1365250000",
+      "integratorFee": "1268500000"
+    },
+    {
+      "price": "3100000000",
+      "platformBps": 227,
+      "creatorBps": 460,
+      "creatorAddonBps": 400,
+      "integratorBps": 40,
+      "platformFee": "1759250000",
+      "creatorFee": "6665000000",
+      "integratorFee": "310000000"
+    },
+    {
+      "price": "40000000000",
+      "platformBps": 280,
+      "creatorBps": 493,
+      "creatorAddonBps": 261,
+      "integratorBps": 68,
+      "platformFee": "28000000000",
+      "creatorFee": "75400000000",
+      "integratorFee": "6800000000"
+    },
+    {
+      "price": "35000000000",
+      "platformBps": 9,
+      "creatorBps": 149,
+      "creatorAddonBps": 33,
+      "integratorBps": 46,
+      "platformFee": "787500000",
+      "creatorFee": "15925000000",
+      "integratorFee": "4025000000"
+    },
+    {
+      "price": "90000000000",
+      "platformBps": 39,
+      "creatorBps": 245,
+      "creatorAddonBps": 197,
+      "integratorBps": 18,
+      "platformFee": "8775000000",
+      "creatorFee": "99450000000",
+      "integratorFee": "4050000000"
+    },
+    {
+      "price": "10000000000",
+      "platformBps": 260,
+      "creatorBps": 33,
+      "creatorAddonBps": 302,
+      "integratorBps": 14,
+      "platformFee": "6500000000",
+      "creatorFee": "8375000000",
+      "integratorFee": "350000000"
+    },
+    {
+      "price": "600000000",
+      "platformBps": 348,
+      "creatorBps": 489,
+      "creatorAddonBps": 392,
+      "integratorBps": 17,
+      "platformFee": "522000000",
+      "creatorFee": "1321500000",
+      "integratorFee": "25500000"
+    },
+    {
+      "price": "100000000",
+      "platformBps": 322,
+      "creatorBps": 475,
+      "creatorAddonBps": 312,
+      "integratorBps": 169,
+      "platformFee": "80500000",
+      "creatorFee": "196750000",
+      "integratorFee": "42250000"
+    },
+    {
+      "price": "500000000",
+      "platformBps": 255,
+      "creatorBps": 268,
+      "creatorAddonBps": 455,
+      "integratorBps": 18,
+      "platformFee": "318750000",
+      "creatorFee": "903750000",
+      "integratorFee": "22500000"
+    },
+    {
+      "price": "100000000000",
+      "platformBps": 493,
+      "creatorBps": 183,
+      "creatorAddonBps": 87,
+      "integratorBps": 164,
+      "platformFee": "123250000000",
+      "creatorFee": "67500000000",
+      "integratorFee": "41000000000"
+    },
+    {
+      "price": "3400000000",
+      "platformBps": 447,
+      "creatorBps": 310,
+      "creatorAddonBps": 49,
+      "integratorBps": 384,
+      "platformFee": "3799500000",
+      "creatorFee": "3051500000",
+      "integratorFee": "3264000000"
+    },
+    {
+      "price": "700000000",
+      "platformBps": 441,
+      "creatorBps": 12,
+      "creatorAddonBps": 408,
+      "integratorBps": 35,
+      "platformFee": "771750000",
+      "creatorFee": "735000000",
+      "integratorFee": "61250000"
+    },
+    {
+      "price": "90000000000",
+      "platformBps": 331,
+      "creatorBps": 97,
+      "creatorAddonBps": 72,
+      "integratorBps": 202,
+      "platformFee": "74475000000",
+      "creatorFee": "38025000000",
+      "integratorFee": "45450000000"
+    },
+    {
+      "price": "65000000000",
+      "platformBps": 113,
+      "creatorBps": 325,
+      "creatorAddonBps": 262,
+      "integratorBps": 76,
+      "platformFee": "18362500000",
+      "creatorFee": "95387500000",
+      "integratorFee": "12350000000"
+    },
+    {
+      "price": "2600000000",
+      "platformBps": 3,
+      "creatorBps": 469,
+      "creatorAddonBps": 356,
+      "integratorBps": 31,
+      "platformFee": "19500000",
+      "creatorFee": "5362500000",
+      "integratorFee": "201500000"
+    },
+    {
+      "price": "50000000000",
+      "platformBps": 85,
+      "creatorBps": 417,
+      "creatorAddonBps": 467,
+      "integratorBps": 12,
+      "platformFee": "10625000000",
+      "creatorFee": "110500000000",
+      "integratorFee": "1500000000"
+    },
+    {
+      "price": "60000000000",
+      "platformBps": 184,
+      "creatorBps": 43,
+      "creatorAddonBps": 164,
+      "integratorBps": 120,
+      "platformFee": "27600000000",
+      "creatorFee": "31050000000",
+      "integratorFee": "18000000000"
+    },
+    {
+      "price": "100000000000",
+      "platformBps": 160,
+      "creatorBps": 196,
+      "creatorAddonBps": 284,
+      "integratorBps": 157,
+      "platformFee": "40000000000",
+      "creatorFee": "120000000000",
+      "integratorFee": "39250000000"
+    },
+    {
+      "price": "3600000000",
+      "platformBps": 256,
+      "creatorBps": 78,
+      "creatorAddonBps": 382,
+      "integratorBps": 85,
+      "platformFee": "2304000000",
+      "creatorFee": "4140000000",
+      "integratorFee": "765000000"
+    },
+    {
+      "price": "650000000",
+      "platformBps": 360,
+      "creatorBps": 360,
+      "creatorAddonBps": 274,
+      "integratorBps": 1,
+      "platformFee": "585000000",
+      "creatorFee": "1030250000",
+      "integratorFee": "1625000"
+    },
+    {
+      "price": "45000000000",
+      "platformBps": 152,
+      "creatorBps": 125,
+      "creatorAddonBps": 21,
+      "integratorBps": 459,
+      "platformFee": "17100000000",
+      "creatorFee": "16425000000",
+      "integratorFee": "51637500000"
+    },
+    {
+      "price": "95000000000",
+      "platformBps": 268,
+      "creatorBps": 421,
+      "creatorAddonBps": 282,
+      "integratorBps": 118,
+      "platformFee": "63650000000",
+      "creatorFee": "166962500000",
+      "integratorFee": "28025000000"
+    },
+    {
+      "price": "55000000000",
+      "platformBps": 70,
+      "creatorBps": 218,
+      "creatorAddonBps": 291,
+      "integratorBps": 151,
+      "platformFee": "9625000000",
+      "creatorFee": "69987500000",
+      "integratorFee": "20762500000"
+    },
+    {
+      "price": "450000000",
+      "platformBps": 263,
+      "creatorBps": 149,
+      "creatorAddonBps": 41,
+      "integratorBps": 279,
+      "platformFee": "295875000",
+      "creatorFee": "213750000",
+      "integratorFee": "313875000"
+    },
+    {
+      "price": "1800000000",
+      "platformBps": 355,
+      "creatorBps": 365,
+      "creatorAddonBps": 164,
+      "integratorBps": 295,
+      "platformFee": "1597500000",
+      "creatorFee": "2380500000",
+      "integratorFee": "1327500000"
+    },
+    {
+      "price": "20000000000",
+      "platformBps": 152,
+      "creatorBps": 494,
+      "creatorAddonBps": 155,
+      "integratorBps": 74,
+      "platformFee": "7600000000",
+      "creatorFee": "32450000000",
+      "integratorFee": "3700000000"
+    },
+    {
+      "price": "500000000",
+      "platformBps": 301,
+      "creatorBps": 45,
+      "creatorAddonBps": 307,
+      "integratorBps": 96,
+      "platformFee": "376250000",
+      "creatorFee": "440000000",
+      "integratorFee": "120000000"
+    },
+    {
+      "price": "550000000",
+      "platformBps": 5,
+      "creatorBps": 97,
+      "creatorAddonBps": 366,
+      "integratorBps": 113,
+      "platformFee": "6875000",
+      "creatorFee": "636625000",
+      "integratorFee": "155375000"
+    },
+    {
+      "price": "350000000",
+      "platformBps": 387,
+      "creatorBps": 42,
+      "creatorAddonBps": 436,
+      "integratorBps": 45,
+      "platformFee": "338625000",
+      "creatorFee": "418250000",
+      "integratorFee": "39375000"
+    },
+    {
+      "price": "300000000",
+      "platformBps": 224,
+      "creatorBps": 458,
+      "creatorAddonBps": 464,
+      "integratorBps": 5,
+      "platformFee": "168000000",
+      "creatorFee": "691500000",
+      "integratorFee": "3750000"
+    },
+    {
+      "price": "80000000000",
+      "platformBps": 175,
+      "creatorBps": 463,
+      "creatorAddonBps": 39,
+      "integratorBps": 177,
+      "platformFee": "35000000000",
+      "creatorFee": "100400000000",
+      "integratorFee": "35400000000"
+    },
+    {
+      "price": "70000000000",
+      "platformBps": 409,
+      "creatorBps": 348,
+      "creatorAddonBps": 416,
+      "integratorBps": 25,
+      "platformFee": "71575000000",
+      "creatorFee": "133700000000",
+      "integratorFee": "4375000000"
+    },
+    {
+      "price": "25000000000",
+      "platformBps": 448,
+      "creatorBps": 203,
+      "creatorAddonBps": 433,
+      "integratorBps": 35,
+      "platformFee": "28000000000",
+      "creatorFee": "39750000000",
+      "integratorFee": "2187500000"
+    },
+    {
+      "price": "200000000",
+      "platformBps": 114,
+      "creatorBps": 398,
+      "creatorAddonBps": 50,
+      "integratorBps": 389,
+      "platformFee": "57000000",
+      "creatorFee": "224000000",
+      "integratorFee": "194500000"
+    },
+    {
+      "price": "20000000000",
+      "platformBps": 324,
+      "creatorBps": 261,
+      "creatorAddonBps": 49,
+      "integratorBps": 121,
+      "platformFee": "16200000000",
+      "creatorFee": "15500000000",
+      "integratorFee": "6050000000"
+    },
+    {
+      "price": "1200000000",
+      "platformBps": 375,
+      "creatorBps": 336,
+      "creatorAddonBps": 124,
+      "integratorBps": 179,
+      "platformFee": "1125000000",
+      "creatorFee": "1380000000",
+      "integratorFee": "537000000"
+    },
+    {
+      "price": "400000000",
+      "platformBps": 399,
+      "creatorBps": 62,
+      "creatorAddonBps": 437,
+      "integratorBps": 23,
+      "platformFee": "399000000",
+      "creatorFee": "499000000",
+      "integratorFee": "23000000"
+    },
+    {
+      "price": "650000000",
+      "platformBps": 499,
+      "creatorBps": 208,
+      "creatorAddonBps": 320,
+      "integratorBps": 124,
+      "platformFee": "810875000",
+      "creatorFee": "858000000",
+      "integratorFee": "201500000"
+    },
+    {
+      "price": "3400000000",
+      "platformBps": 250,
+      "creatorBps": 177,
+      "creatorAddonBps": 288,
+      "integratorBps": 140,
+      "platformFee": "2125000000",
+      "creatorFee": "3952500000",
+      "integratorFee": "1190000000"
+    },
+    {
+      "price": "5000000000",
+      "platformBps": 318,
+      "creatorBps": 385,
+      "creatorAddonBps": 405,
+      "integratorBps": 38,
+      "platformFee": "3975000000",
+      "creatorFee": "9875000000",
+      "integratorFee": "475000000"
+    },
+    {
+      "price": "700000000",
+      "platformBps": 487,
+      "creatorBps": 288,
+      "creatorAddonBps": 330,
+      "integratorBps": 68,
+      "platformFee": "852250000",
+      "creatorFee": "1081500000",
+      "integratorFee": "119000000"
+    },
+    {
+      "price": "50000000",
+      "platformBps": 207,
+      "creatorBps": 369,
+      "creatorAddonBps": 108,
+      "integratorBps": 254,
+      "platformFee": "25875000",
+      "creatorFee": "59625000",
+      "integratorFee": "31750000"
+    },
+    {
+      "price": "65000000000",
+      "platformBps": 223,
+      "creatorBps": 456,
+      "creatorAddonBps": 177,
+      "integratorBps": 51,
+      "platformFee": "36237500000",
+      "creatorFee": "102862500000",
+      "integratorFee": "8287500000"
+    },
+    {
+      "price": "5000000000",
+      "platformBps": 353,
+      "creatorBps": 415,
+      "creatorAddonBps": 135,
+      "integratorBps": 40,
+      "platformFee": "4412500000",
+      "creatorFee": "6875000000",
+      "integratorFee": "500000000"
+    },
+    {
+      "price": "350000000",
+      "platformBps": 82,
+      "creatorBps": 238,
+      "creatorAddonBps": 276,
+      "integratorBps": 65,
+      "platformFee": "71750000",
+      "creatorFee": "449750000",
+      "integratorFee": "56875000"
+    },
+    {
+      "price": "550000000",
+      "platformBps": 242,
+      "creatorBps": 192,
+      "creatorAddonBps": 193,
+      "integratorBps": 200,
+      "platformFee": "332750000",
+      "creatorFee": "529375000",
+      "integratorFee": "275000000"
+    },
+    {
+      "price": "50000000",
+      "platformBps": 29,
+      "creatorBps": 218,
+      "creatorAddonBps": 48,
+      "integratorBps": 287,
+      "platformFee": "3625000",
+      "creatorFee": "33250000",
+      "integratorFee": "35875000"
+    },
+    {
+      "price": "85000000000",
+      "platformBps": 69,
+      "creatorBps": 276,
+      "creatorAddonBps": 320,
+      "integratorBps": 157,
+      "platformFee": "14662500000",
+      "creatorFee": "126650000000",
+      "integratorFee": "33362500000"
+    },
+    {
+      "price": "10000000000",
+      "platformBps": 66,
+      "creatorBps": 439,
+      "creatorAddonBps": 43,
+      "integratorBps": 190,
+      "platformFee": "1650000000",
+      "creatorFee": "12050000000",
+      "integratorFee": "4750000000"
+    },
+    {
+      "price": "85000000000",
+      "platformBps": 86,
+      "creatorBps": 60,
+      "creatorAddonBps": 496,
+      "integratorBps": 4,
+      "platformFee": "18275000000",
+      "creatorFee": "118150000000",
+      "integratorFee": "850000000"
+    },
+    {
+      "price": "75000000000",
+      "platformBps": 13,
+      "creatorBps": 34,
+      "creatorAddonBps": 103,
+      "integratorBps": 349,
+      "platformFee": "2437500000",
+      "creatorFee": "25687500000",
+      "integratorFee": "65437500000"
+    },
+    {
+      "price": "95000000000",
+      "platformBps": 123,
+      "creatorBps": 481,
+      "creatorAddonBps": 429,
+      "integratorBps": 2,
+      "platformFee": "29212500000",
+      "creatorFee": "216125000000",
+      "integratorFee": "475000000"
+    },
+    {
+      "price": "4000000000",
+      "platformBps": 16,
+      "creatorBps": 347,
+      "creatorAddonBps": 10,
+      "integratorBps": 92,
+      "platformFee": "160000000",
+      "creatorFee": "3570000000",
+      "integratorFee": "920000000"
+    },
+    {
+      "price": "4300000000",
+      "platformBps": 148,
+      "creatorBps": 190,
+      "creatorAddonBps": 267,
+      "integratorBps": 0,
+      "platformFee": "1591000000",
+      "creatorFee": "4912750000",
+      "integratorFee": "0"
+    },
+    {
+      "price": "90000000000",
+      "platformBps": 53,
+      "creatorBps": 41,
+      "creatorAddonBps": 125,
+      "integratorBps": 151,
+      "platformFee": "11925000000",
+      "creatorFee": "37350000000",
+      "integratorFee": "33975000000"
+    },
+    {
+      "price": "4500000000",
+      "platformBps": 185,
+      "creatorBps": 25,
+      "creatorAddonBps": 149,
+      "integratorBps": 341,
+      "platformFee": "2081250000",
+      "creatorFee": "1957500000",
+      "integratorFee": "3836250000"
+    },
+    {
+      "price": "3200000000",
+      "platformBps": 21,
+      "creatorBps": 370,
+      "creatorAddonBps": 402,
+      "integratorBps": 48,
+      "platformFee": "168000000",
+      "creatorFee": "6176000000",
+      "integratorFee": "384000000"
+    },
+    {
+      "price": "850000000",
+      "platformBps": 224,
+      "creatorBps": 226,
+      "creatorAddonBps": 237,
+      "integratorBps": 152,
+      "platformFee": "476000000",
+      "creatorFee": "983875000",
+      "integratorFee": "323000000"
+    },
+    {
+      "price": "300000000",
+      "platformBps": 379,
+      "creatorBps": 190,
+      "creatorAddonBps": 177,
+      "integratorBps": 265,
+      "platformFee": "284250000",
+      "creatorFee": "275250000",
+      "integratorFee": "198750000"
+    },
+    {
+      "price": "3600000000",
+      "platformBps": 161,
+      "creatorBps": 155,
+      "creatorAddonBps": 403,
+      "integratorBps": 78,
+      "platformFee": "1449000000",
+      "creatorFee": "5022000000",
+      "integratorFee": "702000000"
+    },
+    {
+      "price": "60000000000",
+      "platformBps": 470,
+      "creatorBps": 20,
+      "creatorAddonBps": 374,
+      "integratorBps": 68,
+      "platformFee": "70500000000",
+      "creatorFee": "59100000000",
+      "integratorFee": "10200000000"
+    },
+    {
+      "price": "4000000000",
+      "platformBps": 289,
+      "creatorBps": 67,
+      "creatorAddonBps": 454,
+      "integratorBps": 9,
+      "platformFee": "2890000000",
+      "creatorFee": "5210000000",
+      "integratorFee": "90000000"
+    },
+    {
+      "price": "450000000",
+      "platformBps": 469,
+      "creatorBps": 493,
+      "creatorAddonBps": 343,
+      "integratorBps": 106,
+      "platformFee": "527625000",
+      "creatorFee": "940500000",
+      "integratorFee": "119250000"
+    },
+    {
+      "price": "2000000000",
+      "platformBps": 428,
+      "creatorBps": 97,
+      "creatorAddonBps": 407,
+      "integratorBps": 26,
+      "platformFee": "2140000000",
+      "creatorFee": "2520000000",
+      "integratorFee": "130000000"
+    },
+    {
+      "price": "60000000000",
+      "platformBps": 74,
+      "creatorBps": 231,
+      "creatorAddonBps": 224,
+      "integratorBps": 247,
+      "platformFee": "11100000000",
+      "creatorFee": "68250000000",
+      "integratorFee": "37050000000"
+    },
+    {
+      "price": "90000000000",
+      "platformBps": 61,
+      "creatorBps": 175,
+      "creatorAddonBps": 427,
+      "integratorBps": 7,
+      "platformFee": "13725000000",
+      "creatorFee": "135450000000",
+      "integratorFee": "1575000000"
+    },
+    {
+      "price": "200000000",
+      "platformBps": 212,
+      "creatorBps": 150,
+      "creatorAddonBps": 58,
+      "integratorBps": 201,
+      "platformFee": "106000000",
+      "creatorFee": "104000000",
+      "integratorFee": "100500000"
+    },
+    {
+      "price": "4900000000",
+      "platformBps": 208,
+      "creatorBps": 479,
+      "creatorAddonBps": 47,
+      "integratorBps": 154,
+      "platformFee": "2548000000",
+      "creatorFee": "6443500000",
+      "integratorFee": "1886500000"
+    },
+    {
+      "price": "750000000",
+      "platformBps": 5,
+      "creatorBps": 143,
+      "creatorAddonBps": 107,
+      "integratorBps": 268,
+      "platformFee": "9375000",
+      "creatorFee": "468750000",
+      "integratorFee": "502500000"
+    },
+    {
+      "price": "60000000000",
+      "platformBps": 11,
+      "creatorBps": 279,
+      "creatorAddonBps": 17,
+      "integratorBps": 152,
+      "platformFee": "1650000000",
+      "creatorFee": "44400000000",
+      "integratorFee": "22800000000"
+    },
+    {
+      "price": "10000000000",
+      "platformBps": 425,
+      "creatorBps": 187,
+      "creatorAddonBps": 190,
+      "integratorBps": 181,
+      "platformFee": "10625000000",
+      "creatorFee": "9425000000",
+      "integratorFee": "4525000000"
+    },
+    {
+      "price": "500000000",
+      "platformBps": 224,
+      "creatorBps": 245,
+      "creatorAddonBps": 431,
+      "integratorBps": 60,
+      "platformFee": "280000000",
+      "creatorFee": "845000000",
+      "integratorFee": "75000000"
+    },
+    {
+      "price": "800000000",
+      "platformBps": 382,
+      "creatorBps": 97,
+      "creatorAddonBps": 1,
+      "integratorBps": 252,
+      "platformFee": "764000000",
+      "creatorFee": "196000000",
+      "integratorFee": "504000000"
+    },
+    {
+      "price": "2800000000",
+      "platformBps": 480,
+      "creatorBps": 436,
+      "creatorAddonBps": 374,
+      "integratorBps": 24,
+      "platformFee": "3360000000",
+      "creatorFee": "5670000000",
+      "integratorFee": "168000000"
+    },
+    {
+      "price": "25000000000",
+      "platformBps": 470,
+      "creatorBps": 492,
+      "creatorAddonBps": 396,
+      "integratorBps": 8,
+      "platformFee": "29375000000",
+      "creatorFee": "55500000000",
+      "integratorFee": "500000000"
+    },
+    {
+      "price": "100000000000",
+      "platformBps": 363,
+      "creatorBps": 218,
+      "creatorAddonBps": 496,
+      "integratorBps": 1,
+      "platformFee": "90750000000",
+      "creatorFee": "178500000000",
+      "integratorFee": "250000000"
+    },
+    {
+      "price": "10000000000",
+      "platformBps": 208,
+      "creatorBps": 106,
+      "creatorAddonBps": 434,
+      "integratorBps": 54,
+      "platformFee": "5200000000",
+      "creatorFee": "13500000000",
+      "integratorFee": "1350000000"
+    },
+    {
+      "price": "200000000",
+      "platformBps": 42,
+      "creatorBps": 92,
+      "creatorAddonBps": 384,
+      "integratorBps": 3,
+      "platformFee": "21000000",
+      "creatorFee": "238000000",
+      "integratorFee": "1500000"
+    },
+    {
+      "price": "700000000",
+      "platformBps": 193,
+      "creatorBps": 338,
+      "creatorAddonBps": 25,
+      "integratorBps": 200,
+      "platformFee": "337750000",
+      "creatorFee": "635250000",
+      "integratorFee": "350000000"
+    },
+    {
+      "price": "2700000000",
+      "platformBps": 436,
+      "creatorBps": 274,
+      "creatorAddonBps": 108,
+      "integratorBps": 376,
+      "platformFee": "2943000000",
+      "creatorFee": "2578500000",
+      "integratorFee": "2538000000"
+    },
+    {
+      "price": "45000000000",
+      "platformBps": 228,
+      "creatorBps": 500,
+      "creatorAddonBps": 96,
+      "integratorBps": 42,
+      "platformFee": "25650000000",
+      "creatorFee": "67050000000",
+      "integratorFee": "4725000000"
+    },
+    {
+      "price": "35000000000",
+      "platformBps": 178,
+      "creatorBps": 280,
+      "creatorAddonBps": 263,
+      "integratorBps": 172,
+      "platformFee": "15575000000",
+      "creatorFee": "47512500000",
+      "integratorFee": "15050000000"
+    },
+    {
+      "price": "3400000000",
+      "platformBps": 211,
+      "creatorBps": 126,
+      "creatorAddonBps": 270,
+      "integratorBps": 128,
+      "platformFee": "1793500000",
+      "creatorFee": "3366000000",
+      "integratorFee": "1088000000"
+    },
+    {
+      "price": "1900000000",
+      "platformBps": 480,
+      "creatorBps": 53,
+      "creatorAddonBps": 175,
+      "integratorBps": 299,
+      "platformFee": "2280000000",
+      "creatorFee": "1083000000",
+      "integratorFee": "1420250000"
+    },
+    {
+      "price": "900000000",
+      "platformBps": 300,
+      "creatorBps": 167,
+      "creatorAddonBps": 197,
+      "integratorBps": 90,
+      "platformFee": "675000000",
+      "creatorFee": "819000000",
+      "integratorFee": "202500000"
+    },
+    {
+      "price": "900000000",
+      "platformBps": 300,
+      "creatorBps": 491,
+      "creatorAddonBps": 106,
+      "integratorBps": 330,
+      "platformFee": "675000000",
+      "creatorFee": "1343250000",
+      "integratorFee": "742500000"
+    },
+    {
+      "price": "300000000",
+      "platformBps": 482,
+      "creatorBps": 293,
+      "creatorAddonBps": 231,
+      "integratorBps": 108,
+      "platformFee": "361500000",
+      "creatorFee": "393000000",
+      "integratorFee": "81000000"
+    },
+    {
+      "price": "50000000",
+      "platformBps": 203,
+      "creatorBps": 376,
+      "creatorAddonBps": 177,
+      "integratorBps": 261,
+      "platformFee": "25375000",
+      "creatorFee": "69125000",
+      "integratorFee": "32625000"
+    },
+    {
+      "price": "1400000000",
+      "platformBps": 313,
+      "creatorBps": 105,
+      "creatorAddonBps": 336,
+      "integratorBps": 24,
+      "platformFee": "1095500000",
+      "creatorFee": "1543500000",
+      "integratorFee": "84000000"
+    },
+    {
+      "price": "4800000000",
+      "platformBps": 288,
+      "creatorBps": 140,
+      "creatorAddonBps": 365,
+      "integratorBps": 8,
+      "platformFee": "3456000000",
+      "creatorFee": "6060000000",
+      "integratorFee": "96000000"
+    },
+    {
+      "price": "2600000000",
+      "platformBps": 479,
+      "creatorBps": 423,
+      "creatorAddonBps": 459,
+      "integratorBps": 24,
+      "platformFee": "3113500000",
+      "creatorFee": "5733000000",
+      "integratorFee": "156000000"
+    },
+    {
+      "price": "1200000000",
+      "platformBps": 299,
+      "creatorBps": 209,
+      "creatorAddonBps": 361,
+      "integratorBps": 115,
+      "platformFee": "897000000",
+      "creatorFee": "1710000000",
+      "integratorFee": "345000000"
+    },
+    {
+      "price": "2800000000",
+      "platformBps": 252,
+      "creatorBps": 335,
+      "creatorAddonBps": 8,
+      "integratorBps": 161,
+      "platformFee": "1764000000",
+      "creatorFee": "2401000000",
+      "integratorFee": "1127000000"
+    },
+    {
+      "price": "200000000",
+      "platformBps": 328,
+      "creatorBps": 151,
+      "creatorAddonBps": 125,
+      "integratorBps": 352,
+      "platformFee": "164000000",
+      "creatorFee": "138000000",
+      "integratorFee": "176000000"
+    },
+    {
+      "price": "400000000",
+      "platformBps": 118,
+      "creatorBps": 268,
+      "creatorAddonBps": 263,
+      "integratorBps": 142,
+      "platformFee": "118000000",
+      "creatorFee": "531000000",
+      "integratorFee": "142000000"
+    },
+    {
+      "price": "95000000000",
+      "platformBps": 475,
+      "creatorBps": 14,
+      "creatorAddonBps": 179,
+      "integratorBps": 251,
+      "platformFee": "112812500000",
+      "creatorFee": "45837500000",
+      "integratorFee": "59612500000"
+    },
+    {
+      "price": "90000000000",
+      "platformBps": 414,
+      "creatorBps": 231,
+      "creatorAddonBps": 94,
+      "integratorBps": 53,
+      "platformFee": "93150000000",
+      "creatorFee": "73125000000",
+      "integratorFee": "11925000000"
+    },
+    {
+      "price": "2600000000",
+      "platformBps": 406,
+      "creatorBps": 407,
+      "creatorAddonBps": 445,
+      "integratorBps": 53,
+      "platformFee": "2639000000",
+      "creatorFee": "5538000000",
+      "integratorFee": "344500000"
+    },
+    {
+      "price": "1600000000",
+      "platformBps": 276,
+      "creatorBps": 323,
+      "creatorAddonBps": 463,
+      "integratorBps": 1,
+      "platformFee": "1104000000",
+      "creatorFee": "3144000000",
+      "integratorFee": "4000000"
+    },
+    {
+      "price": "90000000000",
+      "platformBps": 291,
+      "creatorBps": 243,
+      "creatorAddonBps": 115,
+      "integratorBps": 183,
+      "platformFee": "65475000000",
+      "creatorFee": "80550000000",
+      "integratorFee": "41175000000"
+    },
+    {
+      "price": "15000000000",
+      "platformBps": 463,
+      "creatorBps": 122,
+      "creatorAddonBps": 210,
+      "integratorBps": 108,
+      "platformFee": "17362500000",
+      "creatorFee": "12450000000",
+      "integratorFee": "4050000000"
+    },
+    {
+      "price": "15000000000",
+      "platformBps": 424,
+      "creatorBps": 78,
+      "creatorAddonBps": 8,
+      "integratorBps": 122,
+      "platformFee": "15900000000",
+      "creatorFee": "3225000000",
+      "integratorFee": "4575000000"
+    },
+    {
+      "price": "5000000000",
+      "platformBps": 192,
+      "creatorBps": 390,
+      "creatorAddonBps": 19,
+      "integratorBps": 269,
+      "platformFee": "2400000000",
+      "creatorFee": "5112500000",
+      "integratorFee": "3362500000"
+    },
+    {
+      "price": "1700000000",
+      "platformBps": 185,
+      "creatorBps": 254,
+      "creatorAddonBps": 331,
+      "integratorBps": 37,
+      "platformFee": "786250000",
+      "creatorFee": "2486250000",
+      "integratorFee": "157250000"
+    },
+    {
+      "price": "350000000",
+      "platformBps": 207,
+      "creatorBps": 226,
+      "creatorAddonBps": 17,
+      "integratorBps": 175,
+      "platformFee": "181125000",
+      "creatorFee": "212625000",
+      "integratorFee": "153125000"
+    },
+    {
+      "price": "3400000000",
+      "platformBps": 440,
+      "creatorBps": 457,
+      "creatorAddonBps": 318,
+      "integratorBps": 145,
+      "platformFee": "3740000000",
+      "creatorFee": "6587500000",
+      "integratorFee": "1232500000"
+    },
+    {
+      "price": "35000000000",
+      "platformBps": 224,
+      "creatorBps": 227,
+      "creatorAddonBps": 338,
+      "integratorBps": 84,
+      "platformFee": "19600000000",
+      "creatorFee": "49437500000",
+      "integratorFee": "7350000000"
+    },
+    {
+      "price": "60000000000",
+      "platformBps": 376,
+      "creatorBps": 453,
+      "creatorAddonBps": 485,
+      "integratorBps": 6,
+      "platformFee": "56400000000",
+      "creatorFee": "140700000000",
+      "integratorFee": "900000000"
+    },
+    {
+      "price": "30000000000",
+      "platformBps": 270,
+      "creatorBps": 394,
+      "creatorAddonBps": 325,
+      "integratorBps": 128,
+      "platformFee": "20250000000",
+      "creatorFee": "53925000000",
+      "integratorFee": "9600000000"
+    },
+    {
+      "price": "800000000",
+      "platformBps": 141,
+      "creatorBps": 319,
+      "creatorAddonBps": 172,
+      "integratorBps": 225,
+      "platformFee": "282000000",
+      "creatorFee": "982000000",
+      "integratorFee": "450000000"
+    },
+    {
+      "price": "700000000",
+      "platformBps": 355,
+      "creatorBps": 168,
+      "creatorAddonBps": 274,
+      "integratorBps": 203,
+      "platformFee": "621250000",
+      "creatorFee": "773500000",
+      "integratorFee": "355250000"
+    },
+    {
+      "price": "35000000000",
+      "platformBps": 373,
+      "creatorBps": 470,
+      "creatorAddonBps": 277,
+      "integratorBps": 20,
+      "platformFee": "32637500000",
+      "creatorFee": "65362500000",
+      "integratorFee": "1750000000"
+    },
+    {
+      "price": "450000000",
+      "platformBps": 261,
+      "creatorBps": 18,
+      "creatorAddonBps": 412,
+      "integratorBps": 61,
+      "platformFee": "293625000",
+      "creatorFee": "483750000",
+      "integratorFee": "68625000"
+    },
+    {
+      "price": "65000000000",
+      "platformBps": 161,
+      "creatorBps": 130,
+      "creatorAddonBps": 409,
+      "integratorBps": 81,
+      "platformFee": "26162500000",
+      "creatorFee": "87587500000",
+      "integratorFee": "13162500000"
+    },
+    {
+      "price": "850000000",
+      "platformBps": 38,
+      "creatorBps": 297,
+      "creatorAddonBps": 190,
+      "integratorBps": 174,
+      "platformFee": "80750000",
+      "creatorFee": "1034875000",
+      "integratorFee": "369750000"
+    },
+    {
+      "price": "250000000",
+      "platformBps": 89,
+      "creatorBps": 432,
+      "creatorAddonBps": 301,
+      "integratorBps": 38,
+      "platformFee": "55625000",
+      "creatorFee": "458125000",
+      "integratorFee": "23750000"
+    },
+    {
+      "price": "250000000",
+      "platformBps": 486,
+      "creatorBps": 211,
+      "creatorAddonBps": 318,
+      "integratorBps": 79,
+      "platformFee": "303750000",
+      "creatorFee": "330625000",
+      "integratorFee": "49375000"
+    },
+    {
+      "price": "65000000000",
+      "platformBps": 233,
+      "creatorBps": 439,
+      "creatorAddonBps": 42,
+      "integratorBps": 364,
+      "platformFee": "37862500000",
+      "creatorFee": "78162500000",
+      "integratorFee": "59150000000"
+    },
+    {
+      "price": "35000000000",
+      "platformBps": 101,
+      "creatorBps": 203,
+      "creatorAddonBps": 264,
+      "integratorBps": 175,
+      "platformFee": "8837500000",
+      "creatorFee": "40862500000",
+      "integratorFee": "15312500000"
+    },
+    {
+      "price": "10000000000",
+      "platformBps": 199,
+      "creatorBps": 97,
+      "creatorAddonBps": 186,
+      "integratorBps": 23,
+      "platformFee": "4975000000",
+      "creatorFee": "7075000000",
+      "integratorFee": "575000000"
+    },
+    {
+      "price": "3300000000",
+      "platformBps": 415,
+      "creatorBps": 179,
+      "creatorAddonBps": 431,
+      "integratorBps": 16,
+      "platformFee": "3423750000",
+      "creatorFee": "5032500000",
+      "integratorFee": "132000000"
+    },
+    {
+      "price": "450000000",
+      "platformBps": 86,
+      "creatorBps": 499,
+      "creatorAddonBps": 388,
+      "integratorBps": 58,
+      "platformFee": "96750000",
+      "creatorFee": "997875000",
+      "integratorFee": "65250000"
+    },
+    {
+      "price": "2800000000",
+      "platformBps": 130,
+      "creatorBps": 280,
+      "creatorAddonBps": 180,
+      "integratorBps": 152,
+      "platformFee": "910000000",
+      "creatorFee": "3220000000",
+      "integratorFee": "1064000000"
+    },
+    {
+      "price": "850000000",
+      "platformBps": 171,
+      "creatorBps": 193,
+      "creatorAddonBps": 470,
+      "integratorBps": 18,
+      "platformFee": "363375000",
+      "creatorFee": "1408875000",
+      "integratorFee": "38250000"
+    },
+    {
+      "price": "350000000",
+      "platformBps": 208,
+      "creatorBps": 8,
+      "creatorAddonBps": 115,
+      "integratorBps": 123,
+      "platformFee": "182000000",
+      "creatorFee": "107625000",
+      "integratorFee": "107625000"
+    },
+    {
+      "price": "65000000000",
+      "platformBps": 372,
+      "creatorBps": 215,
+      "creatorAddonBps": 46,
+      "integratorBps": 277,
+      "platformFee": "60450000000",
+      "creatorFee": "42412500000",
+      "integratorFee": "45012500000"
+    },
+    {
+      "price": "200000000",
+      "platformBps": 120,
+      "creatorBps": 2,
+      "creatorAddonBps": 195,
+      "integratorBps": 222,
+      "platformFee": "60000000",
+      "creatorFee": "98500000",
+      "integratorFee": "111000000"
+    },
+    {
+      "price": "55000000000",
+      "platformBps": 303,
+      "creatorBps": 79,
+      "creatorAddonBps": 30,
+      "integratorBps": 91,
+      "platformFee": "41662500000",
+      "creatorFee": "14987500000",
+      "integratorFee": "12512500000"
+    },
+    {
+      "price": "150000000",
+      "platformBps": 457,
+      "creatorBps": 385,
+      "creatorAddonBps": 50,
+      "integratorBps": 379,
+      "platformFee": "171375000",
+      "creatorFee": "163125000",
+      "integratorFee": "142125000"
+    },
+    {
+      "price": "5000000000",
+      "platformBps": 189,
+      "creatorBps": 493,
+      "creatorAddonBps": 306,
+      "integratorBps": 31,
+      "platformFee": "2362500000",
+      "creatorFee": "9987500000",
+      "integratorFee": "387500000"
+    },
+    {
+      "price": "350000000",
+      "platformBps": 406,
+      "creatorBps": 241,
+      "creatorAddonBps": 237,
+      "integratorBps": 233,
+      "platformFee": "355250000",
+      "creatorFee": "418250000",
+      "integratorFee": "203875000"
+    },
+    {
+      "price": "2300000000",
+      "platformBps": 182,
+      "creatorBps": 335,
+      "creatorAddonBps": 105,
+      "integratorBps": 1,
+      "platformFee": "1046500000",
+      "creatorFee": "2530000000",
+      "integratorFee": "5750000"
+    },
+    {
+      "price": "35000000000",
+      "platformBps": 321,
+      "creatorBps": 397,
+      "creatorAddonBps": 395,
+      "integratorBps": 75,
+      "platformFee": "28087500000",
+      "creatorFee": "69300000000",
+      "integratorFee": "6562500000"
+    },
+    {
+      "price": "50000000000",
+      "platformBps": 398,
+      "creatorBps": 334,
+      "creatorAddonBps": 167,
+      "integratorBps": 293,
+      "platformFee": "49750000000",
+      "creatorFee": "62625000000",
+      "integratorFee": "36625000000"
+    },
+    {
+      "price": "2700000000",
+      "platformBps": 284,
+      "creatorBps": 128,
+      "creatorAddonBps": 110,
+      "integratorBps": 323,
+      "platformFee": "1917000000",
+      "creatorFee": "1606500000",
+      "integratorFee": "2180250000"
+    },
+    {
+      "price": "400000000",
+      "platformBps": 143,
+      "creatorBps": 171,
+      "creatorAddonBps": 83,
+      "integratorBps": 300,
+      "platformFee": "143000000",
+      "creatorFee": "254000000",
+      "integratorFee": "300000000"
+    },
+    {
+      "price": "150000000",
+      "platformBps": 11,
+      "creatorBps": 246,
+      "creatorAddonBps": 311,
+      "integratorBps": 21,
+      "platformFee": "4125000",
+      "creatorFee": "208875000",
+      "integratorFee": "7875000"
+    },
+    {
+      "price": "450000000",
+      "platformBps": 59,
+      "creatorBps": 222,
+      "creatorAddonBps": 318,
+      "integratorBps": 125,
+      "platformFee": "66375000",
+      "creatorFee": "607500000",
+      "integratorFee": "140625000"
+    },
+    {
+      "price": "100000000000",
+      "platformBps": 144,
+      "creatorBps": 75,
+      "creatorAddonBps": 201,
+      "integratorBps": 124,
+      "platformFee": "36000000000",
+      "creatorFee": "69000000000",
+      "integratorFee": "31000000000"
+    },
+    {
+      "price": "3300000000",
+      "platformBps": 173,
+      "creatorBps": 319,
+      "creatorAddonBps": 178,
+      "integratorBps": 190,
+      "platformFee": "1427250000",
+      "creatorFee": "4100250000",
+      "integratorFee": "1567500000"
+    },
+    {
+      "price": "200000000",
+      "platformBps": 34,
+      "creatorBps": 457,
+      "creatorAddonBps": 416,
+      "integratorBps": 8,
+      "platformFee": "17000000",
+      "creatorFee": "436500000",
+      "integratorFee": "4000000"
+    },
+    {
+      "price": "4800000000",
+      "platformBps": 117,
+      "creatorBps": 295,
+      "creatorAddonBps": 247,
+      "integratorBps": 8,
+      "platformFee": "1404000000",
+      "creatorFee": "6504000000",
+      "integratorFee": "96000000"
+    },
+    {
+      "price": "4400000000",
+      "platformBps": 476,
+      "creatorBps": 267,
+      "creatorAddonBps": 292,
+      "integratorBps": 134,
+      "platformFee": "5236000000",
+      "creatorFee": "6149000000",
+      "integratorFee": "1474000000"
+    },
+    {
+      "price": "4800000000",
+      "platformBps": 19,
+      "creatorBps": 278,
+      "creatorAddonBps": 126,
+      "integratorBps": 73,
+      "platformFee": "228000000",
+      "creatorFee": "4848000000",
+      "integratorFee": "876000000"
+    },
+    {
+      "price": "90000000000",
+      "platformBps": 442,
+      "creatorBps": 32,
+      "creatorAddonBps": 188,
+      "integratorBps": 267,
+      "platformFee": "99450000000",
+      "creatorFee": "49500000000",
+      "integratorFee": "60075000000"
+    },
+    {
+      "price": "1500000000",
+      "platformBps": 394,
+      "creatorBps": 409,
+      "creatorAddonBps": 374,
+      "integratorBps": 121,
+      "platformFee": "1477500000",
+      "creatorFee": "2936250000",
+      "integratorFee": "453750000"
+    },
+    {
+      "price": "3700000000",
+      "platformBps": 4,
+      "creatorBps": 219,
+      "creatorAddonBps": 22,
+      "integratorBps": 402,
+      "platformFee": "37000000",
+      "creatorFee": "2229250000",
+      "integratorFee": "3718500000"
+    },
+    {
+      "price": "50000000000",
+      "platformBps": 96,
+      "creatorBps": 475,
+      "creatorAddonBps": 145,
+      "integratorBps": 192,
+      "platformFee": "12000000000",
+      "creatorFee": "77500000000",
+      "integratorFee": "24000000000"
+    },
+    {
+      "price": "200000000",
+      "platformBps": 345,
+      "creatorBps": 235,
+      "creatorAddonBps": 335,
+      "integratorBps": 149,
+      "platformFee": "172500000",
+      "creatorFee": "285000000",
+      "integratorFee": "74500000"
+    },
+    {
+      "price": "400000000",
+      "platformBps": 231,
+      "creatorBps": 324,
+      "creatorAddonBps": 490,
+      "integratorBps": 1,
+      "platformFee": "231000000",
+      "creatorFee": "814000000",
+      "integratorFee": "1000000"
+    },
+    {
+      "price": "3900000000",
+      "platformBps": 61,
+      "creatorBps": 16,
+      "creatorAddonBps": 304,
+      "integratorBps": 143,
+      "platformFee": "594750000",
+      "creatorFee": "3120000000",
+      "integratorFee": "1394250000"
+    },
+    {
+      "price": "400000000",
+      "platformBps": 28,
+      "creatorBps": 20,
+      "creatorAddonBps": 96,
+      "integratorBps": 161,
+      "platformFee": "28000000",
+      "creatorFee": "116000000",
+      "integratorFee": "161000000"
+    },
+    {
+      "price": "1400000000",
+      "platformBps": 30,
+      "creatorBps": 433,
+      "creatorAddonBps": 311,
+      "integratorBps": 10,
+      "platformFee": "105000000",
+      "creatorFee": "2604000000",
+      "integratorFee": "35000000"
+    },
+    {
+      "price": "150000000",
+      "platformBps": 333,
+      "creatorBps": 78,
+      "creatorAddonBps": 405,
+      "integratorBps": 39,
+      "platformFee": "124875000",
+      "creatorFee": "181125000",
+      "integratorFee": "14625000"
+    },
+    {
+      "price": "3800000000",
+      "platformBps": 24,
+      "creatorBps": 49,
+      "creatorAddonBps": 157,
+      "integratorBps": 329,
+      "platformFee": "228000000",
+      "creatorFee": "1957000000",
+      "integratorFee": "3125500000"
+    },
+    {
+      "price": "3300000000",
+      "platformBps": 38,
+      "creatorBps": 336,
+      "creatorAddonBps": 223,
+      "integratorBps": 88,
+      "platformFee": "313500000",
+      "creatorFee": "4611750000",
+      "integratorFee": "726000000"
+    },
+    {
+      "price": "4900000000",
+      "platformBps": 494,
+      "creatorBps": 144,
+      "creatorAddonBps": 465,
+      "integratorBps": 1,
+      "platformFee": "6051500000",
+      "creatorFee": "7460250000",
+      "integratorFee": "12250000"
+    },
+    {
+      "price": "100000000",
+      "platformBps": 441,
+      "creatorBps": 225,
+      "creatorAddonBps": 69,
+      "integratorBps": 346,
+      "platformFee": "110250000",
+      "creatorFee": "73500000",
+      "integratorFee": "86500000"
+    },
+    {
+      "price": "50000000",
+      "platformBps": 500,
+      "creatorBps": 360,
+      "creatorAddonBps": 151,
+      "integratorBps": 271,
+      "platformFee": "62500000",
+      "creatorFee": "63875000",
+      "integratorFee": "33875000"
+    },
+    {
+      "price": "1700000000",
+      "platformBps": 370,
+      "creatorBps": 344,
+      "creatorAddonBps": 365,
+      "integratorBps": 45,
+      "platformFee": "1572500000",
+      "creatorFee": "3013250000",
+      "integratorFee": "191250000"
+    },
+    {
+      "price": "50000000000",
+      "platformBps": 257,
+      "creatorBps": 319,
+      "creatorAddonBps": 314,
+      "integratorBps": 145,
+      "platformFee": "32125000000",
+      "creatorFee": "79125000000",
+      "integratorFee": "18125000000"
+    },
+    {
+      "price": "35000000000",
+      "platformBps": 178,
+      "creatorBps": 369,
+      "creatorAddonBps": 116,
+      "integratorBps": 259,
+      "platformFee": "15575000000",
+      "creatorFee": "42437500000",
+      "integratorFee": "22662500000"
+    },
+    {
+      "price": "5000000000",
+      "platformBps": 362,
+      "creatorBps": 108,
+      "creatorAddonBps": 127,
+      "integratorBps": 69,
+      "platformFee": "4525000000",
+      "creatorFee": "2937500000",
+      "integratorFee": "862500000"
+    },
+    {
+      "price": "850000000",
+      "platformBps": 240,
+      "creatorBps": 263,
+      "creatorAddonBps": 77,
+      "integratorBps": 246,
+      "platformFee": "510000000",
+      "creatorFee": "722500000",
+      "integratorFee": "522750000"
+    },
+    {
+      "price": "100000000",
+      "platformBps": 7,
+      "creatorBps": 99,
+      "creatorAddonBps": 266,
+      "integratorBps": 54,
+      "platformFee": "1750000",
+      "creatorFee": "91250000",
+      "integratorFee": "13500000"
+    },
+    {
+      "price": "1000000000",
+      "platformBps": 304,
+      "creatorBps": 427,
+      "creatorAddonBps": 34,
+      "integratorBps": 35,
+      "platformFee": "760000000",
+      "creatorFee": "1152500000",
+      "integratorFee": "87500000"
+    },
+    {
+      "price": "1200000000",
+      "platformBps": 183,
+      "creatorBps": 118,
+      "creatorAddonBps": 188,
+      "integratorBps": 163,
+      "platformFee": "549000000",
+      "creatorFee": "918000000",
+      "integratorFee": "489000000"
+    },
+    {
+      "price": "300000000",
+      "platformBps": 262,
+      "creatorBps": 10,
+      "creatorAddonBps": 445,
+      "integratorBps": 25,
+      "platformFee": "196500000",
+      "creatorFee": "341250000",
+      "integratorFee": "18750000"
+    },
+    {
+      "price": "4700000000",
+      "platformBps": 199,
+      "creatorBps": 202,
+      "creatorAddonBps": 115,
+      "integratorBps": 97,
+      "platformFee": "2338250000",
+      "creatorFee": "3724750000",
+      "integratorFee": "1139750000"
+    },
+    {
+      "price": "750000000",
+      "platformBps": 41,
+      "creatorBps": 384,
+      "creatorAddonBps": 379,
+      "integratorBps": 49,
+      "platformFee": "76875000",
+      "creatorFee": "1430625000",
+      "integratorFee": "91875000"
+    },
+    {
+      "price": "3900000000",
+      "platformBps": 105,
+      "creatorBps": 40,
+      "creatorAddonBps": 252,
+      "integratorBps": 155,
+      "platformFee": "1023750000",
+      "creatorFee": "2847000000",
+      "integratorFee": "1511250000"
+    },
+    {
+      "price": "50000000000",
+      "platformBps": 118,
+      "creatorBps": 209,
+      "creatorAddonBps": 430,
+      "integratorBps": 48,
+      "platformFee": "14750000000",
+      "creatorFee": "79875000000",
+      "integratorFee": "6000000000"
+    },
+    {
+      "price": "1200000000",
+      "platformBps": 393,
+      "creatorBps": 125,
+      "creatorAddonBps": 106,
+      "integratorBps": 107,
+      "platformFee": "1179000000",
+      "creatorFee": "693000000",
+      "integratorFee": "321000000"
+    },
+    {
+      "price": "850000000",
+      "platformBps": 20,
+      "creatorBps": 421,
+      "creatorAddonBps": 281,
+      "integratorBps": 26,
+      "platformFee": "42500000",
+      "creatorFee": "1491750000",
+      "integratorFee": "55250000"
+    },
+    {
+      "price": "65000000000",
+      "platformBps": 165,
+      "creatorBps": 6,
+      "creatorAddonBps": 81,
+      "integratorBps": 282,
+      "platformFee": "26812500000",
+      "creatorFee": "14137500000",
+      "integratorFee": "45825000000"
+    },
+    {
+      "price": "1000000000",
+      "platformBps": 282,
+      "creatorBps": 229,
+      "creatorAddonBps": 325,
+      "integratorBps": 165,
+      "platformFee": "705000000",
+      "creatorFee": "1385000000",
+      "integratorFee": "412500000"
+    },
+    {
+      "price": "1200000000",
+      "platformBps": 371,
+      "creatorBps": 12,
+      "creatorAddonBps": 127,
+      "integratorBps": 146,
+      "platformFee": "1113000000",
+      "creatorFee": "417000000",
+      "integratorFee": "438000000"
+    },
+    {
+      "price": "3100000000",
+      "platformBps": 416,
+      "creatorBps": 102,
+      "creatorAddonBps": 394,
+      "integratorBps": 9,
+      "platformFee": "3224000000",
+      "creatorFee": "3844000000",
+      "integratorFee": "69750000"
+    }
+  ]
+}
