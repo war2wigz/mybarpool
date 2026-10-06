@@ -56,6 +56,7 @@ import {
   sendExpectingError,
   updateConfigInstruction,
   updateKickoffInstruction,
+  withRetry,
   type GameKey,
 } from "./helpers/mybarpool.js";
 
@@ -104,12 +105,15 @@ describe("game instructions (Surfpool, mainnet fork)", () => {
       Uint8Array.from(JSON.parse(readFileSync(walletPath, "utf8"))),
     );
     keeper = await generateKeyPairSigner();
+    // First touch of a fresh key: Surfpool asks mainnet whether it exists (Step 3 audit M1).
     const airdrop = airdropFactory({ rpc, rpcSubscriptions });
-    await airdrop({
-      recipientAddress: keeper.address,
-      lamports: lamports(10n * SOL),
-      commitment: "confirmed",
-    });
+    await withRetry(() =>
+      airdrop({
+        recipientAddress: keeper.address,
+        lamports: lamports(10n * SOL),
+        commitment: "confirmed",
+      }),
+    );
     if ((await fetchAccountData(await configPda())) === null) {
       throw new Error(
         "config PDA missing: config.test.ts must run first (see tests/vitest.config.ts)",

@@ -11,6 +11,7 @@ import { address, createSolanaRpc } from "@solana/kit";
 import { describe, expect, it } from "vitest";
 
 import { ENTROPY_PROGRAM, LOCALNET_URL, Localnet } from "../scripts/localnet.js";
+import { withRetry } from "./helpers/mybarpool.js";
 
 const rpc = createSolanaRpc(LOCALNET_URL);
 
@@ -24,7 +25,10 @@ function declaredProgramId(): string {
 
 describe("localnet (Surfpool, mainnet fork)", () => {
   it("serves the Entropy program cloned from mainnet", async () => {
-    const info = await rpc.getAccountInfo(address(ENTROPY_PROGRAM), { encoding: "base64" }).send();
+    // First touch: Surfpool fetches the program from mainnet (Step 3 audit M1).
+    const info = await withRetry(() =>
+      rpc.getAccountInfo(address(ENTROPY_PROGRAM), { encoding: "base64" }).send(),
+    );
     expect(info.value).not.toBeNull();
     expect(info.value?.executable).toBe(true);
   });

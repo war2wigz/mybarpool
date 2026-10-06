@@ -46,6 +46,7 @@ import {
   TOKEN_PROGRAM,
   updateConfigInstruction,
   walletOverrideDecoder,
+  withRetry,
   type InitializeParams,
   type TokenRule,
 } from "./helpers/mybarpool.js";
@@ -118,13 +119,16 @@ describe("admin instructions (Surfpool, mainnet fork)", () => {
     );
     stranger = await generateKeyPairSigner();
     keeper = await generateKeyPairSigner();
+    // First touch of fresh keys: Surfpool asks mainnet whether they exist (Step 3 audit M1).
     const airdrop = airdropFactory({ rpc, rpcSubscriptions });
     for (const who of [stranger, keeper]) {
-      await airdrop({
-        recipientAddress: who.address,
-        lamports: lamports(10n * SOL),
-        commitment: "confirmed",
-      });
+      await withRetry(() =>
+        airdrop({
+          recipientAddress: who.address,
+          lamports: lamports(10n * SOL),
+          commitment: "confirmed",
+        }),
+      );
     }
     params = initialParams(
       keeper.address,
@@ -142,9 +146,9 @@ describe("admin instructions (Surfpool, mainnet fork)", () => {
   });
 
   it("2. initialize by the upgrade authority writes the §3.1 config and emits ConfigUpdated", async () => {
-    const signature = await send(
-      admin,
-      await initializeInstruction(admin, params, { mint2: ORE_MINT }),
+    // First touch of the ORE mint, fetched from mainnet (Step 3 audit M1).
+    const signature = await withRetry(async () =>
+      send(admin, await initializeInstruction(admin, params, { mint2: ORE_MINT })),
     );
 
     const data = await fetchAccountData(config);

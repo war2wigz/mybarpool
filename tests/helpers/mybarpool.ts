@@ -13,7 +13,8 @@ import {
   address,
   appendTransactionMessageInstruction,
   assertIsTransactionWithBlockhashLifetime,
-  createSolanaRpc,
+  createDefaultRpcTransport,
+  createSolanaRpcFromTransport,
   createSolanaRpcSubscriptions,
   createTransactionMessage,
   fixDecoderSize,
@@ -60,6 +61,7 @@ import {
   type ReadonlyUint8Array,
   type Rpc,
   type RpcSubscriptions,
+  type RpcTransport,
   type Signature,
   type SolanaRpcApi,
   type SolanaRpcSubscriptionsApi,
@@ -749,7 +751,34 @@ export async function chainNow(): Promise<bigint> {
 // Sending and reading back
 // ---------------------------------------------------------------------------
 
-export const rpc: Rpc<SolanaRpcApi> = createSolanaRpc(LOCALNET_URL);
+/**
+ * Surfpool answers a failed remote fetch ("Failed to fetch accounts from remote: …") with a
+ * JSON-RPC error that has no `data`; Kit's `getSolanaErrorFromJsonRpcError` then throws
+ * `TypeError: Cannot destructure property 'err' of 'data'` and the message is lost. The
+ * transport sees the raw response first and rethrows such an error with the RPC `message`,
+ * so a CI log says what happened (Step 3 audit M1 b). Errors with `data` (program errors,
+ * preflight failures) pass through to Kit untouched.
+ */
+export class RpcErrorWithoutData extends Error {
+  constructor(
+    readonly code: number | undefined,
+    message: string,
+  ) {
+    super(`RPC error ${code ?? "?"} without data: ${message}`);
+    this.name = "RpcErrorWithoutData";
+  }
+}
+
+const defaultTransport = createDefaultRpcTransport({ url: LOCALNET_URL });
+const transport: RpcTransport = async (...args) => {
+  const response = await defaultTransport<unknown>(...args);
+  const error = (response as { error?: { code?: number; message?: string; data?: unknown } }).error;
+  if (error !== undefined && error.data === undefined) {
+    throw new RpcErrorWithoutData(error.code, error.message ?? "(no message)");
+  }
+  return response as never;
+};
+export const rpc: Rpc<SolanaRpcApi> = createSolanaRpcFromTransport(transport);
 export const rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi> =
   createSolanaRpcSubscriptions(LOCALNET_URL.replace(/^http/, "ws").replace(/:8899$/, ":8900"));
 const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions });
@@ -771,8 +800,49 @@ export async function send(
   );
   const tx = await signTransactionMessageWithSigners(message);
   assertIsTransactionWithBlockhashLifetime(tx);
-  await sendAndConfirm(tx, { commitment: "confirmed" });
+  // Any instruction that creates a PDA makes Surfpool ask mainnet whether the address exists,
+  // and the public endpoint stalls on some of those (Step 3 audit M1); a stall is never the
+  // answer a test is after, so it is retried here, and only it.
+  await withRetry(() => sendAndConfirm(tx, { commitment: "confirmed" }), {
+    onlyRpcStalls: true,
+  });
   return getSignatureFromTransaction(tx);
+}
+
+/**
+ * Retry a remote-touching call that failed for a reason other than a program error (an RPC
+ * stall on Surfpool's first fetch of an account from mainnet). Program errors (an Anchor custom
+ * code) are never retried; they are the test's answer (Step 3 audit M1 c).
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  {
+    attempts = 3,
+    delayMs = 2_000,
+    onlyRpcStalls = false,
+  }: { attempts?: number; delayMs?: number; onlyRpcStalls?: boolean } = {},
+): Promise<T> {
+  let last: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (hasCustomErrorCode(error)) throw error;
+      if (onlyRpcStalls && !(error instanceof RpcErrorWithoutData)) throw error;
+      last = error;
+      if (attempt < attempts) await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw last;
+}
+
+function hasCustomErrorCode(error: unknown): boolean {
+  try {
+    customErrorCode(error);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Send and return the Anchor custom error code the program failed with, or `null` on success. */

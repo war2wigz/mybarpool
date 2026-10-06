@@ -149,6 +149,21 @@ jobs:
       - name: Build packages/shared (the localnet suite imports its dist/)
         run: npm run build
 
+      - name: Dedicated RPC for the mainnet fork, when configured
+        # Surfpool forks mainnet through `[surfpool] datasource_rpc_url` in
+        # Anchor.toml, the public endpoint by default. From a shared runner the
+        # public endpoint rate-limits the first touch of fresh accounts (Step 3
+        # audit M1), so when the repository secret SURFPOOL_RPC_URL is set the
+        # one line is rewritten to it; without the secret this step does nothing
+        # and forks keep the public endpoint. The URL is never echoed.
+        if: env.SURFPOOL_RPC_URL != ''
+        env:
+          SURFPOOL_RPC_URL: ${{ secrets.SURFPOOL_RPC_URL }}
+        run: |
+          set -euo pipefail
+          sed -i "s|^datasource_rpc_url = .*|datasource_rpc_url = \"${SURFPOOL_RPC_URL}\"|" Anchor.toml
+          grep -c '^datasource_rpc_url = ' Anchor.toml
+
       - name: Localnet suite (Surfpool, mainnet fork)
         # The suite reads the program id from the synced Anchor.toml, so it
         # asserts whatever id CI generated is deployed and executable.
