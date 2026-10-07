@@ -18,6 +18,7 @@ import {
   createSolanaRpcSubscriptions,
   createTransactionMessage,
   fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
   getArrayDecoder,
@@ -27,6 +28,7 @@ import {
   getBooleanDecoder,
   getBooleanEncoder,
   getBytesDecoder,
+  getBytesEncoder,
   getEnumDecoder,
   getEnumEncoder,
   getI64Decoder,
@@ -42,6 +44,7 @@ import {
   getU64Encoder,
   getU8Decoder,
   getU8Encoder,
+  getU32Decoder,
   getUtf8Encoder,
   isSolanaError,
   pipe,
@@ -68,7 +71,14 @@ import {
   type TransactionSigner,
 } from "@solana/kit";
 
-import { gameRecordSeeds, type GameKey } from "@mybarpool/shared";
+import {
+  counterSeeds,
+  gameRecordSeeds,
+  poolSeeds,
+  sponsorshipSeeds,
+  vaultSeeds,
+  type GameKey,
+} from "@mybarpool/shared";
 
 import { LOCALNET_URL } from "../../scripts/localnet.js";
 
@@ -745,6 +755,478 @@ export async function chainNow(): Promise<bigint> {
   const data = await fetchAccountData(CLOCK_SYSVAR);
   if (!data || data.length < 40) throw new Error("Clock sysvar unreadable");
   return getI64Decoder().decode(data.subarray(32, 40));
+}
+
+// ---------------------------------------------------------------------------
+// Pools (PROGRAM §3.3–§3.7, §4.3, §7)
+// ---------------------------------------------------------------------------
+
+/** Kit's encoder yields a `ReadonlyUint8Array`; the shared seed helpers take `Uint8Array`. */
+const addrBytes = (a: Address): Uint8Array => Uint8Array.from(getAddressEncoder().encode(a));
+
+export async function poolPda(game: Address, creator: Address, nonce: bigint): Promise<Address> {
+  const [pda] = await getProgramDerivedAddress({
+    programAddress: PROGRAM_ID,
+    seeds: poolSeeds(addrBytes(game), addrBytes(creator), nonce),
+  });
+  return pda;
+}
+
+export async function vaultPda(pool: Address): Promise<Address> {
+  const [pda] = await getProgramDerivedAddress({
+    programAddress: PROGRAM_ID,
+    seeds: vaultSeeds(addrBytes(pool)),
+  });
+  return pda;
+}
+
+export async function counterPda(creator: Address, game: Address): Promise<Address> {
+  const [pda] = await getProgramDerivedAddress({
+    programAddress: PROGRAM_ID,
+    seeds: counterSeeds(addrBytes(creator), addrBytes(game)),
+  });
+  return pda;
+}
+
+export async function sponsorshipPda(pool: Address, wallet: Address): Promise<Address> {
+  const [pda] = await getProgramDerivedAddress({
+    programAddress: PROGRAM_ID,
+    seeds: sponsorshipSeeds(addrBytes(pool), addrBytes(wallet)),
+  });
+  return pda;
+}
+
+/** PROGRAM §3.3 `PoolStatus`; the numeric value is the on-chain byte. */
+export enum PoolStatus {
+  Open = 0,
+  Locked = 1,
+  Drawn = 2,
+  Settled = 3,
+  Returned = 4,
+  Split = 5,
+}
+
+/** PROGRAM §3.3 `AccessType`. */
+export enum AccessType {
+  Public = 0,
+  Link = 1,
+  Allowlist = 2,
+}
+
+/** PROGRAM §1 `PayoutPreset`. */
+export enum PayoutPreset {
+  Standard = 0,
+  Even = 1,
+  FinalOnly = 2,
+}
+
+const poolStatusDecoder = getEnumDecoder(PoolStatus) as Decoder<PoolStatus>;
+const accessTypeEncoder = getEnumEncoder(AccessType) as Encoder<AccessType>;
+const accessTypeDecoder = getEnumDecoder(AccessType) as Decoder<AccessType>;
+const payoutPresetEncoder = getEnumEncoder(PayoutPreset) as Encoder<PayoutPreset>;
+const payoutPresetDecoder = getEnumDecoder(PayoutPreset) as Decoder<PayoutPreset>;
+
+export interface CreatePoolParams {
+  nonce: bigint;
+  token: number;
+  price: bigint;
+  preset: PayoutPreset;
+  accessType: AccessType;
+  gateKey: Address;
+  allowlistRoot: ReadonlyUint8Array;
+  creatorAddonBps: number;
+  integrator: Address;
+  integratorBps: number;
+  initialBoxes: number;
+}
+
+export const createPoolParamsEncoder: Encoder<CreatePoolParams> = getStructEncoder([
+  ["nonce", getU64Encoder()],
+  ["token", getU8Encoder()],
+  ["price", getU64Encoder()],
+  ["preset", payoutPresetEncoder],
+  ["accessType", accessTypeEncoder],
+  ["gateKey", getAddressEncoder()],
+  ["allowlistRoot", fixEncoderSize(getBytesEncoder(), 32)],
+  ["creatorAddonBps", getU16Encoder()],
+  ["integrator", getAddressEncoder()],
+  ["integratorBps", getU16Encoder()],
+  ["initialBoxes", getU8Encoder()],
+]);
+
+/** A `CreatePoolParams` with the Step 4 defaults: Public, Standard, no gate, no integrator. */
+export function poolParams(
+  overrides: Partial<CreatePoolParams> & Pick<CreatePoolParams, "nonce" | "price">,
+): CreatePoolParams {
+  return {
+    token: 0,
+    preset: PayoutPreset.Standard,
+    accessType: AccessType.Public,
+    gateKey: DEFAULT_ADDRESS,
+    allowlistRoot: new Uint8Array(32),
+    creatorAddonBps: 0,
+    integrator: DEFAULT_ADDRESS,
+    integratorBps: 0,
+    initialBoxes: 0,
+    ...overrides,
+  };
+}
+
+export interface Pool {
+  game: Address;
+  creator: Address;
+  nonce: bigint;
+  token: number;
+  mint: Address;
+  tokenProgram: Address;
+  vault: Address;
+  price: bigint;
+  preset: PayoutPreset;
+  accessType: AccessType;
+  gateKey: Address;
+  allowlistRoot: ReadonlyUint8Array;
+  creatorAddonBps: number;
+  integrator: Address;
+  integratorBps: number;
+  platformFee: bigint;
+  creatorFee: bigint;
+  integratorFee: bigint;
+  status: PoolStatus;
+  sold: number;
+  owners: Address[];
+  creatorBoxes: number;
+  sponsoredTotal: bigint;
+  sponsorCount: number;
+  sponsorshipsOpen: number;
+  var: Address;
+  varEndAt: bigint;
+  sampledSlot: bigint;
+  sampledHash: ReadonlyUint8Array;
+  varReplacements: number;
+  drawn: boolean;
+  homeAxis: number[];
+  awayAxis: number[];
+  prizePool: bigint;
+  quarterPrize: bigint[];
+  quartersSettled: number;
+  winningBox: number[];
+  feesPaid: boolean;
+  unpaidPrizePool: bigint;
+  returned: number;
+  splitAmount: bigint;
+  cancelledByAdmin: boolean;
+  abandoned: boolean;
+  createdAt: bigint;
+  lockedAt: bigint;
+  bump: number;
+  vaultBump: number;
+  reserved: ReadonlyUint8Array;
+}
+
+export const poolDecoder = getStructDecoder([
+  ["game", getAddressDecoder()],
+  ["creator", getAddressDecoder()],
+  ["nonce", getU64Decoder()],
+  ["token", getU8Decoder()],
+  ["mint", getAddressDecoder()],
+  ["tokenProgram", getAddressDecoder()],
+  ["vault", getAddressDecoder()],
+  ["price", getU64Decoder()],
+  ["preset", payoutPresetDecoder],
+  ["accessType", accessTypeDecoder],
+  ["gateKey", getAddressDecoder()],
+  ["allowlistRoot", fixDecoderSize(getBytesDecoder(), 32)],
+  ["creatorAddonBps", getU16Decoder()],
+  ["integrator", getAddressDecoder()],
+  ["integratorBps", getU16Decoder()],
+  ["platformFee", getU64Decoder()],
+  ["creatorFee", getU64Decoder()],
+  ["integratorFee", getU64Decoder()],
+  ["status", poolStatusDecoder],
+  ["sold", getU8Decoder()],
+  ["owners", getArrayDecoder(getAddressDecoder(), { size: 25 })],
+  ["creatorBoxes", getU8Decoder()],
+  ["sponsoredTotal", getU64Decoder()],
+  ["sponsorCount", getU16Decoder()],
+  ["sponsorshipsOpen", getU16Decoder()],
+  ["var", getAddressDecoder()],
+  ["varEndAt", getU64Decoder()],
+  ["sampledSlot", getU64Decoder()],
+  ["sampledHash", fixDecoderSize(getBytesDecoder(), 32)],
+  ["varReplacements", getU8Decoder()],
+  ["drawn", getBooleanDecoder()],
+  ["homeAxis", getArrayDecoder(getU8Decoder(), { size: 10 })],
+  ["awayAxis", getArrayDecoder(getU8Decoder(), { size: 10 })],
+  ["prizePool", getU64Decoder()],
+  ["quarterPrize", getArrayDecoder(getU64Decoder(), { size: 4 })],
+  ["quartersSettled", getU8Decoder()],
+  ["winningBox", getArrayDecoder(getU8Decoder(), { size: 4 })],
+  ["feesPaid", getBooleanDecoder()],
+  ["unpaidPrizePool", getU64Decoder()],
+  ["returned", getU32Decoder()],
+  ["splitAmount", getU64Decoder()],
+  ["cancelledByAdmin", getBooleanDecoder()],
+  ["abandoned", getBooleanDecoder()],
+  ["createdAt", getI64Decoder()],
+  ["lockedAt", getI64Decoder()],
+  ["bump", getU8Decoder()],
+  ["vaultBump", getU8Decoder()],
+  ["reserved", fixDecoderSize(getBytesDecoder(), 128)],
+]) as Decoder<Pool>;
+
+export interface CreatorCounter {
+  creator: Address;
+  game: Address;
+  openCount: number;
+  bump: number;
+}
+export const creatorCounterDecoder: Decoder<CreatorCounter> = getStructDecoder([
+  ["creator", getAddressDecoder()],
+  ["game", getAddressDecoder()],
+  ["openCount", getU8Decoder()],
+  ["bump", getU8Decoder()],
+]);
+
+export interface Sponsorship {
+  pool: Address;
+  wallet: Address;
+  amount: bigint;
+  bump: number;
+}
+export const sponsorshipDecoder: Decoder<Sponsorship> = getStructDecoder([
+  ["pool", getAddressDecoder()],
+  ["wallet", getAddressDecoder()],
+  ["amount", getU64Decoder()],
+  ["bump", getU8Decoder()],
+]);
+
+export interface PoolCreated {
+  time: bigint;
+  pool: Address;
+  game: Address;
+  creator: Address;
+  token: number;
+  mint: Address;
+  price: bigint;
+  preset: PayoutPreset;
+  accessType: AccessType;
+  creatorAddonBps: number;
+  integrator: Address;
+  integratorBps: number;
+  platformFee: bigint;
+  creatorFee: bigint;
+  integratorFee: bigint;
+}
+export const poolCreatedDecoder: Decoder<PoolCreated> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["game", getAddressDecoder()],
+  ["creator", getAddressDecoder()],
+  ["token", getU8Decoder()],
+  ["mint", getAddressDecoder()],
+  ["price", getU64Decoder()],
+  ["preset", payoutPresetDecoder],
+  ["accessType", accessTypeDecoder],
+  ["creatorAddonBps", getU16Decoder()],
+  ["integrator", getAddressDecoder()],
+  ["integratorBps", getU16Decoder()],
+  ["platformFee", getU64Decoder()],
+  ["creatorFee", getU64Decoder()],
+  ["integratorFee", getU64Decoder()],
+]);
+
+export interface BoxesBought {
+  time: bigint;
+  pool: Address;
+  buyer: Address;
+  /** 0-based indices in assignment order (Borsh Vec<u8>, u32 length prefix). */
+  boxes: number[];
+  count: number;
+  soldAfter: number;
+}
+export const boxesBoughtDecoder: Decoder<BoxesBought> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["buyer", getAddressDecoder()],
+  ["boxes", getArrayDecoder(getU8Decoder())],
+  ["count", getU8Decoder()],
+  ["soldAfter", getU8Decoder()],
+]);
+
+export interface PoolLocked {
+  time: bigint;
+  pool: Address;
+  lockedAt: bigint;
+}
+export const poolLockedDecoder: Decoder<PoolLocked> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["lockedAt", getI64Decoder()],
+]);
+
+export interface Sponsored {
+  time: bigint;
+  pool: Address;
+  sponsor: Address;
+  amount: bigint;
+  sponsoredTotal: bigint;
+}
+export const sponsoredDecoder: Decoder<Sponsored> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["sponsor", getAddressDecoder()],
+  ["amount", getU64Decoder()],
+  ["sponsoredTotal", getU64Decoder()],
+]);
+
+export interface GateKeyRotated {
+  time: bigint;
+  pool: Address;
+}
+export const gateKeyRotatedDecoder: Decoder<GateKeyRotated> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+]);
+
+export const SLOT_HASHES_SYSVAR = address("SysvarS1otHashes111111111111111111111111111");
+export const TOKEN_2022_PROGRAM = address("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+
+/** The three optional token-path accounts; absent ones are the program id (Anchor's convention). */
+export interface TokenPath {
+  mint?: Address;
+  tokenAccount?: Address;
+  tokenProgram?: Address;
+}
+
+function optional(a: Address | undefined, writable = false) {
+  return {
+    address: a ?? PROGRAM_ID,
+    role: a !== undefined && writable ? AccountRole.WRITABLE : AccountRole.READONLY,
+  };
+}
+
+/** The pool-side addresses every post-creation instruction needs. */
+export interface PoolRefs {
+  pool: Address;
+  game: Address;
+  creator: Address;
+}
+
+export async function createPoolInstruction(
+  creator: TransactionSigner,
+  game: Address,
+  params: CreatePoolParams,
+  token: TokenPath = {},
+): Promise<SignedInstruction> {
+  const pool = await poolPda(game, creator.address, params.nonce);
+  const accounts: SignedMetas = [
+    { address: creator.address, role: AccountRole.WRITABLE_SIGNER, signer: creator },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: game, role: AccountRole.READONLY },
+    { address: pool, role: AccountRole.WRITABLE },
+    { address: await vaultPda(pool), role: AccountRole.WRITABLE },
+    { address: await counterPda(creator.address, game), role: AccountRole.WRITABLE },
+    { address: await overridePda(creator.address), role: AccountRole.READONLY },
+    optional(token.mint),
+    optional(token.tokenAccount, true),
+    optional(token.tokenProgram),
+    { address: SLOT_HASHES_SYSVAR, role: AccountRole.READONLY },
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("create_pool", createPoolParamsEncoder.encode(params)),
+  };
+}
+
+export async function buyInstruction(
+  buyer: TransactionSigner,
+  refs: PoolRefs,
+  count: number,
+  token: TokenPath = {},
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: buyer.address, role: AccountRole.WRITABLE_SIGNER, signer: buyer },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: refs.game, role: AccountRole.READONLY },
+    { address: refs.pool, role: AccountRole.WRITABLE },
+    { address: await vaultPda(refs.pool), role: AccountRole.WRITABLE },
+    { address: await counterPda(refs.creator, refs.game), role: AccountRole.WRITABLE },
+    { address: await overridePda(refs.creator), role: AccountRole.READONLY },
+    optional(token.mint),
+    optional(token.tokenAccount, true),
+    optional(token.tokenProgram),
+    { address: SLOT_HASHES_SYSVAR, role: AccountRole.READONLY },
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("buy", getU8Encoder().encode(count)),
+  };
+}
+
+export async function sponsorInstruction(
+  sponsor: TransactionSigner,
+  refs: PoolRefs,
+  amount: bigint,
+  token: TokenPath = {},
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: sponsor.address, role: AccountRole.WRITABLE_SIGNER, signer: sponsor },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: refs.game, role: AccountRole.READONLY },
+    { address: refs.pool, role: AccountRole.WRITABLE },
+    { address: await vaultPda(refs.pool), role: AccountRole.WRITABLE },
+    { address: await sponsorshipPda(refs.pool, sponsor.address), role: AccountRole.WRITABLE },
+    optional(token.mint),
+    optional(token.tokenAccount, true),
+    optional(token.tokenProgram),
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("sponsor", getU64Encoder().encode(amount)),
+  };
+}
+
+export async function rotateGateKeyInstruction(
+  creator: TransactionSigner,
+  pool: Address,
+  newKey: Address,
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: creator.address, role: AccountRole.READONLY_SIGNER, signer: creator },
+    { address: pool, role: AccountRole.WRITABLE },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("rotate_gate_key", getAddressEncoder().encode(newKey)),
+  };
+}
+
+/** Permissionless: no signer among the accounts; the fee payer is whoever sends it. */
+export async function closeCounterInstruction(
+  creator: Address,
+  game: Address,
+  feeWallet: Address,
+): Promise<Instruction> {
+  return {
+    programAddress: PROGRAM_ID,
+    accounts: [
+      { address: await counterPda(creator, game), role: AccountRole.WRITABLE },
+      { address: await configPda(), role: AccountRole.READONLY },
+      { address: feeWallet, role: AccountRole.WRITABLE },
+    ],
+    data: withDiscriminator("close_counter", new Uint8Array(0)),
+  };
 }
 
 // ---------------------------------------------------------------------------
