@@ -34,6 +34,12 @@ pub struct SetWalletOverride<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// `missing_mut_constraint` is non-deterministic here: the public Lints job passed on `b1a88d6`
+/// and failed on byte-identical code at `c2fc985` (run 37553061357), naming `wallet_override`,
+/// which *is* writable (`init_if_needed`; Anchor refuses the literal `mut` beside it, the token
+/// the lint looks for). The lint reports from `check_fn`, so the allow has to sit on the
+/// handler, not the context, to take effect.
+#[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_set_wallet_override(
     ctx: Context<SetWalletOverride>,
     wallet: Pubkey,
