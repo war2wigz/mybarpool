@@ -1,11 +1,12 @@
 //! Error codes and order, PROGRAM §8 (+ `InvalidConfig`, `InvalidGameKey`,
-//! `InvalidGameStatus` appended before anything shipped, see the step NOTES).
+//! `InvalidGameStatus` appended before anything shipped, then Step 5's
+//! `SampleTooEarly` and `VarAlreadySampled`; see the step NOTES).
 
 use anchor_lang::error::ERROR_CODE_OFFSET;
 use mybarpool::MybarpoolError as E;
 
-/// PROGRAM §8, in the listed order, then the three appended errors.
-const EXPECTED: [E; 62] = [
+/// PROGRAM §8, in the listed order, then the five appended errors.
+const EXPECTED: [E; 64] = [
     E::Unauthorized,
     E::Paused,
     E::GameNotScheduled,
@@ -68,6 +69,8 @@ const EXPECTED: [E; 62] = [
     E::InvalidConfig,
     E::InvalidGameKey,
     E::InvalidGameStatus,
+    E::SampleTooEarly,
+    E::VarAlreadySampled,
 ];
 
 #[test]
@@ -84,6 +87,26 @@ fn the_pinned_codes() {
     assert_eq!(E::InvalidConfig as u32, 59); // 6059
     assert_eq!(E::InvalidGameKey as u32, 60); // 6060
     assert_eq!(E::InvalidGameStatus as u32, 61); // 6061
+}
+
+#[test]
+fn the_step_5_codes_appended_by_the_brief() {
+    assert_eq!(E::SampleTooEarly as u32, 62); // 6062
+    assert_eq!(E::VarAlreadySampled as u32, 63); // 6063
+                                                 // The §4.4 codes the step makes reachable, in §8 order.
+    assert_eq!(E::VarAlreadySet as u32, 31); // 6031
+    assert_eq!(E::VarNotSet as u32, 32); // 6032
+    assert_eq!(E::VarMismatch as u32, 33); // 6033
+    assert_eq!(E::VarNotEntropy as u32, 34); // 6034
+    assert_eq!(E::VarProviderMismatch as u32, 35); // 6035
+    assert_eq!(E::VarNotFresh as u32, 36); // 6036
+    assert_eq!(E::VarNotRevealed as u32, 37); // 6037
+    assert_eq!(E::VarNotSampledHere as u32, 38); // 6038
+    assert_eq!(E::SampleWindowMissed as u32, 39); // 6039
+    assert_eq!(E::VarFallbackHash as u32, 40); // 6040
+    assert_eq!(E::TooManyVarReplacements as u32, 41); // 6041
+    assert_eq!(E::PoolNotLocked as u32, 27); // 6027
+    assert_eq!(E::AlreadyDrawn as u32, 42); // 6042
 }
 
 #[test]
@@ -107,5 +130,5 @@ fn every_error_in_program_section_8_order() {
             "{variant:?} is not at index {index}"
         );
     }
-    assert_eq!(EXPECTED.len(), 62);
+    assert_eq!(EXPECTED.len(), 64);
 }

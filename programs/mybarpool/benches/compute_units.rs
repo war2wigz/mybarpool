@@ -11,6 +11,7 @@ mod common;
 
 use common::*;
 use mollusk_svm_bencher::MolluskComputeUnitBencher;
+use mybarpool::PoolStatus;
 
 fn main() {
     let f = Fixture::new();
@@ -194,6 +195,60 @@ fn main() {
     ));
     close_counter_accounts.push((f.fee_wallet, system_account(LAMPORTS_PER_SOL)));
 
+    // Step 5: the draw. The same Mollusk: its clock sits at `T0 × 5 / 2`; the SlotHashes keeps
+    // `(SLOT, SLOT_HASH)` first (the `buy` rows read the newest entry) and gains a window
+    // ending at `end_b = clock.slot − 3` for the `Var` the sample rows bind. The real Entropy
+    // bytecode is loaded so the `sample_var` row measures the CPI.
+    let mut m = m;
+    let end_b = m.sysvars.clock.slot - 3;
+    m.sysvars.slot_hashes = anchor_lang::prelude::SlotHashes::new(&[
+        (SLOT, solana_hash::Hash::new_from_array(SLOT_HASH)),
+        (end_b + 2, solana_hash::Hash::new_from_array([0x5D; 32])),
+        (end_b + 1, solana_hash::Hash::new_from_array([0x5C; 32])),
+        (end_b, solana_hash::Hash::new_from_array(END_HASH)),
+    ]);
+    with_entropy(&mut m);
+    let var = f.var_key();
+    let var_b = var_pda(&f.keeper, VAR_ID + 1).0;
+
+    let set_var_pool = pool_with(&f, PoolStatus::Locked, 25, &f.buyer_2);
+    let set_var = set_var_ix(&f.keeper, &set_var_pool, &var);
+    let set_var_accounts = draw_accounts(
+        &f,
+        &m,
+        &set_var_pool,
+        Some((&var, &f.fresh_var(end_b + 1_000))),
+    );
+
+    let bound = locked_pool_with_var(&f, &var, end_b);
+    let sample_var = sample_var_ix(&f.keeper, &bound, &var);
+    let sample_var_accounts = draw_accounts(&f, &m, &bound, Some((&var, &f.fresh_var(end_b))));
+    let already_sampled_accounts = draw_accounts(
+        &f,
+        &m,
+        &bound,
+        Some((&var, &f.sampled_var(end_b, END_HASH))),
+    );
+
+    let sampled = sampled_pool(&f, &var, end_b, m.sysvars.clock.slot, END_HASH);
+    let draw = draw_ix(&f.keeper, &sampled, &var);
+    let draw_accounts_ = draw_accounts(
+        &f,
+        &m,
+        &sampled,
+        Some((&var, &f.revealed_var(end_b, END_HASH, &SEED))),
+    );
+
+    let replace_var = replace_var_ix(&f.admin, &bound, &var_b);
+    let mut replace_var_accounts = draw_accounts(&f, &m, &bound, Some((&var, &f.fresh_var(end_b))));
+    replace_var_accounts.push((
+        var_b,
+        var_account(&VarFields {
+            id: VAR_ID + 1,
+            ..f.fresh_var(end_b + 1_000)
+        }),
+    ));
+
     MolluskComputeUnitBencher::new(m)
         .bench(("initialize", &initialize, &initialize_accounts))
         .bench(("update_config_full", &update_config_full, &update_accounts))
@@ -224,6 +279,15 @@ fn main() {
         .bench(("sponsor_top_up", &sponsor_top_up, &top_up_accounts))
         .bench(("rotate_gate_key", &rotate, &link_accounts))
         .bench(("close_counter", &close_counter, &close_counter_accounts))
+        .bench(("set_var", &set_var, &set_var_accounts))
+        .bench(("sample_var", &sample_var, &sample_var_accounts))
+        .bench((
+            "sample_var_already_sampled",
+            &sample_var,
+            &already_sampled_accounts,
+        ))
+        .bench(("draw", &draw, &draw_accounts_))
+        .bench(("replace_var", &replace_var, &replace_var_accounts))
         .must_pass(true)
         .out_dir(env!("CARGO_MANIFEST_DIR"))
         .execute();

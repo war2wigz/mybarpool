@@ -553,3 +553,72 @@ fn step_4_seed_prefixes_match_program_section_3() {
     );
     assert_eq!(pool, by_bytes);
 }
+
+#[test]
+fn entropy_var_is_240_bytes_at_the_brief_offsets() {
+    // this brief, the `Var` offset table: disc 0..8, authority 8..40, id 40..48,
+    // provider 48..80, commit 80..112, seed 112..144, slot_hash 144..176, value 176..208,
+    // samples 208..216, is_auto 216..224, start_at 224..232, end_at 232..240.
+    use mybarpool::entropy::{Var, VAR_LEN, VAR_SEED};
+    assert_eq!(VAR_LEN, 240);
+    assert_eq!(VAR_SEED, b"var");
+    let fields = common::VarFields {
+        authority: common::to_m(&key(0x01)),
+        id: 0x0202_0202_0202_0202,
+        provider: common::to_m(&key(0x03)),
+        commit: [0x04; 32],
+        seed: [0x05; 32],
+        slot_hash: [0x06; 32],
+        value: [0x07; 32],
+        samples: 0x0808_0808_0808_0808,
+        is_auto: 0x0909_0909_0909_0909,
+        start_at: 0x0A0A_0A0A_0A0A_0A0A,
+        end_at: 0x0B0B_0B0B_0B0B_0B0B,
+    };
+    let data = common::var_bytes(&fields);
+    assert_eq!(&data[0..8], &[0u8; 8]);
+    assert_eq!(&data[8..40], key(0x01).as_ref());
+    assert_eq!(&data[40..48], &0x0202_0202_0202_0202u64.to_le_bytes());
+    assert_eq!(&data[48..80], key(0x03).as_ref());
+    assert_eq!(&data[80..112], &[0x04; 32]);
+    assert_eq!(&data[112..144], &[0x05; 32]);
+    assert_eq!(&data[144..176], &[0x06; 32]);
+    assert_eq!(&data[176..208], &[0x07; 32]);
+    assert_eq!(&data[208..216], &0x0808_0808_0808_0808u64.to_le_bytes());
+    assert_eq!(&data[216..224], &0x0909_0909_0909_0909u64.to_le_bytes());
+    assert_eq!(&data[224..232], &0x0A0A_0A0A_0A0A_0A0Au64.to_le_bytes());
+    assert_eq!(&data[232..240], &0x0B0B_0B0B_0B0B_0B0Bu64.to_le_bytes());
+
+    // The program's decoder reads the same offsets.
+    let account = common::var_account(&fields);
+    let key_ = key(0x10);
+    let mut lamports = account.lamports;
+    let mut bytes = account.data.clone();
+    let owner = common::to_a(&account.owner);
+    let info = anchor_lang::prelude::AccountInfo::new(
+        &key_,
+        false,
+        false,
+        &mut lamports,
+        &mut bytes,
+        &owner,
+        false,
+    );
+    let v = Var::try_from_account(&info).expect("decode");
+    assert_eq!(v.authority, key(0x01));
+    assert_eq!(v.id, fields.id);
+    assert_eq!(v.provider, key(0x03));
+    assert_eq!(
+        (v.commit, v.seed, v.slot_hash, v.value),
+        ([0x04; 32], [0x05; 32], [0x06; 32], [0x07; 32])
+    );
+    assert_eq!(
+        (v.samples, v.is_auto, v.start_at, v.end_at),
+        (
+            fields.samples,
+            fields.is_auto,
+            fields.start_at,
+            fields.end_at
+        )
+    );
+}

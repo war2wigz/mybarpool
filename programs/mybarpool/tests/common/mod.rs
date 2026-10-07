@@ -29,10 +29,11 @@ use anchor_spl::token::spl_token::state::{Account as TokenAccountLegacy, Account
 use anchor_spl::token_2022::spl_token_2022::state::Account as TokenAccount2022;
 use mollusk_svm::sysvar::Sysvars;
 
+use mybarpool::entropy::{expected_value, VAR_LEN, VAR_SEED};
 use mybarpool::{
     constants::{
-        PayoutPreset, BOXES, CONFIG_SEED, COUNTER_SEED, GAME_SEED, NO_WINNING_BOX, OVERRIDE_SEED,
-        POOL_SEED, QUARTERS, SPONSORSHIP_SEED, VAULT_SEED,
+        PayoutPreset, BOXES, CONFIG_SEED, COUNTER_SEED, ENTROPY_PROGRAM, GAME_SEED, NO_WINNING_BOX,
+        OVERRIDE_SEED, POOL_SEED, QUARTERS, SPONSORSHIP_SEED, VAULT_SEED,
     },
     AccessType, CreatePoolParams, CreatorCounter, GameKey, GameRecord, GameStatus, PlatformConfig,
     Pool, PoolStatus, Sponsorship, TokenRule, WalletOverride,
@@ -1245,9 +1246,296 @@ pub fn event_names(result: &InstructionResult) -> Vec<&'static str> {
                 "Sponsored"
             } else if d == mybarpool::GateKeyRotated::DISCRIMINATOR {
                 "GateKeyRotated"
+            } else if d == mybarpool::VarSet::DISCRIMINATOR {
+                "VarSet"
+            } else if d == mybarpool::VarSampled::DISCRIMINATOR {
+                "VarSampled"
+            } else if d == mybarpool::VarReplaced::DISCRIMINATOR {
+                "VarReplaced"
+            } else if d == mybarpool::DigitsDrawn::DISCRIMINATOR {
+                "DigitsDrawn"
             } else {
                 "other"
             }
         })
         .collect()
+}
+
+// ---------------------------------------------------------------------------
+// Entropy fixtures (Step 5)
+// ---------------------------------------------------------------------------
+
+/// The deployed Entropy bytecode, dumped from mainnet (ProgramData bytes 45.., trailing zeros
+/// stripped); `tests/entropy.rs` checks its SHA-256 against the `verify.osec.io` report.
+pub const ENTROPY_ELF: &[u8] = include_bytes!("../fixtures/entropy-f26ae03.so");
+/// The live ORE `Var` `BWCaDY96Xe4WkFq1M7UiCCRcChsJ3p51L5KrGzhxgm2E`, fetched at slot 454,331,258.
+pub const LIVE_VAR: &[u8] = include_bytes!("../fixtures/var-BWCaDY96.bin");
+
+pub fn entropy_id() -> Pubkey {
+    to_m(&ENTROPY_PROGRAM)
+}
+
+/// The ELF's true length: its section-header table ends at `e_shoff + e_shentsize × e_shnum`
+/// (98,368 + 576 for this file). The committed fixture is the trailing-zero-stripped form
+/// `verify.osec.io` hashes (98,929 bytes), and the last fifteen bytes of that table happen to
+/// be zero, so the loader needs them back; they are padding and nothing else.
+pub const ENTROPY_ELF_LOADABLE_LEN: usize = 98_944;
+
+/// Load the real Entropy program under loader v3, as a second program beside ours.
+pub fn with_entropy(m: &mut Mollusk) {
+    let mut elf = ENTROPY_ELF.to_vec();
+    assert!(elf.len() <= ENTROPY_ELF_LOADABLE_LEN);
+    elf.resize(ENTROPY_ELF_LOADABLE_LEN, 0);
+    m.add_program_with_loader_and_elf(
+        &entropy_id(),
+        &mollusk_svm::program::loader_keys::LOADER_V3,
+        &elf,
+    );
+}
+
+/// The Entropy program's keyed account (executable), for contexts that take it by address.
+pub fn entropy_program_account() -> (Pubkey, Account) {
+    (
+        entropy_id(),
+        create_program_account_loader_v3(&entropy_id()),
+    )
+}
+
+/// `["var", authority, id LE]` under the Entropy program.
+pub fn var_pda(authority: &Pubkey, id: u64) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[VAR_SEED, authority.as_ref(), &id.to_le_bytes()],
+        &entropy_id(),
+    )
+}
+
+/// The brief's standard window and values.
+pub const END_AT: u64 = 1_000;
+pub const END_HASH: [u8; 32] = [0x5B; 32];
+pub const SEED: [u8; 32] = [0x11; 32];
+pub const VAR_ID: u64 = 7;
+
+/// `keccak(SEED)`: the commit `Open` would have written.
+pub fn commit_of(seed: &[u8; 32]) -> [u8; 32] {
+    solana_keccak_hasher::hashv(&[seed]).to_bytes()
+}
+
+/// Every field of a `Var`, for the planter.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct VarFields {
+    pub authority: Pubkey,
+    pub id: u64,
+    pub provider: Pubkey,
+    pub commit: [u8; 32],
+    pub seed: [u8; 32],
+    pub slot_hash: [u8; 32],
+    pub value: [u8; 32],
+    pub samples: u64,
+    pub is_auto: u64,
+    pub start_at: u64,
+    pub end_at: u64,
+}
+
+/// The 240 bytes of a `Var`, written from the brief's offset table independently of the
+/// program's decoder (the decoder test proves the two agree).
+pub fn var_bytes(f: &VarFields) -> [u8; VAR_LEN] {
+    let mut d = [0u8; VAR_LEN];
+    d[8..40].copy_from_slice(f.authority.as_ref());
+    d[40..48].copy_from_slice(&f.id.to_le_bytes());
+    d[48..80].copy_from_slice(f.provider.as_ref());
+    d[80..112].copy_from_slice(&f.commit);
+    d[112..144].copy_from_slice(&f.seed);
+    d[144..176].copy_from_slice(&f.slot_hash);
+    d[176..208].copy_from_slice(&f.value);
+    d[208..216].copy_from_slice(&f.samples.to_le_bytes());
+    d[216..224].copy_from_slice(&f.is_auto.to_le_bytes());
+    d[224..232].copy_from_slice(&f.start_at.to_le_bytes());
+    d[232..240].copy_from_slice(&f.end_at.to_le_bytes());
+    d
+}
+
+pub fn var_account(f: &VarFields) -> Account {
+    Account {
+        lamports: rent_for(VAR_LEN),
+        data: var_bytes(f).to_vec(),
+        owner: entropy_id(),
+        executable: false,
+        rent_epoch: 0,
+    }
+}
+
+impl Fixture {
+    /// A `Var` as `Open` leaves it: committed, zero seed/hash/value, one sample, manual,
+    /// authority the keeper, provider the configured one, `id` 7.
+    pub fn fresh_var(&self, end_at: u64) -> VarFields {
+        VarFields {
+            authority: self.keeper,
+            id: VAR_ID,
+            provider: self.entropy_provider,
+            commit: commit_of(&SEED),
+            seed: [0u8; 32],
+            slot_hash: [0u8; 32],
+            value: [0u8; 32],
+            samples: 1,
+            is_auto: 0,
+            start_at: END_AT.saturating_sub(150),
+            end_at,
+        }
+    }
+
+    /// `fresh_var` after `Sample` wrote `hash`.
+    pub fn sampled_var(&self, end_at: u64, hash: [u8; 32]) -> VarFields {
+        VarFields {
+            slot_hash: hash,
+            ..self.fresh_var(end_at)
+        }
+    }
+
+    /// `sampled_var` after `Reveal(seed)`: `value = keccak(hash ‖ seed ‖ samples)`.
+    pub fn revealed_var(&self, end_at: u64, hash: [u8; 32], seed: &[u8; 32]) -> VarFields {
+        VarFields {
+            commit: commit_of(seed),
+            seed: *seed,
+            value: expected_value(&hash, seed, 1),
+            ..self.sampled_var(end_at, hash)
+        }
+    }
+
+    /// The standard `Var`'s address.
+    pub fn var_key(&self) -> Pubkey {
+        var_pda(&self.keeper, VAR_ID).0
+    }
+}
+
+/// `VALUE`: the revealed value of the standard `Var` (`END_HASH`, `SEED`, one sample).
+pub fn standard_value() -> [u8; 32] {
+    expected_value(&END_HASH, &SEED, 1)
+}
+
+/// A `Locked` pool (all 25 boxes sold to `buyer_2`) with `var` bound at `end_at`.
+pub fn locked_pool_with_var(f: &Fixture, var: &Pubkey, end_at: u64) -> Pool {
+    let mut pool = pool_with(f, PoolStatus::Locked, 25, &f.buyer_2);
+    pool.var = to_a(var);
+    pool.var_end_at = end_at;
+    pool
+}
+
+/// `locked_pool_with_var` after `sample_var` recorded `(slot, hash)`.
+pub fn sampled_pool(f: &Fixture, var: &Pubkey, end_at: u64, slot: u64, hash: [u8; 32]) -> Pool {
+    let mut pool = locked_pool_with_var(f, var, end_at);
+    pool.sampled_slot = slot;
+    pool.sampled_hash = hash;
+    pool
+}
+
+/// A `Locked` pool planted with `drawn = true` (unreachable through the program; defence tests).
+pub fn drawn_pool(f: &Fixture, var: &Pubkey, end_at: u64) -> Pool {
+    let mut pool = sampled_pool(f, var, end_at, END_AT + 3, END_HASH);
+    pool.drawn = true;
+    pool
+}
+
+/// A Mollusk at `(slot, unix_timestamp)` with SlotHashes holding `entries` newest-first.
+pub fn mollusk_for_draw(slot: u64, entries: &[(u64, [u8; 32])]) -> Mollusk {
+    let mut m = mollusk_at(T0);
+    m.sysvars.clock.slot = slot;
+    let hashes: Vec<(u64, solana_hash::Hash)> = entries
+        .iter()
+        .map(|(s, h)| (*s, solana_hash::Hash::new_from_array(*h)))
+        .collect();
+    m.sysvars.slot_hashes = SlotHashes::new(&hashes);
+    m
+}
+
+/// The standard SlotHashes window around `END_AT`: `[(END_AT + 2, h2), (END_AT + 1, h1), (END_AT, END_HASH)]`.
+pub fn standard_window() -> Vec<(u64, [u8; 32])> {
+    vec![
+        (END_AT + 2, [0xE3; 32]),
+        (END_AT + 1, [0xE2; 32]),
+        (END_AT, END_HASH),
+    ]
+}
+
+/// `pool_accounts` for a draw test: the pool with a SOL vault holding 25 boxes, the counter at
+/// 0, the `Var` at `var_key`, the SlotHashes account, the Entropy program account.
+pub fn draw_accounts(
+    f: &Fixture,
+    m: &Mollusk,
+    pool: &Pool,
+    var: Option<(&Pubkey, &VarFields)>,
+) -> Vec<(Pubkey, Account)> {
+    let mut accounts = pool_accounts(
+        f,
+        m,
+        &f.expected_config(),
+        pool,
+        rent_for(0) + 25 * PRICE,
+        0,
+    );
+    if let Some((key, fields)) = var {
+        set_account(&mut accounts, *key, var_account(fields));
+    }
+    accounts.push(entropy_program_account());
+    accounts
+}
+
+pub fn set_var_ix(signer: &Pubkey, pool: &Pool, var: &Pubkey) -> Instruction {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    instruction(
+        mybarpool::accounts::SetVar {
+            score_authority: to_a(signer),
+            config: to_a(&config_pda().0),
+            pool: to_a(&pool_key),
+            var: to_a(var),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::SetVar {},
+    )
+}
+
+pub fn sample_var_ix(sampler: &Pubkey, pool: &Pool, var: &Pubkey) -> Instruction {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    instruction(
+        mybarpool::accounts::SampleVar {
+            sampler: to_a(sampler),
+            pool: to_a(&pool_key),
+            var: to_a(var),
+            slot_hashes: to_a(&solana_sdk_ids::sysvar::slot_hashes::ID),
+            entropy_program: ENTROPY_PROGRAM,
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::SampleVar {},
+    )
+}
+
+pub fn draw_ix(signer: &Pubkey, pool: &Pool, var: &Pubkey) -> Instruction {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    instruction(
+        mybarpool::accounts::Draw {
+            score_authority: to_a(signer),
+            config: to_a(&config_pda().0),
+            pool: to_a(&pool_key),
+            var: to_a(var),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::Draw {},
+    )
+}
+
+pub fn replace_var_ix(signer: &Pubkey, pool: &Pool, new_var: &Pubkey) -> Instruction {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    instruction(
+        mybarpool::accounts::ReplaceVar {
+            admin: to_a(signer),
+            config: to_a(&config_pda().0),
+            pool: to_a(&pool_key),
+            new_var: to_a(new_var),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::ReplaceVar {},
+    )
 }
