@@ -258,6 +258,18 @@ function feeBulkVectors() {
   return { spec: "PROGRAM §5.1 fee amounts, 200 random inputs; u64 as decimal strings", entries };
 }
 
+/** Step 5's 1,000-value axis check; the program reads this file in its Rust vector test. */
+function axesBulkVectors() {
+  const rng = new Prng("vectors/axes-bulk");
+  const entries = [];
+  for (let t = 0; t < 1_000; t++) {
+    const value = rng.bytes(32);
+    const { home, away } = drawAxes(value);
+    entries.push({ value: toHex(value), home: [...home], away: [...away] });
+  }
+  return { spec: "PROGRAM §6.2 axis shuffle, 1,000 random values", entries };
+}
+
 const FILES = {
   "assignment.json": assignmentVectors,
   "axes.json": axesVectors,
@@ -265,6 +277,7 @@ const FILES = {
   "fees.json": feeVectors,
   "assignment-bulk.json": assignmentBulkVectors,
   "fees-bulk.json": feeBulkVectors,
+  "axes-bulk.json": axesBulkVectors,
 } as const;
 
 describe("shared vector files (PROGRAM §6)", () => {
