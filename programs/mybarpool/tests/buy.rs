@@ -558,7 +558,7 @@ fn ore_buy_plumbing_errors_are_anchors() {
 
 #[test]
 fn a_3_box_buy_on_a_fresh_grid_is_never_1_2_3_across_100_seeded_runs() {
-    // ARCHITECTURE › Buying "never 1-2-3"; BUILD-PLAN Step 4 acceptance. Pure-function check over
+    // ARCHITECTURE › Buying "never 1-2-3"; the Step 4 acceptance list. Pure-function check over
     // 100 slot hashes sha256(i), plus one Mollusk run showing the instruction uses that function.
     use solana_sha256_hasher::hashv;
     let f = Fixture::new();

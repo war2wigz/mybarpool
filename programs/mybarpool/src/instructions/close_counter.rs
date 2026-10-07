@@ -1,7 +1,7 @@
 //! `close_counter`, PROGRAM §3.5: close a `CreatorCounter` at zero open
 //! pools, rent to `fee_wallet`. Permissionless: no signer in the context.
 //! Lands in Step 4 because its acceptance list requires the counter to
-//! close at zero (BUILD-PLAN Step 6 is amended).
+//! close at zero (it was first pencilled in for Step 6).
 
 use anchor_lang::prelude::*;
 

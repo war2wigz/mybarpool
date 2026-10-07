@@ -114,7 +114,7 @@ fn planted_owners(owned: &[u8]) -> [APubkey; 25] {
 
 #[test]
 fn assignment_bulk_json_matches_for_all_1000_entries_and_every_50th_as_a_real_buy() {
-    // BUILD-PLAN Step 4 acceptance: "matches the shared reference for 1,000 random vectors".
+    // Step 4 acceptance: "matches the shared reference for 1,000 random vectors".
     let file: File<BulkEntry> = load("assignment-bulk.json");
     assert_eq!(file.entries.len(), 1_000);
     let f = Fixture::new();
@@ -220,7 +220,7 @@ fn fees_bulk_json_matches_for_all_200_entries() {
 
 #[test]
 fn fees_json_matches_and_every_entry_stores_the_same_fees_through_create_pool() {
-    // PROGRAM §5.1; BUILD-PLAN acceptance "fee amounts stored equal the shared-package math".
+    // PROGRAM §5.1; Step 4 acceptance "fee amounts stored equal the shared-package math".
     // SOL and ORE entries run on those rules; SKR@6 entries on the Token-2022 rule.
     let entries = check_fee_file("fees.json", 24);
     let f = Fixture::new();
