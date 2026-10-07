@@ -1,4 +1,4 @@
-//! Entropy as deployed (PROGRAM §4.4; BUILD-PLAN Step 5 first task): the
+//! Entropy as deployed (PROGRAM §4.4; the Step 5 first task): the
 //! dumped ELF's hash against the `verify.osec.io` report, the `Var` decoder
 //! against the live ORE `Var` fetched from mainnet, and the two keccak
 //! formulas against vectors the TypeScript side shares.

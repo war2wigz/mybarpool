@@ -50,7 +50,7 @@ fn is_permutation(a: &[u8; 10]) -> bool {
 
 #[test]
 fn axes_json_matches_for_every_entry() {
-    // PROGRAM §6.2; BUILD-PLAN acceptance "axes match the reference implementation".
+    // PROGRAM §6.2: the axes match the reference implementation entry for entry.
     let entries = load("axes.json");
     assert_eq!(entries.len(), 24);
     for e in &entries {

@@ -1268,8 +1268,10 @@ pub fn event_names(result: &InstructionResult) -> Vec<&'static str> {
 /// The deployed Entropy bytecode, dumped from mainnet (ProgramData bytes 45.., trailing zeros
 /// stripped); `tests/entropy.rs` checks its SHA-256 against the `verify.osec.io` report.
 pub const ENTROPY_ELF: &[u8] = include_bytes!("../fixtures/entropy-f26ae03.so");
-/// The live ORE `Var` `BWCaDY96Xe4WkFq1M7UiCCRcChsJ3p51L5KrGzhxgm2E`, fetched at slot 454,331,258.
-pub const LIVE_VAR: &[u8] = include_bytes!("../fixtures/var-BWCaDY96.bin");
+/// The live ORE `Var` `BWCaDY96Xe4WkFq1M7UiCCRcChsJ3p51L5KrGzhxgm2E`, fetched at slot 454,331,258;
+/// the one copy lives beside the shared package's decoder test.
+pub const LIVE_VAR: &[u8] =
+    include_bytes!("../../../../packages/shared/test/fixtures/var-BWCaDY96.bin");
 
 pub fn entropy_id() -> Pubkey {
     to_m(&ENTROPY_PROGRAM)

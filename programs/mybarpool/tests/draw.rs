@@ -268,7 +268,7 @@ fn sample_var_cpis_entropy_sample_and_records_the_verified_hash() {
 
 #[test]
 fn the_reload_test_sampled_hash_is_the_sysvar_entry_though_the_var_was_zero_before_the_cpi() {
-    // BUILD-PLAN: "the test that fails if the reload() after the CPI is missing". The planted
+    // The test that fails if the re-decode after the CPI is missing (PROGRAM §4.4). The planted
     // Var has slot_hash == 0; only a decode after the CPI can see END_HASH. Without the second
     // decode the handler reads zero and fails with SampleWindowMissed.
     let f = Fixture::new();
@@ -569,7 +569,7 @@ fn draw_derives_both_axes_from_the_revealed_value() {
 
 #[test]
 fn draw_refuses_a_var_that_no_longer_carries_the_verified_hash() {
-    // BUILD-PLAN "rolled with Next"; PROGRAM §4.4 "value binding": VarNotSampledHere.
+    // PROGRAM §4.4 "value binding": a Var rolled with Next is VarNotSampledHere.
     let f = Fixture::new();
     let m = draw_mollusk(false);
     let var = f.var_key();
@@ -602,7 +602,7 @@ fn draw_refuses_a_var_that_no_longer_carries_the_verified_hash() {
 
 #[test]
 fn draw_refuses_the_fallback_hash_even_when_sampled_hash_is_forged_to_match() {
-    // BUILD-PLAN acceptance: VarFallbackHash, defence in depth behind sample_var.
+    // PROGRAM §4.4 VarFallbackHash: defence in depth behind sample_var.
     let f = Fixture::new();
     let m = draw_mollusk(false);
     let var = f.var_key();
@@ -795,7 +795,7 @@ fn replace_var_on_a_sampled_pool_is_var_already_sampled() {
 
 #[test]
 fn replace_var_is_capped_at_two() {
-    // PROGRAM §4.4 "capped at two"; BUILD-PLAN acceptance.
+    // PROGRAM §4.4 "capped at two".
     let f = Fixture::new();
     let m = mollusk_for_draw(END_AT + 600, &[]);
     let a = f.var_key();
