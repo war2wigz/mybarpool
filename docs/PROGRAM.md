@@ -130,8 +130,8 @@ One per scheduled game. Created and rent-paid by the platform. Never closed.
 | `token_program` | Pubkey | Copied from config at creation |
 | `vault` | Pubkey | The vault account (3.4) |
 | `price` | u64 | Per box |
-| `preset` | u8 | Payout preset |
-| `access_type` | u8 | `Public = 0`, `Link = 1`, `Allowlist = 2` |
+| `preset` | u8 | `PayoutPreset`; an enum in the program and the IDL, stored as its one-byte discriminant |
+| `access_type` | u8 | `AccessType`: `Public = 0`, `Link = 1`, `Allowlist = 2`; an enum in the program and the IDL, one byte |
 | `gate_key` | Pubkey | Required co-signer when `access_type == Link`; else default |
 | `allowlist_root` | [u8; 32] | Merkle root when `access_type == Allowlist`; else zero |
 | `creator_addon_bps` | u16 | 0–500 |
@@ -140,7 +140,7 @@ One per scheduled game. Created and rent-paid by the platform. Never closed.
 | `platform_fee` | u64 | Fixed at creation (§5.1) |
 | `creator_fee` | u64 | Fixed at creation; base + add-on |
 | `integrator_fee` | u64 | Fixed at creation |
-| `status` | u8 | `PoolStatus` |
+| `status` | u8 | `PoolStatus`; an enum in the program and the IDL, stored as its one-byte discriminant |
 | `sold` | u8 | Boxes sold, 0–25 |
 | `owners` | [Pubkey; 25] | `Pubkey::default()` = unsold |
 | `creator_boxes` | u8 | Boxes the creator holds in this pool |
@@ -202,7 +202,7 @@ Created by `create_pool` when absent (creator pays rent), incremented there, dec
 | `max_own_boxes` | u8 | 1 ≤ … ≤ `MAX_OWN_BOXES_ABSOLUTE` |
 | `bump` | u8 | |
 
-Admin-created. When present it replaces both config values for that wallet. Passed as an optional account to `create_pool` and `buy`; if the account at the derived address exists, it must be passed, and the program checks the address, so a client cannot omit it to escape a lower limit.
+Admin-created. When present it replaces both config values for that wallet. The slot at `["override", creator]` is a required account of `create_pool` and `buy` (seeds-checked, so the canonical address is the only one accepted); the program reads it only when it holds this program's data and otherwise uses the config's two values. A client therefore cannot omit an existing override to escape a lower limit, and `OverrideRequired` is never raised (§8).
 
 ### 3.7 `Sponsorship` — seeds `["sponsorship", pool, wallet]`
 
@@ -247,19 +247,21 @@ Checks: `status == Scheduled` (`GameNotScheduled` for a `Final` record, `GameAlr
 
 ### 4.3 Pool creation and buying
 
-**`create_pool(nonce, token, price, preset, access_type, gate_key, allowlist_root, creator_addon_bps, integrator, integrator_bps, initial_boxes)`** — signer: creator; payer: creator. Accounts: config, game, pool (init), vault (init), counter (init if needed), optional override, creator's token account for SPL, token program, system program, and the SlotHashes sysvar when `initial_boxes > 0`.
-Checks: `!config.paused`; `game.status == Scheduled`; `now < game.recorded_kickoff`; `tokens[token].enabled`; `price == min_price + k × step` for some integer `k` and `price ≤ max_price`; `preset` is a valid discriminant; `access_type` valid, with `gate_key != default` iff `Link` and `allowlist_root != 0` iff `Allowlist`; `creator_addon_bps + integrator_bps ≤ config.addon_budget_bps`; `integrator_bps == 0` iff `integrator == default`; `counter.open_count < limit.max_open_pools`; `initial_boxes ≤ limit.max_own_boxes`.
-Effects: computes and stores fee amounts (§5.1); writes every field; `status = Open`; `winning_box = [255; 4]`; increments `counter.open_count`; if `initial_boxes > 0`, runs the `buy` logic (below) for the creator in the same instruction. Emits `PoolCreated`, then `BoxesBought` if boxes were bought.
+**`create_pool(nonce, token, price, preset, access_type, gate_key, allowlist_root, creator_addon_bps, integrator, integrator_bps, initial_boxes)`** — signer: creator; payer: creator. Accounts: config, game, pool (init), vault (funded for SOL, created and initialised as a token account for SPL), counter (init if needed), the creator's override slot (§3.6, required, read when initialised), the SlotHashes sysvar (required; read when `initial_boxes > 0`), system program; for an SPL token also the rule's mint, the token program, and the creator's token account when `initial_boxes > 0`.
+Checks: `!config.paused`; `game.status == Scheduled`; `now < game.recorded_kickoff`; `tokens[token].enabled`; `price == min_price + k × step` for some integer `k` and `price ≤ max_price`; `preset` is a valid discriminant; `access_type` valid, with `gate_key != default` iff `Link` and `allowlist_root != 0` iff `Allowlist` (until Step 8 lands gating in `buy`, `access_type` must also be `Public`, else `InvalidAccessType`); `creator_addon_bps + integrator_bps ≤ config.addon_budget_bps`; `integrator_bps == 0` iff `integrator == default`; `counter.open_count < limit.max_open_pools`; `initial_boxes ≤ limit.max_own_boxes`.
+Effects: computes and stores fee amounts (§5.1); writes every field; `status = Open`; `winning_box = [255; 4]`; increments `counter.open_count`; if `initial_boxes > 0`, runs the `buy` logic (below) for the creator in the same instruction. Emits `PoolCreated`, then `BoxesBought` if boxes were bought, then `PoolLocked` if those boxes were the 25th.
 
-**`buy(count)`** — signer: buyer; payer: buyer. Accounts: config, game, pool, vault, optional override (required if the buyer is the creator and an override exists), buyer's token account for SPL, token program, system program, SlotHashes sysvar, plus `gate_key` as a co-signer when `access_type == Link`, plus a Merkle proof argument when `Allowlist`.
+**`buy(count)`** — signer: buyer; payer: buyer. Accounts: config, game, pool, vault, the creator's counter (decremented on lock), the creator's override slot (§3.6, required; read only when the buyer is the creator), the SlotHashes sysvar, system program; for an SPL pool also the pool's mint, the token program and the buyer's token account; plus `gate_key` as a co-signer when `access_type == Link`, plus a Merkle proof argument when `Allowlist` (Step 8).
 Checks: `!config.paused`; `status == Open`; `now < game.recorded_kickoff`; `game.status == Scheduled`; `1 ≤ count ≤ 25 − sold`; if buyer is creator, `creator_boxes + count ≤ limit.max_own_boxes`; gating satisfied.
-Effects: transfers `count × price` from buyer to vault; assigns boxes (§6.1); `sold += count`; if buyer is creator, `creator_boxes += count`; if `sold == 25`: `status = Locked`, `locked_at = now`, counter decremented. Emits `BoxesBought { buyer, boxes[], count }` and, on lock, `PoolLocked`.
+Effects: transfers `count × price` from buyer to vault; assigns boxes (§6.1); `sold += count`; if buyer is creator, `creator_boxes += count`; if `sold == 25`: `status = Locked`, `locked_at = now`, counter decremented. Emits `BoxesBought { buyer, boxes[], count, sold_after }` and, on lock, `PoolLocked`.
 
-**`sponsor(amount)`** — signer: sponsor; payer: sponsor. Accounts: config, game, pool, vault, sponsorship (init if needed), sponsor's token account for SPL, programs.
-Checks: `!config.paused`; `status ∈ {Open, Locked, Drawn}` (a full pool is usually drawn well before kickoff and can still be sponsored); `now < game.recorded_kickoff`; `game.status == Scheduled`; `amount ≥ price`; `sponsored_total + amount ≤ tokens[token].max_sponsorship`.
+**`sponsor(amount)`** — signer: sponsor; payer: sponsor. Accounts: config, game, pool, vault, sponsorship (init if needed), system program; for an SPL pool also the pool's mint, the token program and the sponsor's token account.
+Checks: `!config.paused`; `status ∈ {Open, Locked, Drawn}` (a full pool is usually drawn well before kickoff and can still be sponsored), else `PoolNotOpen`; `now < game.recorded_kickoff`; `game.status == Scheduled`; `amount ≥ price`; `sponsored_total + amount ≤ tokens[token].max_sponsorship` (the cap as configured now, not as it was at creation).
 Effects: transfers `amount` to the vault; creates `Sponsorship` (increment `sponsor_count`, `sponsorships_open`) or adds to it; `sponsored_total += amount`. Emits `Sponsored { sponsor, amount, sponsored_total }`.
 
-**`rotate_gate_key(new_key)`** — signer: creator. Checks `access_type == Link`, `new_key != default`. Emits `GateKeyRotated` (the new key is public information; only signatures from it matter).
+**`rotate_gate_key(new_key)`** — signer: creator (`Unauthorized` otherwise). Checks `access_type == Link` (`InvalidAccessType`), `new_key != default` (`GateKeyMissing`). Emits `GateKeyRotated` (the new key is public information; only signatures from it matter).
+
+A wrong or missing client-side account — an SPL pool without its mint, token account or token program, a token account of another mint, a token program other than the pool's, a pool, vault or counter at a non-canonical address — fails with Anchor's own constraint errors (`ConstraintAccountIsNone`, `ConstraintTokenMint`, `RequireKeysEqViolated`, `ConstraintSeeds`, `ConstraintHasOne`, `InvalidProgramId`), not with a §8 code.
 
 ### 4.4 Draw
 
@@ -302,7 +304,7 @@ Idempotency: a repeated `settle` for the same quarter fails on the ordering chec
 **`close_pool()`** — permissionless. Accounts: pool, vault, game, counter (if it exists), `fee_wallet`, creator, config.
 Checks: `status ∈ {Settled, Returned, Split}`; `sponsorships_open == 0`; if `Returned` or `Split`, every sold box has its `returned` bit set. Effects: transfers the vault's remaining balance (dust, and for SOL the vault's rent) and the pool account's rent to the destination: `creator` if `abandoned`, else `fee_wallet`. Closes the vault (SPL: `close_account` after the token balance is swept) and the pool. Emits `PoolClosed { destination, dust }`.
 
-**`close_counter()`** — permissionless. Checks `open_count == 0`. Rent to `fee_wallet`.
+**`close_counter()`** — permissionless (no signer). Accounts: counter, config (`has_one = fee_wallet`), `fee_wallet`. Checks `open_count == 0` (`CounterNotEmpty`). Rent to `fee_wallet`. No event. Built in Step 4, because that step's acceptance needs the counter to close at zero.
 
 ### 4.6 Returns, splits, cancellation, reclaim
 
@@ -379,7 +381,7 @@ Reference implementations live in `packages/shared` and are cross-tested against
 
 ### 6.1 Box assignment
 
-Inputs: `slothash` = the 32-byte hash of the most recent entry in the SlotHashes sysvar; `buyer` (32 bytes); `sold` (u8, before this purchase); `count` (u8).
+Inputs: `slothash` = the 32-byte hash of the most recent entry in the SlotHashes sysvar (the entry for the slot the transaction lands in, as measured on Surfpool; a client reproducing a purchase reads the sysvar's entry for the transaction's own slot); `buyer` (32 bytes); `sold` (u8, before this purchase); `count` (u8).
 
 ```
 seed      = sha256(slothash || buyer || [sold] || [count])
@@ -462,6 +464,8 @@ Numbered from 6000 (Anchor custom errors). Names are the contract; numbers follo
 `InvalidConfig` (6059) is the error for a violated §3.1 or §3.6 invariant on any write (`initialize`, `update_config`, `set_wallet_override`), and for a `TokenRule` whose shape does not fit its index (index 0 is native SOL with the default mint and program; a rule with the default mint elsewhere is a disabled placeholder; a rule with a mint needs that mint account passed, matching key, owner and decimals). `default_preset` outside 0–2 is `InvalidPreset`; a transfer-fee or transfer-hook mint is `UnsupportedMintExtension`. It was added in Step 2, after the list above had been written and before anything shipped, so every other number is unchanged.
 
 `InvalidGameKey` (6060) is the error for a `create_game` key that breaks the §2 rules (`week` outside 1–22 and not a preseason week with `preseason_enabled`; a team index of 32 or more; `home == away`). `InvalidGameStatus` (6061) is the error for a `mark_game` whose `new_status` is not a mark (`Scheduled`, `Final`) or is `Postponed`/`Cancelled` once a quarter has been posted. Both were added in Step 3, the same way, before anything shipped.
+
+`OverrideRequired` (6023) is reserved and never raised: the override slot is a required account of `create_pool` and `buy` (§3.6), so there is no way to omit it. The number stays because the list is frozen in declaration order. Client-side account mistakes on the §4.3 instructions fail with Anchor's own constraint errors, not with a code from this list (see the end of §4.3).
 
 ## 9. State machines
 
