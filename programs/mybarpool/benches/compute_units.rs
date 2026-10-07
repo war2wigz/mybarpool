@@ -14,7 +14,10 @@ use mollusk_svm_bencher::MolluskComputeUnitBencher;
 
 fn main() {
     let f = Fixture::new();
-    let wallet = solana_pubkey::Pubkey::new_unique();
+    // Every key that is not a Fixture field is a literal, so a row never moves because the
+    // fixture grew (Step 4 audit L1: `Pubkey::new_unique()` is a deterministic counter and
+    // the keys it yields shift with every key the fixture adds).
+    let wallet = solana_pubkey::Pubkey::new_from_array([7; 32]);
     let config = f.expected_config();
 
     // initialize: fresh config PDA, ProgramData check, one mint (ORE) attached.
@@ -107,7 +110,7 @@ fn main() {
     );
     let create_sol_accounts = pool_base(&f, &m, &config);
 
-    let creator_ore = solana_pubkey::Pubkey::new_unique();
+    let creator_ore = solana_pubkey::Pubkey::new_from_array([8; 32]);
     let ore_path = TokenPath {
         mint: Some(f.ore_mint),
         token_account: Some(creator_ore),
@@ -129,7 +132,7 @@ fn main() {
     let almost_accounts = pool_accounts(&f, &m, &config, &almost, rent_for(0) + 24 * PRICE, 1);
 
     let ore_pool = fresh_pool(&f, &config, &ore_params(0));
-    let buyer_ore = solana_pubkey::Pubkey::new_unique();
+    let buyer_ore = solana_pubkey::Pubkey::new_from_array([9; 32]);
     let buy_spl_1 = buy_ix(
         &f.buyer,
         &ore_pool,
@@ -175,8 +178,12 @@ fn main() {
 
     let mut link = fresh_pool(&f, &config, &sol_params(0));
     link.access_type = mybarpool::AccessType::Link;
-    link.gate_key = to_a(&solana_pubkey::Pubkey::new_unique());
-    let rotate = rotate_gate_key_ix(&f.creator, &link, &solana_pubkey::Pubkey::new_unique());
+    link.gate_key = to_a(&solana_pubkey::Pubkey::new_from_array([10; 32]));
+    let rotate = rotate_gate_key_ix(
+        &f.creator,
+        &link,
+        &solana_pubkey::Pubkey::new_from_array([11; 32]),
+    );
     let link_accounts = pool_accounts(&f, &m, &config, &link, rent_for(0), 1);
 
     let close_counter = close_counter_ix(&f.creator, &standard_game(), &f.fee_wallet);
