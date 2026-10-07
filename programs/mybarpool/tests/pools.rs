@@ -683,6 +683,57 @@ fn pre_funded_pdas_do_not_block_creation() {
         &accounts,
         &[Check::success()],
     );
+
+    // Step 4 audit M1: an SPL vault PDA holding lamports beforehand. create_account would
+    // refuse it; the handler tops up, allocates and assigns instead, and the vault ends as a
+    // 165-byte token account owned by the Token program with the creator's first box in it.
+    let creator_ata = Pubkey::new_unique();
+    let mut accounts = pool_base(&f, &m, &c);
+    set_account(
+        &mut accounts,
+        vault_pda(&pool_key).0,
+        system_account(1_000_000),
+    );
+    accounts.push((
+        creator_ata,
+        token_account(&f.ore_mint, &f.creator, 10 * PRICE_ORE),
+    ));
+    let result = m.process_and_validate_instruction(
+        &create_pool_ix(
+            &f.creator,
+            &standard_game(),
+            ore_params(1),
+            ore_path(&f, Some(creator_ata)),
+        ),
+        &accounts,
+        &[Check::success()],
+    );
+    let vault = account_of(&result, &vault_pda(&pool_key).0);
+    assert_eq!(vault.data.len(), 165);
+    assert_eq!(vault.owner, token_program_id());
+    assert_eq!(decode_token_owner(vault), pool_key);
+    assert_eq!(decode_token_amount(vault), PRICE_ORE);
+    assert!(vault.lamports >= rent_for(165));
+    // Pre-funded above the rent minimum: nothing is taken from the creator for the vault's rent.
+    let mut accounts = pool_base(&f, &m, &c);
+    set_account(
+        &mut accounts,
+        vault_pda(&pool_key).0,
+        system_account(5_000_000),
+    );
+    let result = m.process_and_validate_instruction(
+        &create_pool_ix(
+            &f.creator,
+            &standard_game(),
+            ore_params(0),
+            ore_path(&f, None),
+        ),
+        &accounts,
+        &[Check::success()],
+    );
+    let vault = account_of(&result, &vault_pda(&pool_key).0);
+    assert_eq!(vault.lamports, 5_000_000);
+    assert_eq!(vault.owner, token_program_id());
 }
 
 #[test]

@@ -49,19 +49,51 @@ pub fn create_spl_vault<'info>(
 ) -> Result<()> {
     let space = vault_token_account_len(mint, token_program)?;
     let lamports = Rent::get()?.minimum_balance(space);
-    system_program::create_account(
-        CpiContext::new_with_signer(
-            *system_program.key,
-            system_program::CreateAccount {
-                from: creator.to_account_info(),
-                to: vault.clone(),
-            },
-            &[vault_seeds],
-        ),
-        lamports,
-        u64::try_from(space).map_err(|_| MybarpoolError::MathOverflow)?,
-        token_program.key,
-    )?;
+    let space_u64 = u64::try_from(space).map_err(|_| MybarpoolError::MathOverflow)?;
+    if vault.lamports() == 0 {
+        system_program::create_account(
+            CpiContext::new_with_signer(
+                *system_program.key,
+                system_program::CreateAccount {
+                    from: creator.to_account_info(),
+                    to: vault.clone(),
+                },
+                &[vault_seeds],
+            ),
+            lamports,
+            space_u64,
+            token_program.key,
+        )?;
+    } else {
+        // The PDA already holds lamports (anyone can send to a derivable address), and the
+        // System program's create_account refuses a funded target (Step 4 audit M1). The
+        // sequence Anchor 1.2's `init` uses instead: top up to the rent minimum, allocate,
+        // assign — the last two signed with the vault seeds.
+        let shortfall = lamports.saturating_sub(vault.lamports());
+        if shortfall > 0 {
+            transfer_in_sol(creator, vault, system_program, shortfall)?;
+        }
+        system_program::allocate(
+            CpiContext::new_with_signer(
+                *system_program.key,
+                system_program::Allocate {
+                    account_to_allocate: vault.clone(),
+                },
+                &[vault_seeds],
+            ),
+            space_u64,
+        )?;
+        system_program::assign(
+            CpiContext::new_with_signer(
+                *system_program.key,
+                system_program::Assign {
+                    account_to_assign: vault.clone(),
+                },
+                &[vault_seeds],
+            ),
+            token_program.key,
+        )?;
+    }
     token_interface::initialize_account3(CpiContext::new(
         *token_program.key,
         token_interface::InitializeAccount3 {
