@@ -88,6 +88,18 @@ pub const BPS_DENOMINATOR: u64 = 10_000;
 #[constant]
 pub const NO_WINNING_BOX: u8 = 255;
 
+/// PROGRAM §4.4: `replace_var` is "capped at two".
+#[constant]
+pub const VAR_REPLACEMENTS_MAX: u8 = 2;
+
+/// PROGRAM §6.2: the home (column) axis label.
+#[constant]
+pub const AXIS_LABEL_HOME: &[u8] = b"home";
+
+/// PROGRAM §6.2: the away (row) axis label.
+#[constant]
+pub const AXIS_LABEL_AWAY: &[u8] = b"away";
+
 /// Native SOL (PROGRAM §2 token index 0): nine decimals.
 #[constant]
 pub const SOL_DECIMALS: u8 = 9;

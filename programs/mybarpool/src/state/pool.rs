@@ -172,6 +172,15 @@ impl Pool {
         Ok(())
     }
 
+    /// `status == Locked`, else `PoolNotLocked` (PROGRAM §4.4: the four draw instructions).
+    pub fn require_locked(&self) -> Result<()> {
+        require!(
+            self.status == PoolStatus::Locked,
+            MybarpoolError::PoolNotLocked
+        );
+        Ok(())
+    }
+
     /// `status ∈ {Open, Locked, Drawn}`, else `PoolNotOpen` (PROGRAM §4.3 `sponsor`, §9: a full
     /// pool is usually drawn before kickoff and can still be sponsored).
     pub fn require_sponsorable(&self) -> Result<()> {

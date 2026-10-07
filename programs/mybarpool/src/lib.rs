@@ -1,16 +1,18 @@
 //! MyBarPool: NFL boxes on Solana.
 //!
-//! Build plan Steps 2–4: `PlatformConfig`, `WalletOverride`, every PROGRAM
+//! Build plan Steps 2–5: `PlatformConfig`, `WalletOverride`, every PROGRAM
 //! §1 constant, the complete §8 error enum, the four §4.1 admin
-//! instructions, `GameRecord` with the four §4.2 game instructions, and
-//! `Pool`, its vault, `CreatorCounter` and `Sponsorship` with the §4.3
-//! instructions that fill them. Money only moves in. Later steps add the
-//! draw, settlement and returns, each built and audited against
-//! `docs/PROGRAM.md`.
+//! instructions, `GameRecord` with the four §4.2 game instructions, `Pool`,
+//! its vault, `CreatorCounter` and `Sponsorship` with the §4.3 instructions
+//! that fill them, and the §4.4 draw over a Regolith Entropy `Var`. Money
+//! only moves in. Later steps add settlement and returns, each built and
+//! audited against `docs/PROGRAM.md`.
 #![allow(unexpected_cfgs)]
 
 pub mod assignment;
+pub mod axes;
 pub mod constants;
+pub mod entropy;
 pub mod errors;
 pub mod events;
 pub mod instructions;
@@ -146,5 +148,32 @@ pub mod mybarpool {
     /// `config.fee_wallet`. Permissionless.
     pub fn close_counter(ctx: Context<CloseCounter>) -> Result<()> {
         instructions::close_counter::handle_close_counter(ctx)
+    }
+
+    /// PROGRAM §4.4 `set_var`: bind a fresh, committed, unsampled Entropy `Var` from the
+    /// configured provider to a `Locked` pool. Signer: the keeper. Emits `VarSet`.
+    pub fn set_var(ctx: Context<SetVar>) -> Result<()> {
+        instructions::set_var::handle_set_var(ctx)
+    }
+
+    /// PROGRAM §4.4 `sample_var`: at or after the `Var`'s `end_at`, CPI Entropy `Sample` if
+    /// unsampled, then prove against SlotHashes that the hash it carries is the real hash of
+    /// `end_at`, and record slot and hash on the pool. Signer: anyone. Emits `VarSampled`.
+    pub fn sample_var(ctx: Context<SampleVar>) -> Result<()> {
+        instructions::sample_var::handle_sample_var(ctx)
+    }
+
+    /// PROGRAM §4.4 `draw`: on a sampled, revealed `Var` that still carries the verified hash
+    /// (and not the fallback), recompute the value and derive both axes (§6.2). Signer: the
+    /// keeper. Emits `DigitsDrawn`.
+    pub fn draw(ctx: Context<Draw>) -> Result<()> {
+        instructions::draw::handle_draw(ctx)
+    }
+
+    /// PROGRAM §4.4 `replace_var`: bind a fresh `Var` in place of one whose window was missed;
+    /// at most twice, never on a pool with a verified sample. Signer: the admin. Emits
+    /// `VarReplaced`.
+    pub fn replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
+        instructions::replace_var::handle_replace_var(ctx)
     }
 }

@@ -3,7 +3,9 @@
 //! come first, then the ones appended before anything shipped: `InvalidConfig`
 //! (6059, Step 2) for a violated §3.1 invariant, `InvalidGameKey` (6060) and
 //! `InvalidGameStatus` (6061, both Step 3) for the §4.2 key rules and the
-//! `mark_game` status rules, which §8 had no error for.
+//! `mark_game` status rules, `SampleTooEarly` (6062) and `VarAlreadySampled`
+//! (6063, both Step 5) for two `sample_var` / `replace_var` checks, which §8
+//! had no error for.
 
 use anchor_lang::prelude::*;
 
@@ -100,7 +102,8 @@ pub enum MybarpoolError {
     /// 6026: the pool is not Open.
     #[msg("Pool is not open")]
     PoolNotOpen,
-    /// 6027: the pool is not Locked.
+    /// 6027: the pool's status is not `Locked` (PROGRAM §4.4: `set_var`, `sample_var`, `draw`
+    /// and `replace_var` all need a locked pool; `draw` moves it to `Drawn`).
     #[msg("Pool is not locked")]
     PoolNotLocked,
     /// 6028: the pool is not Drawn.
@@ -112,41 +115,49 @@ pub enum MybarpoolError {
     /// 6030: the pool's sponsorship cap would be exceeded.
     #[msg("Sponsorship cap exceeded")]
     SponsorshipCapExceeded,
-    /// 6031: the pool already has a Var.
-    #[msg("Var is already set")]
+    /// 6031: `set_var` on a pool that already has a `Var`; `replace_var` with the pool's own
+    /// `Var` as the replacement (PROGRAM §4.4 "One call per pool").
+    #[msg("Var is already set on this pool")]
     VarAlreadySet,
-    /// 6032: the pool has no Var.
-    #[msg("Var is not set")]
+    /// 6032: `sample_var` or `draw` on a pool with no `Var` bound (PROGRAM §4.4).
+    #[msg("No Var is set on this pool")]
     VarNotSet,
-    /// 6033: the passed Var is not the one recorded on the pool.
-    #[msg("Var does not match the pool")]
+    /// 6033: the `Var` passed is not `pool.var` (PROGRAM §4.4 `var == pool.var`).
+    #[msg("Var does not match the one recorded on the pool")]
     VarMismatch,
-    /// 6034: the Var is not owned by the Entropy program.
-    #[msg("Var is not an Entropy account")]
+    /// 6034: the account is not a `Var` the Entropy program owns and formats as one: wrong
+    /// owner, not 240 bytes (the two legacy 232-byte accounts included), or a non-zero
+    /// discriminator (PROGRAM §4.4).
+    #[msg("Account is not an Entropy Var")]
     VarNotEntropy,
-    /// 6035: the Var's provider is not the configured one.
-    #[msg("Var provider does not match config")]
+    /// 6035: `var.provider != config.entropy_provider` (PROGRAM §4.4).
+    #[msg("Var provider does not match the configured provider")]
     VarProviderMismatch,
-    /// 6036: the Var is already sampled or revealed, or not committed.
-    #[msg("Var is not fresh")]
+    /// 6036: a `Var` offered to `set_var` / `replace_var` is not committed, unsampled and
+    /// unrevealed with `samples == 1`, `is_auto == 0` and `end_at` ahead (PROGRAM §4.4).
+    #[msg("Var is not fresh: it must be committed, unsampled, unrevealed, single-sample, manual, and end in the future")]
     VarNotFresh,
-    /// 6037: the Var's value is missing or does not recompute.
-    #[msg("Var is not revealed")]
+    /// 6037: `draw` with a zero seed or value, or a value that does not recompute as
+    /// `keccak(slot_hash ‖ seed ‖ samples)` (PROGRAM §4.4).
+    #[msg("Var is not revealed, or its value does not recompute")]
     VarNotRevealed,
-    /// 6038: the Var was not sampled through this program.
-    #[msg("Var was not sampled here")]
+    /// 6038: `draw` before `sample_var` ran, or on a `Var` whose `slot_hash` is no longer the one
+    /// `sample_var` verified (rolled with `Next`, re-opened, or rewritten) (PROGRAM §4.4).
+    #[msg("Var was not sampled through this program, or no longer carries the verified hash")]
     VarNotSampledHere,
-    /// 6039: the end slot is no longer in SlotHashes, or the hash differs.
-    #[msg("Sample window missed")]
+    /// 6039: `sample_var` found no SlotHashes entry for `end_at`, or one that differs from the
+    /// `Var`'s hash — the window closed and the fallback was written (PROGRAM §4.4).
+    #[msg("Sample window missed: SlotHashes does not confirm the Var's hash for end_at")]
     SampleWindowMissed,
-    /// 6040: the Var carries the keccak(end_at) fallback hash.
-    #[msg("Var carries the fallback hash")]
+    /// 6040: `draw` with `slot_hash == keccak(end_at)`, Entropy's predictable fallback
+    /// (PROGRAM §4.4, defence in depth behind `SampleWindowMissed`).
+    #[msg("Var carries the keccak(end_at) fallback hash")]
     VarFallbackHash,
-    /// 6041: the Var has already been replaced twice.
-    #[msg("Too many Var replacements")]
+    /// 6041: a third `replace_var` (PROGRAM §4.4 "capped at two").
+    #[msg("Var has already been replaced twice")]
     TooManyVarReplacements,
-    /// 6042: the pool's digits are already drawn.
-    #[msg("Already drawn")]
+    /// 6042: `draw` or `replace_var` on a pool whose digits are drawn (PROGRAM §4.4).
+    #[msg("Digits are already drawn")]
     AlreadyDrawn,
     /// 6043: the quarter's scores are not posted.
     #[msg("Scores not posted")]
@@ -208,4 +219,12 @@ pub enum MybarpoolError {
     /// `Suspended` applies to a game with scores).
     #[msg("Invalid game status for mark_game")]
     InvalidGameStatus,
+    /// 6062: `sample_var` before `Clock.slot ≥ var.end_at` (PROGRAM §4.4).
+    #[msg("Sample window not open yet")]
+    SampleTooEarly,
+    /// 6063: `sample_var` on a pool that already has a verified sample; `replace_var` on such a
+    /// pool (a `Var` with a verified sample is never abandoned: its value is fixed, only the
+    /// reveal is outstanding).
+    #[msg("Var already has a sample recorded")]
+    VarAlreadySampled,
 }

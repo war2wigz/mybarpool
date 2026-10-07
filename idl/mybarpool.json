@@ -718,6 +718,105 @@
       ]
     },
     {
+      "name": "draw",
+      "docs": [
+        "PROGRAM §4.4 `draw`: on a sampled, revealed `Var` that still carries the verified hash",
+        "(and not the fallback), recompute the value and derive both axes (§6.2). Signer: the",
+        "keeper. Emits `DigitsDrawn`."
+      ],
+      "discriminator": [
+        61,
+        40,
+        62,
+        184,
+        31,
+        176,
+        24,
+        130
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "docs": [
+            "The keeper, `config.score_authority`."
+          ],
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "var",
+          "docs": [
+            "The recorded `Var`, sampled through this program and revealed by its provider."
+          ]
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initialize",
       "docs": [
         "PROGRAM §4.1 `initialize`: create `PlatformConfig`. Signer: the program's upgrade",
@@ -1046,6 +1145,105 @@
       ]
     },
     {
+      "name": "replace_var",
+      "docs": [
+        "PROGRAM §4.4 `replace_var`: bind a fresh `Var` in place of one whose window was missed;",
+        "at most twice, never on a pool with a verified sample. Signer: the admin. Emits",
+        "`VarReplaced`."
+      ],
+      "discriminator": [
+        42,
+        99,
+        131,
+        112,
+        101,
+        167,
+        52,
+        125
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "`config.admin`."
+          ],
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; read for `entropy_provider`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "new_var",
+          "docs": [
+            "The fresh `Var` bound in place of `pool.var`."
+          ]
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "rotate_gate_key",
       "docs": [
         "PROGRAM §4.3 `rotate_gate_key`: set a `Link` pool's gate key. Signer: the creator.",
@@ -1120,6 +1318,194 @@
           "type": "pubkey"
         }
       ]
+    },
+    {
+      "name": "sample_var",
+      "docs": [
+        "PROGRAM §4.4 `sample_var`: at or after the `Var`'s `end_at`, CPI Entropy `Sample` if",
+        "unsampled, then prove against SlotHashes that the hash it carries is the real hash of",
+        "`end_at`, and record slot and hash on the pool. Signer: anyone. Emits `VarSampled`."
+      ],
+      "discriminator": [
+        37,
+        50,
+        169,
+        61,
+        168,
+        228,
+        43,
+        189
+      ],
+      "accounts": [
+        {
+          "name": "sampler",
+          "docs": [
+            "Any wallet; the CPI's signer and nothing else."
+          ],
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "var",
+          "docs": [
+            "handler. Writable because Entropy's `Sample` writes `slot_hash`."
+          ],
+          "writable": true
+        },
+        {
+          "name": "slot_hashes",
+          "docs": [
+            "handler's own `hash_for_slot`."
+          ],
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "entropy_program",
+          "docs": [
+            "CPI target is this constant, never a caller-supplied key."
+          ],
+          "address": "3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_var",
+      "docs": [
+        "PROGRAM §4.4 `set_var`: bind a fresh, committed, unsampled Entropy `Var` from the",
+        "configured provider to a `Locked` pool. Signer: the keeper. Emits `VarSet`."
+      ],
+      "discriminator": [
+        181,
+        135,
+        171,
+        34,
+        185,
+        221,
+        158,
+        113
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "docs": [
+            "The keeper, `config.score_authority`."
+          ],
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; read for `entropy_provider`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "var",
+          "docs": [
+            "`Var::try_from_account` in the handler. Not an Anchor account (steel layout)."
+          ]
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
     },
     {
       "name": "set_wallet_override",
@@ -1677,6 +2063,19 @@
       ]
     },
     {
+      "name": "DigitsDrawn",
+      "discriminator": [
+        65,
+        63,
+        114,
+        71,
+        3,
+        64,
+        113,
+        55
+      ]
+    },
+    {
       "name": "GameCreated",
       "discriminator": [
         218,
@@ -1804,6 +2203,45 @@
         80,
         85,
         131
+      ]
+    },
+    {
+      "name": "VarReplaced",
+      "discriminator": [
+        41,
+        212,
+        111,
+        15,
+        6,
+        218,
+        118,
+        236
+      ]
+    },
+    {
+      "name": "VarSampled",
+      "discriminator": [
+        18,
+        149,
+        233,
+        88,
+        35,
+        49,
+        133,
+        248
+      ]
+    },
+    {
+      "name": "VarSet",
+      "discriminator": [
+        235,
+        25,
+        131,
+        138,
+        59,
+        177,
+        249,
+        172
       ]
     }
   ],
@@ -1966,62 +2404,62 @@
     {
       "code": 6031,
       "name": "VarAlreadySet",
-      "msg": "Var is already set"
+      "msg": "Var is already set on this pool"
     },
     {
       "code": 6032,
       "name": "VarNotSet",
-      "msg": "Var is not set"
+      "msg": "No Var is set on this pool"
     },
     {
       "code": 6033,
       "name": "VarMismatch",
-      "msg": "Var does not match the pool"
+      "msg": "Var does not match the one recorded on the pool"
     },
     {
       "code": 6034,
       "name": "VarNotEntropy",
-      "msg": "Var is not an Entropy account"
+      "msg": "Account is not an Entropy Var"
     },
     {
       "code": 6035,
       "name": "VarProviderMismatch",
-      "msg": "Var provider does not match config"
+      "msg": "Var provider does not match the configured provider"
     },
     {
       "code": 6036,
       "name": "VarNotFresh",
-      "msg": "Var is not fresh"
+      "msg": "Var is not fresh: it must be committed, unsampled, unrevealed, single-sample, manual, and end in the future"
     },
     {
       "code": 6037,
       "name": "VarNotRevealed",
-      "msg": "Var is not revealed"
+      "msg": "Var is not revealed, or its value does not recompute"
     },
     {
       "code": 6038,
       "name": "VarNotSampledHere",
-      "msg": "Var was not sampled here"
+      "msg": "Var was not sampled through this program, or no longer carries the verified hash"
     },
     {
       "code": 6039,
       "name": "SampleWindowMissed",
-      "msg": "Sample window missed"
+      "msg": "Sample window missed: SlotHashes does not confirm the Var's hash for end_at"
     },
     {
       "code": 6040,
       "name": "VarFallbackHash",
-      "msg": "Var carries the fallback hash"
+      "msg": "Var carries the keccak(end_at) fallback hash"
     },
     {
       "code": 6041,
       "name": "TooManyVarReplacements",
-      "msg": "Too many Var replacements"
+      "msg": "Var has already been replaced twice"
     },
     {
       "code": 6042,
       "name": "AlreadyDrawn",
-      "msg": "Already drawn"
+      "msg": "Digits are already drawn"
     },
     {
       "code": 6043,
@@ -2117,6 +2555,16 @@
       "code": 6061,
       "name": "InvalidGameStatus",
       "msg": "Invalid game status for mark_game"
+    },
+    {
+      "code": 6062,
+      "name": "SampleTooEarly",
+      "msg": "Sample window not open yet"
+    },
+    {
+      "code": 6063,
+      "name": "VarAlreadySampled",
+      "msg": "Var already has a sample recorded"
     }
   ],
   "types": [
@@ -2457,6 +2905,74 @@
               "PDA bump."
             ],
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DigitsDrawn",
+      "docs": [
+        "PROGRAM §7 `DigitsDrawn`: `draw` derived both axes from the `Var`'s value."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "var",
+            "docs": [
+              "The `Var` drawn on."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "value",
+            "docs": [
+              "The revealed Entropy value."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "home_axis",
+            "docs": [
+              "Home (column) digits; lane `l` = positions `l`, `l + 5`."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                10
+              ]
+            }
+          },
+          {
+            "name": "away_axis",
+            "docs": [
+              "Away (row) digits."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                10
+              ]
+            }
           }
         ]
       }
@@ -4113,6 +4629,163 @@
       }
     },
     {
+      "name": "VarReplaced",
+      "docs": [
+        "PROGRAM §7 `VarReplaced`: the admin bound a replacement `Var`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "old_var",
+            "docs": [
+              "The `Var` abandoned (its address stays in history)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "new_var",
+            "docs": [
+              "The `Var` bound instead."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "end_at",
+            "docs": [
+              "The new `Var`'s `end_at`."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "replacements",
+            "docs": [
+              "`pool.var_replacements` after this call (1 or 2)."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VarSampled",
+      "docs": [
+        "PROGRAM §7 `VarSampled`: `sample_var` recorded a hash it matched against SlotHashes."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "var",
+            "docs": [
+              "The `Var`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "sampler",
+            "docs": [
+              "Whoever signed `sample_var` (anyone may)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "docs": [
+              "The slot `sample_var` ran in."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "end_at",
+            "docs": [
+              "The `Var`'s `end_at`."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "slot_hash",
+            "docs": [
+              "The hash recorded, equal to the SlotHashes entry for `end_at`."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VarSet",
+      "docs": [
+        "PROGRAM §7 `VarSet`: `set_var` bound a `Var` to the pool."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "var",
+            "docs": [
+              "The `Var` bound."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "end_at",
+            "docs": [
+              "The `Var`'s `end_at`, the slot whose hash will be sampled."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "WalletOverride",
       "docs": [
         "PROGRAM §3.6 `WalletOverride`: per-wallet creator limits. 43 bytes.",
@@ -4164,6 +4837,22 @@
       ],
       "type": "u16",
       "value": "500"
+    },
+    {
+      "name": "AXIS_LABEL_AWAY",
+      "docs": [
+        "PROGRAM §6.2: the away (row) axis label."
+      ],
+      "type": "bytes",
+      "value": "[97, 119, 97, 121]"
+    },
+    {
+      "name": "AXIS_LABEL_HOME",
+      "docs": [
+        "PROGRAM §6.2: the home (column) axis label."
+      ],
+      "type": "bytes",
+      "value": "[104, 111, 109, 101]"
     },
     {
       "name": "BOXES",
@@ -4342,6 +5031,14 @@
       ],
       "type": "u16",
       "value": "1500"
+    },
+    {
+      "name": "VAR_REPLACEMENTS_MAX",
+      "docs": [
+        "PROGRAM §4.4: `replace_var` is \"capped at two\"."
+      ],
+      "type": "u8",
+      "value": "2"
     },
     {
       "name": "VAULT_SEED",

@@ -232,3 +232,69 @@ pub struct GateKeyRotated {
     /// The pool's address.
     pub pool: Pubkey,
 }
+
+/// PROGRAM §7 `VarSet`: `set_var` bound a `Var` to the pool.
+#[event]
+pub struct VarSet {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The `Var` bound.
+    pub var: Pubkey,
+    /// The `Var`'s `end_at`, the slot whose hash will be sampled.
+    pub end_at: u64,
+}
+
+/// PROGRAM §7 `VarSampled`: `sample_var` recorded a hash it matched against SlotHashes.
+#[event]
+pub struct VarSampled {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The `Var`.
+    pub var: Pubkey,
+    /// Whoever signed `sample_var` (anyone may).
+    pub sampler: Pubkey,
+    /// The slot `sample_var` ran in.
+    pub slot: u64,
+    /// The `Var`'s `end_at`.
+    pub end_at: u64,
+    /// The hash recorded, equal to the SlotHashes entry for `end_at`.
+    pub slot_hash: [u8; 32],
+}
+
+/// PROGRAM §7 `VarReplaced`: the admin bound a replacement `Var`.
+#[event]
+pub struct VarReplaced {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The `Var` abandoned (its address stays in history).
+    pub old_var: Pubkey,
+    /// The `Var` bound instead.
+    pub new_var: Pubkey,
+    /// The new `Var`'s `end_at`.
+    pub end_at: u64,
+    /// `pool.var_replacements` after this call (1 or 2).
+    pub replacements: u8,
+}
+
+/// PROGRAM §7 `DigitsDrawn`: `draw` derived both axes from the `Var`'s value.
+#[event]
+pub struct DigitsDrawn {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The `Var` drawn on.
+    pub var: Pubkey,
+    /// The revealed Entropy value.
+    pub value: [u8; 32],
+    /// Home (column) digits; lane `l` = positions `l`, `l + 5`.
+    pub home_axis: [u8; 10],
+    /// Away (row) digits.
+    pub away_axis: [u8; 10],
+}

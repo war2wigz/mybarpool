@@ -33,6 +33,10 @@ anchor-spl = { workspace = true, features = ["token", "token_2022"] }
 # resolved: the two lines only make the dependency direct.
 solana-sha256-hasher = "3.1"
 solana-sdk-ids = "3.1"
+# PROGRAM §4.4: Entropy's formulas are keccak-256 (`sol_keccak256` on-chain through this
+# crate's `hashv`; `sha3` on the host so the fixtures compute the same values). The one
+# runtime crate Step 5 adds to the compiled program tree; its `sha3` 0.10 was already there.
+solana-keccak-hasher = { version = "3.1", features = ["sha3"] }
 
 [dev-dependencies]
 mollusk-svm = { workspace = true, features = ["inner-instructions"] }
