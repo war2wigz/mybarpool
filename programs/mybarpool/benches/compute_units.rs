@@ -87,7 +87,107 @@ fn main() {
     let post_final = post_scores_ix(&f.keeper, &played_game, 4, 24, 20, true, true);
     let post_final_accounts = game_accounts(&f, Some(&played_after_q3));
 
-    MolluskComputeUnitBencher::new(mollusk_at(T0))
+    // Step 4: pools. One Mollusk with the token programs and a slot hash; the standard game at
+    // T0 is open. The eleven rows the brief names.
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let config = f.expected_config();
+    let pool_key = pool_pda(&standard_game(), &f.creator, NONCE).0;
+
+    let create_pool_sol = create_pool_ix(
+        &f.creator,
+        &standard_game(),
+        sol_params(0),
+        TokenPath::default(),
+    );
+    let create_pool_sol_5 = create_pool_ix(
+        &f.creator,
+        &standard_game(),
+        sol_params(5),
+        TokenPath::default(),
+    );
+    let create_sol_accounts = pool_base(&f, &m, &config);
+
+    let creator_ore = solana_pubkey::Pubkey::new_unique();
+    let ore_path = TokenPath {
+        mint: Some(f.ore_mint),
+        token_account: Some(creator_ore),
+        token_program: Some(token_program_id()),
+    };
+    let create_pool_spl = create_pool_ix(&f.creator, &standard_game(), ore_params(1), ore_path);
+    let mut create_spl_accounts = pool_base(&f, &m, &config);
+    create_spl_accounts.push((
+        creator_ore,
+        token_account(&f.ore_mint, &f.creator, 10 * PRICE_ORE),
+    ));
+
+    let open = fresh_pool(&f, &config, &sol_params(0));
+    let buy_1 = buy_ix(&f.buyer, &open, 1, TokenPath::default());
+    let buy_3 = buy_ix(&f.buyer, &open, 3, TokenPath::default());
+    let open_accounts = pool_accounts(&f, &m, &config, &open, rent_for(0), 1);
+    let almost = pool_with(&f, mybarpool::PoolStatus::Open, 24, &f.buyer_2);
+    let buy_25th = buy_ix(&f.buyer, &almost, 1, TokenPath::default());
+    let almost_accounts = pool_accounts(&f, &m, &config, &almost, rent_for(0) + 24 * PRICE, 1);
+
+    let ore_pool = fresh_pool(&f, &config, &ore_params(0));
+    let buyer_ore = solana_pubkey::Pubkey::new_unique();
+    let buy_spl_1 = buy_ix(
+        &f.buyer,
+        &ore_pool,
+        1,
+        TokenPath {
+            mint: Some(f.ore_mint),
+            token_account: Some(buyer_ore),
+            token_program: Some(token_program_id()),
+        },
+    );
+    let mut ore_accounts = pool_accounts(&f, &m, &config, &ore_pool, 0, 1);
+    set_account(
+        &mut ore_accounts,
+        vault_pda(&pool_key).0,
+        token_account(&f.ore_mint, &pool_key, 0),
+    );
+    ore_accounts.push((
+        buyer_ore,
+        token_account(&f.ore_mint, &f.buyer, 10 * PRICE_ORE),
+    ));
+
+    let sponsor_new = sponsor_ix(&f.sponsor, &open, PRICE, TokenPath::default());
+    let mut sponsored = fresh_pool(&f, &config, &sol_params(0));
+    sponsored.sponsored_total = PRICE;
+    sponsored.sponsor_count = 1;
+    sponsored.sponsorships_open = 1;
+    let sponsor_top_up = sponsor_ix(&f.sponsor, &sponsored, PRICE, TokenPath::default());
+    let mut top_up_accounts = pool_accounts(&f, &m, &config, &sponsored, rent_for(0) + PRICE, 1);
+    set_account(
+        &mut top_up_accounts,
+        sponsorship_pda(&pool_key, &f.sponsor).0,
+        account_for(
+            &mybarpool::Sponsorship {
+                pool: to_a(&pool_key),
+                wallet: to_a(&f.sponsor),
+                amount: PRICE,
+                bump: sponsorship_pda(&pool_key, &f.sponsor).1,
+            },
+            &program_id(),
+            mybarpool::Sponsorship::SIZE,
+        ),
+    );
+
+    let mut link = fresh_pool(&f, &config, &sol_params(0));
+    link.access_type = mybarpool::AccessType::Link;
+    link.gate_key = to_a(&solana_pubkey::Pubkey::new_unique());
+    let rotate = rotate_gate_key_ix(&f.creator, &link, &solana_pubkey::Pubkey::new_unique());
+    let link_accounts = pool_accounts(&f, &m, &config, &link, rent_for(0), 1);
+
+    let close_counter = close_counter_ix(&f.creator, &standard_game(), &f.fee_wallet);
+    let mut close_counter_accounts = base_accounts(&f, Some(&config));
+    close_counter_accounts.push((
+        counter_pda(&f.creator, &standard_game()).0,
+        counter_account(&f.creator, &standard_game(), 0),
+    ));
+    close_counter_accounts.push((f.fee_wallet, system_account(LAMPORTS_PER_SOL)));
+
+    MolluskComputeUnitBencher::new(m)
         .bench(("initialize", &initialize, &initialize_accounts))
         .bench(("update_config_full", &update_config_full, &update_accounts))
         .bench(("set_wallet_override_create", &set_create, &create_accounts))
@@ -102,6 +202,21 @@ fn main() {
         .bench(("post_scores_q1", &post_q1, &post_q1_accounts))
         .bench(("post_scores_final", &post_final, &post_final_accounts))
         .bench(("mark_game", &mark_game, &fresh_accounts))
+        .bench(("create_pool_sol", &create_pool_sol, &create_sol_accounts))
+        .bench((
+            "create_pool_sol_5_boxes",
+            &create_pool_sol_5,
+            &create_sol_accounts,
+        ))
+        .bench(("create_pool_spl", &create_pool_spl, &create_spl_accounts))
+        .bench(("buy_1", &buy_1, &open_accounts))
+        .bench(("buy_3", &buy_3, &open_accounts))
+        .bench(("buy_25th_locks", &buy_25th, &almost_accounts))
+        .bench(("buy_spl_1", &buy_spl_1, &ore_accounts))
+        .bench(("sponsor_new", &sponsor_new, &open_accounts))
+        .bench(("sponsor_top_up", &sponsor_top_up, &top_up_accounts))
+        .bench(("rotate_gate_key", &rotate, &link_accounts))
+        .bench(("close_counter", &close_counter, &close_counter_accounts))
         .must_pass(true)
         .out_dir(env!("CARGO_MANIFEST_DIR"))
         .execute();
