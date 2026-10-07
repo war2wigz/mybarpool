@@ -48,9 +48,13 @@ pub const RECLAIM_DELAY: i64 = 2_592_000;
 #[constant]
 pub const MAX_OWN_BOXES_ABSOLUTE: u8 = 25;
 
-/// PROGRAM §1 `ENTROPY_PROGRAM`: Regolith Entropy.
+/// PROGRAM §1 `ENTROPY_PROGRAM`: the platform's own deployment of Entropy — the fork
+/// `war2wigz/entropy` at `ENTROPY_FORK_COMMIT` (see `tests/helpers/entropy.ts` and `ci.yml`) of
+/// `regolith-labs/entropy` `f26ae03`, with the program id changed, `Open` re-enabled and the
+/// `security.txt` contact changed, nothing else (ARCHITECTURE › Randomness). Through Step 5 the
+/// constant was Regolith's `3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X`.
 #[constant]
-pub const ENTROPY_PROGRAM: Pubkey = pubkey!("3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X");
+pub const ENTROPY_PROGRAM: Pubkey = pubkey!("ASo8r4EEFLPAMDk1w3XdKbEmq4c1GynbsHGa6RGG83fH");
 
 /// PROGRAM §3.1 `PlatformConfig` seed.
 #[constant]

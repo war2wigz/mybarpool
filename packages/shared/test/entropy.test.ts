@@ -107,12 +107,15 @@ describe("Entropy Var (regolith-labs/entropy f26ae03)", () => {
     expect(EntropyInstruction).toEqual({ Open: 0, Close: 1, Next: 2, Reveal: 4, Sample: 5 });
     const commit = new Uint8Array(32).fill(0xab);
     const open = encodeOpen({ id: 7n, commit, isAuto: false, samples: 1n, endAt: 1000n });
-    expect(open).toHaveLength(1 + 8 + 32 + 1 + 8 + 8);
+    // api/src/instruction.rs `Open`: id [u8;8], commit [u8;32], is_auto [u8;8], samples [u8;8],
+    // end_at [u8;8] — 65 bytes with the discriminator (Step 5b: is_auto is a u64, not a byte).
+    expect(open).toHaveLength(1 + 8 + 32 + 8 + 8 + 8);
     expect([...open.subarray(0, 9)]).toEqual([0, 7, 0, 0, 0, 0, 0, 0, 0]);
     expect(open.subarray(9, 41)).toEqual(commit);
-    expect(open[41]).toBe(0);
-    expect([...open.subarray(42, 50)]).toEqual([1, 0, 0, 0, 0, 0, 0, 0]);
-    expect([...open.subarray(50, 58)]).toEqual([0xe8, 0x03, 0, 0, 0, 0, 0, 0]);
+    expect([...open.subarray(41, 49)]).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    expect([...open.subarray(49, 57)]).toEqual([1, 0, 0, 0, 0, 0, 0, 0]);
+    expect([...open.subarray(57, 65)]).toEqual([0xe8, 0x03, 0, 0, 0, 0, 0, 0]);
+    expect(encodeOpen({ id: 7n, commit, isAuto: true, samples: 1n, endAt: 1000n })[41]).toBe(1);
     expect([...encodeSample()]).toEqual([5]);
     expect([...encodeReveal(commit)]).toEqual([4, ...commit]);
     expect([...encodeNext(1000n)]).toEqual([2, 0xe8, 0x03, 0, 0, 0, 0, 0, 0]);

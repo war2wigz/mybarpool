@@ -227,4 +227,8 @@ pub enum MybarpoolError {
     /// reveal is outstanding).
     #[msg("Var already has a sample recorded")]
     VarAlreadySampled,
+    /// 6064 (Step 5b): `draw` on a `Var` whose revealed `seed` does not hash to the commit
+    /// `set_var` / `replace_var` recorded on the pool (PROGRAM §4.4, §8).
+    #[msg("Var seed does not hash to the commit recorded on the pool")]
+    VarCommitMismatch,
 }

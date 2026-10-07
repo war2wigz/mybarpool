@@ -311,7 +311,8 @@ pub fn handle_create_pool(ctx: Context<CreatePool>, params: CreatePoolParams) ->
     pool.locked_at = 0;
     pool.bump = pool_bump;
     pool.vault_bump = vault_bump;
-    pool.reserved = [0u8; 128];
+    pool.var_commit = [0u8; 32];
+    pool.reserved = [0u8; 96];
 
     emit_cpi!(PoolCreated {
         time: now,

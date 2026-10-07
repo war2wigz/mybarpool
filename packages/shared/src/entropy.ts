@@ -13,7 +13,18 @@ import { keccak_256 } from "@noble/hashes/sha3.js";
 import { ascii, assertU64, concatBytes } from "./bytes.js";
 
 /** PROGRAM §1 `ENTROPY_PROGRAM`, base58. */
-export const ENTROPY_PROGRAM = "3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X";
+/**
+ * The platform's own deployment of Entropy (PROGRAM §1): the fork `war2wigz/entropy` of
+ * `regolith-labs/entropy` `f26ae03`, program id changed, `Open` re-enabled, `security.txt`
+ * contact changed, nothing else. Through Step 5 this was Regolith's id below.
+ */
+export const ENTROPY_PROGRAM = "ASo8r4EEFLPAMDk1w3XdKbEmq4c1GynbsHGa6RGG83fH";
+/**
+ * Regolith's deployed Entropy, the source of the `Var` layout and the live ORE `Var` the
+ * decoder test reads; `Open` is disabled there. Used by the Step 0 mainnet-fork test and the
+ * `Open` canary only.
+ */
+export const REGOLITH_ENTROPY_PROGRAM = "3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X";
 export const VAR_LEN = 240;
 export const VAR_DISCRIMINATOR: Uint8Array = new Uint8Array(8);
 const PUBKEY_BYTES = 32;
@@ -142,7 +153,13 @@ export function encodeVar(fields: Var): Uint8Array {
   return out;
 }
 
-/** `Open`: `[0] ‖ id ‖ commit ‖ is_auto (u8) ‖ samples ‖ end_at`. Refused by the deployed program. */
+/**
+ * `Open`: `[0] ‖ id ‖ commit ‖ is_auto ‖ samples ‖ end_at`, every field a u64 LE except the
+ * 32-byte commit — `is_auto` included (`api/src/instruction.rs` at `f26ae03`: `is_auto: [u8; 8]`,
+ * written as `(is_auto as u64).to_le_bytes()` by `sdk::open`); 65 bytes. Step 5 wrote it as one
+ * byte, which Regolith's deployment never parsed (its dispatcher refuses `Open` first); the
+ * platform's deployment accepts `Open`, and the fork's bytecode under Mollusk caught it (Step 5b).
+ */
 export function encodeOpen(args: {
   id: bigint;
   commit: Uint8Array;
@@ -154,7 +171,7 @@ export function encodeOpen(args: {
     Uint8Array.of(EntropyInstruction.Open),
     u64le(args.id, "id"),
     assert32(args.commit, "commit"),
-    Uint8Array.of(args.isAuto ? 1 : 0),
+    u64le(args.isAuto ? 1n : 0n, "isAuto"),
     u64le(args.samples, "samples"),
     u64le(args.endAt, "endAt"),
   );

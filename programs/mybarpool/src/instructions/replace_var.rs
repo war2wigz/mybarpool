@@ -70,6 +70,8 @@ pub fn handle_replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
     let old_var = pool.var;
     pool.var = new_var.key();
     pool.var_end_at = v.end_at;
+    // A replacement is a fresh commit-reveal: the pool's recorded commit moves with it.
+    pool.var_commit = v.commit;
     pool.var_replacements = pool
         .var_replacements
         .checked_add(1)
@@ -83,6 +85,7 @@ pub fn handle_replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
         new_var: new_var.key(),
         end_at: v.end_at,
         replacements: pool.var_replacements,
+        commit: v.commit,
     });
     Ok(())
 }

@@ -913,7 +913,8 @@ pub fn fresh_pool(f: &Fixture, config: &PlatformConfig, params: &CreatePoolParam
         locked_at: 0,
         bump,
         vault_bump,
-        reserved: [0u8; 128],
+        var_commit: [0u8; 32],
+        reserved: [0u8; 96],
     }
 }
 
@@ -1265,11 +1266,18 @@ pub fn event_names(result: &InstructionResult) -> Vec<&'static str> {
 // Entropy fixtures (Step 5)
 // ---------------------------------------------------------------------------
 
-/// The deployed Entropy bytecode, dumped from mainnet (ProgramData bytes 45.., trailing zeros
-/// stripped); `tests/entropy.rs` checks its SHA-256 against the `verify.osec.io` report.
-pub const ENTROPY_ELF: &[u8] = include_bytes!("../fixtures/entropy-f26ae03.so");
+/// Regolith's deployed Entropy bytecode, dumped from mainnet (ProgramData bytes 45.., trailing
+/// zeros stripped); `tests/entropy.rs` checks its SHA-256 against the `verify.osec.io` report.
+/// Loaded only by `with_regolith_entropy`, for the `Open` canary.
+pub const REGOLITH_ENTROPY_ELF: &[u8] = include_bytes!("../fixtures/entropy-f26ae03.so");
+/// The platform's Entropy deployment: the fork `war2wigz/entropy` at `ENTROPY_FORK_COMMIT`
+/// (`solana-verify build --arch v3` output, byte for byte; CI rebuilds it and compares).
+/// `tests/entropy.rs` checks its SHA-256. This is what `with_entropy` loads at
+/// `ENTROPY_PROGRAM`.
+pub const ENTROPY_FORK_ELF: &[u8] = include_bytes!("../fixtures/entropy-486225b.so");
 /// The live ORE `Var` `BWCaDY96Xe4WkFq1M7UiCCRcChsJ3p51L5KrGzhxgm2E`, fetched at slot 454,331,258;
-/// the one copy lives beside the shared package's decoder test.
+/// the one copy lives beside the shared package's decoder test. It lives under Regolith's
+/// program, not the platform's.
 pub const LIVE_VAR: &[u8] =
     include_bytes!("../../../../packages/shared/test/fixtures/var-BWCaDY96.bin");
 
@@ -1277,21 +1285,45 @@ pub fn entropy_id() -> Pubkey {
     to_m(&ENTROPY_PROGRAM)
 }
 
-/// The ELF's true length: its section-header table ends at `e_shoff + e_shentsize × e_shnum`
-/// (98,368 + 576 for this file). The committed fixture is the trailing-zero-stripped form
-/// `verify.osec.io` hashes (98,929 bytes), and the last fifteen bytes of that table happen to
-/// be zero, so the loader needs them back; they are padding and nothing else.
-pub const ENTROPY_ELF_LOADABLE_LEN: usize = 98_944;
+/// Regolith's deployed program id, where the live `Var`s and the canary's bytecode live.
+pub fn regolith_entropy_id() -> Pubkey {
+    Pubkey::from_str_const("3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X")
+}
 
-/// Load the real Entropy program under loader v3, as a second program beside ours.
+/// The Regolith ELF's true length: its section-header table ends at `e_shoff + e_shentsize ×
+/// e_shnum` (98,368 + 576 for this file). The committed fixture is the trailing-zero-stripped
+/// form `verify.osec.io` hashes (98,929 bytes), and the last fifteen bytes of that table happen
+/// to be zero, so the loader needs them back; they are padding and nothing else.
+pub const REGOLITH_ENTROPY_ELF_LOADABLE_LEN: usize = 98_944;
+
+/// Pad a stripped ELF back to its section-header end, if the fixture needs it.
+pub fn loadable_elf(elf: &[u8], loadable_len: usize) -> Vec<u8> {
+    let mut out = elf.to_vec();
+    assert!(out.len() <= loadable_len);
+    out.resize(loadable_len, 0);
+    out
+}
+
+/// Load the platform's Entropy deployment (the fork ELF) under loader v3 at `ENTROPY_PROGRAM`,
+/// as a second program beside ours. The fork fixture is the full `solana-verify` output, whose
+/// section-header table ends exactly at the file's end, so no padding is needed.
 pub fn with_entropy(m: &mut Mollusk) {
-    let mut elf = ENTROPY_ELF.to_vec();
-    assert!(elf.len() <= ENTROPY_ELF_LOADABLE_LEN);
-    elf.resize(ENTROPY_ELF_LOADABLE_LEN, 0);
     m.add_program_with_loader_and_elf(
         &entropy_id(),
         &mollusk_svm::program::loader_keys::LOADER_V3,
-        &elf,
+        ENTROPY_FORK_ELF,
+    );
+}
+
+/// Load Regolith's deployed bytecode at its own id `3jSk…` (steel's entrypoint checks the
+/// program id against `declare_id!` before dispatching, so it cannot stand in at
+/// `ENTROPY_PROGRAM`), for the `Open` canary only: the test sends the same `Open` the fork
+/// accepts and expects `InvalidInstructionData` from the dispatcher's `_` arm.
+pub fn with_regolith_entropy(m: &mut Mollusk) {
+    m.add_program_with_loader_and_elf(
+        &regolith_entropy_id(),
+        &mollusk_svm::program::loader_keys::LOADER_V3,
+        &loadable_elf(REGOLITH_ENTROPY_ELF, REGOLITH_ENTROPY_ELF_LOADABLE_LEN),
     );
 }
 
@@ -1317,10 +1349,13 @@ pub const END_HASH: [u8; 32] = [0x5B; 32];
 pub const SEED: [u8; 32] = [0x11; 32];
 pub const VAR_ID: u64 = 7;
 
-/// `keccak(SEED)`: the commit `Open` would have written.
+/// `keccak(seed)`: the commit `Open` writes.
 pub fn commit_of(seed: &[u8; 32]) -> [u8; 32] {
     solana_keccak_hasher::hashv(&[seed]).to_bytes()
 }
+
+/// `COMMIT = keccak(SEED)`, the standard Var's commit (computed once; the brief's constant).
+pub static COMMIT: std::sync::LazyLock<[u8; 32]> = std::sync::LazyLock::new(|| commit_of(&SEED));
 
 /// Every field of a `Var`, for the planter.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1419,6 +1454,8 @@ pub fn locked_pool_with_var(f: &Fixture, var: &Pubkey, end_at: u64) -> Pool {
     let mut pool = pool_with(f, PoolStatus::Locked, 25, &f.buyer_2);
     pool.var = to_a(var);
     pool.var_end_at = end_at;
+    // PROGRAM §3.3 (Step 5b): `set_var` records the commit; the standard Var's is `COMMIT`.
+    pool.var_commit = *COMMIT;
     pool
 }
 
@@ -1540,4 +1577,99 @@ pub fn replace_var_ix(signer: &Pubkey, pool: &Pool, new_var: &Pubkey) -> Instruc
         },
         mybarpool::instruction::ReplaceVar {},
     )
+}
+
+// ---------------------------------------------------------------------------
+// Entropy instructions the tests send directly (Step 5b): `Open`, `Reveal`, `Close`
+// ---------------------------------------------------------------------------
+
+/// `Open(id, commit, is_auto, samples, end_at)`, discriminator 0: `[0] ‖ id ‖ commit ‖ is_auto ‖
+/// samples ‖ end_at`, every field a u64 LE but the 32-byte commit (`api/src/instruction.rs`:
+/// `is_auto: [u8; 8]`), 65 bytes; accounts `[authority (w,s), payer (w,s), provider (w), var (w),
+/// system]`. The provider does not sign (Regolith's check is commented out; the fork keeps it).
+/// `program` is the Entropy deployment addressed (the fork, or Regolith's for the canary).
+#[allow(clippy::too_many_arguments)]
+pub fn open_ix_at(
+    program: &Pubkey,
+    authority: &Pubkey,
+    payer: &Pubkey,
+    provider: &Pubkey,
+    id: u64,
+    commit: [u8; 32],
+    is_auto: bool,
+    samples: u64,
+    end_at: u64,
+) -> Instruction {
+    let mut data = vec![0u8];
+    data.extend_from_slice(&id.to_le_bytes());
+    data.extend_from_slice(&commit);
+    data.extend_from_slice(&u64::from(is_auto).to_le_bytes());
+    data.extend_from_slice(&samples.to_le_bytes());
+    data.extend_from_slice(&end_at.to_le_bytes());
+    let var =
+        Pubkey::find_program_address(&[VAR_SEED, authority.as_ref(), &id.to_le_bytes()], program).0;
+    Instruction {
+        program_id: *program,
+        accounts: vec![
+            AccountMeta::new(*authority, true),
+            AccountMeta::new(*payer, true),
+            AccountMeta::new(*provider, false),
+            AccountMeta::new(var, false),
+            AccountMeta::new_readonly(Pubkey::default(), false),
+        ],
+        data,
+    }
+}
+
+/// `open_ix_at` on `ENTROPY_PROGRAM`.
+#[allow(clippy::too_many_arguments)]
+pub fn open_ix(
+    authority: &Pubkey,
+    payer: &Pubkey,
+    provider: &Pubkey,
+    id: u64,
+    commit: [u8; 32],
+    is_auto: bool,
+    samples: u64,
+    end_at: u64,
+) -> Instruction {
+    open_ix_at(
+        &entropy_id(),
+        authority,
+        payer,
+        provider,
+        id,
+        commit,
+        is_auto,
+        samples,
+        end_at,
+    )
+}
+
+/// `Reveal(seed)`, discriminator 4: `[4] ‖ seed`; accounts `[signer (s), var (w)]`. Any signer.
+pub fn reveal_ix(signer: &Pubkey, var: &Pubkey, seed: &[u8; 32]) -> Instruction {
+    let mut data = vec![4u8];
+    data.extend_from_slice(seed);
+    Instruction {
+        program_id: entropy_id(),
+        accounts: vec![
+            AccountMeta::new_readonly(*signer, true),
+            AccountMeta::new(*var, false),
+        ],
+        data,
+    }
+}
+
+/// `Close`, discriminator 1: `[1]`; accounts `[authority (w,s), var (w), system]` — three, the
+/// processor's destructure, not the two Regolith's `sdk::close` builds.
+pub fn close_ix(authority: &Pubkey, var: &Pubkey) -> Instruction {
+    Instruction {
+        program_id: entropy_id(),
+        accounts: vec![
+            AccountMeta::new(*authority, true),
+            AccountMeta::new(*var, false),
+            AccountMeta::new_readonly(Pubkey::default(), false),
+        ],
+        data: vec![1u8],
+    }
 }

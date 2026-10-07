@@ -244,6 +244,8 @@ pub struct VarSet {
     pub var: Pubkey,
     /// The `Var`'s `end_at`, the slot whose hash will be sampled.
     pub end_at: u64,
+    /// The `Var`'s `commit`, now recorded on the pool (Step 5b).
+    pub commit: [u8; 32],
 }
 
 /// PROGRAM §7 `VarSampled`: `sample_var` recorded a hash it matched against SlotHashes.
@@ -280,6 +282,8 @@ pub struct VarReplaced {
     pub end_at: u64,
     /// `pool.var_replacements` after this call (1 or 2).
     pub replacements: u8,
+    /// The replacement's `commit`, now recorded on the pool (Step 5b).
+    pub commit: [u8; 32],
 }
 
 /// PROGRAM §7 `DigitsDrawn`: `draw` derived both axes from the `Var`'s value.

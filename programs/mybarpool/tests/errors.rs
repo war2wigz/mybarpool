@@ -1,12 +1,13 @@
 //! Error codes and order, PROGRAM §8 (+ `InvalidConfig`, `InvalidGameKey`,
 //! `InvalidGameStatus` appended before anything shipped, then Step 5's
-//! `SampleTooEarly` and `VarAlreadySampled`; see the step NOTES).
+//! `SampleTooEarly` and `VarAlreadySampled`, then Step 5b's `VarCommitMismatch`;
+//! see the step NOTES).
 
 use anchor_lang::error::ERROR_CODE_OFFSET;
 use mybarpool::MybarpoolError as E;
 
-/// PROGRAM §8, in the listed order, then the five appended errors.
-const EXPECTED: [E; 64] = [
+/// PROGRAM §8, in the listed order, then the six appended errors.
+const EXPECTED: [E; 65] = [
     E::Unauthorized,
     E::Paused,
     E::GameNotScheduled,
@@ -71,6 +72,7 @@ const EXPECTED: [E; 64] = [
     E::InvalidGameStatus,
     E::SampleTooEarly,
     E::VarAlreadySampled,
+    E::VarCommitMismatch,
 ];
 
 #[test]
@@ -130,5 +132,5 @@ fn every_error_in_program_section_8_order() {
             "{variant:?} is not at index {index}"
         );
     }
-    assert_eq!(EXPECTED.len(), 64);
+    assert_eq!(EXPECTED.len(), 65);
 }

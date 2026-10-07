@@ -1,12 +1,16 @@
-//! Regolith Entropy as this program reads it (PROGRAM §4.4): the `Var` layout,
-//! the two keccak formulas and the `Sample` instruction, declared here rather
-//! than imported (the `entropy-api` crate sits on an older `solana-program`
-//! major than Anchor 1.2). Everything is taken from `regolith-labs/entropy`
-//! at `f26ae03cccab6188effb0a170b8123cf4bb54c94`, the commit `verify.osec.io`
-//! reports as the deployed `3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X`
+//! Entropy as this program reads it (PROGRAM §4.4): the `Var` layout, the two
+//! keccak formulas and the `Sample` instruction, declared here rather than
+//! imported (the `entropy-api` crate sits on an older `solana-program` major
+//! than Anchor 1.2). Everything is taken from `regolith-labs/entropy` at
+//! `f26ae03cccab6188effb0a170b8123cf4bb54c94`, the commit `verify.osec.io`
+//! reports as Regolith's deployed `3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X`
 //! (`api/src/state/var.rs`, `api/src/instruction.rs`, `program/src/sample.rs`,
-//! `program/src/reveal.rs`); a test decodes a `Var` fetched from mainnet and
-//! another checks the dumped ELF's hash against that report.
+//! `program/src/reveal.rs`). The deployment this program uses, `ENTROPY_PROGRAM`,
+//! is the platform's fork `war2wigz/entropy` of that commit (program id, the
+//! `Open` arm and the `security.txt` contact changed; the layout, `Sample`,
+//! `Reveal` and the formulas unmodified), pinned at `ENTROPY_FORK_COMMIT` in
+//! the test helpers and CI. A test decodes a `Var` fetched from mainnet and
+//! others check both ELF fixtures' hashes.
 //!
 //! The program never opens, reveals, rolls or closes a `Var`: it reads one and
 //! CPIs `Sample`. Nothing here depends on the provider's auto mode.

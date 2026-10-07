@@ -60,7 +60,7 @@ pub enum AccessType {
 /// (4 × 8); `quarters_settled` 1268; `winning_box` 1269; `fees_paid` 1273;
 /// `unpaid_prize_pool` 1274; `returned` 1282; `split_amount` 1286; `cancelled_by_admin` 1294;
 /// `abandoned` 1295; `created_at` 1296; `locked_at` 1304; `bump` 1312; `vault_bump` 1313;
-/// `reserved` 1314 (128).
+/// `var_commit` 1314; `reserved` 1346 (96).
 #[account]
 #[derive(InitSpace, Debug, PartialEq, Eq)]
 pub struct Pool {
@@ -158,8 +158,13 @@ pub struct Pool {
     pub bump: u8,
     /// PDA bump of the vault.
     pub vault_bump: u8,
-    /// PROGRAM §3 preamble: padding so fields can be appended without a migration.
-    pub reserved: [u8; 128],
+    /// PROGRAM §3.3 (Step 5b): the `Var`'s `commit` as recorded by `set_var` / `replace_var`;
+    /// `draw` requires `keccak(var.seed)` to equal it. Taken out of `reserved` so no earlier
+    /// offset moves. Zero on an unbound pool.
+    pub var_commit: [u8; 32],
+    /// PROGRAM §3 preamble: padding so fields can be appended without a migration (128
+    /// through Step 5).
+    pub reserved: [u8; 96],
 }
 
 impl Pool {

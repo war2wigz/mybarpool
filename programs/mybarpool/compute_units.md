@@ -1,3 +1,36 @@
+#### 2026-10-07 23:55:45.691051079 UTC
+
+Solana CLI Version: solana-cli 4.3.0 (src:825efd18; feat:c9ad34d2, client:Agave)
+
+| Name | CUs | Delta |
+|------|------|-------|
+| initialize | 20280 | -- |
+| update_config_full | 15211 | -- |
+| set_wallet_override_create | 13155 | -- |
+| set_wallet_override_update | 10815 | -- |
+| close_wallet_override | 9391 | -- |
+| create_game | 18053 | -- |
+| update_kickoff | 10932 | -- |
+| post_scores_q1 | 10949 | -- |
+| post_scores_final | 10961 | -- |
+| mark_game | 10397 | -- |
+| create_pool_sol | 41554 | +226 |
+| create_pool_sol_5_boxes | 47644 | +226 |
+| create_pool_spl | 51307 | +226 |
+| buy_1 | 29257 | +221 |
+| buy_3 | 29635 | +221 |
+| buy_25th_locks | 31225 | +221 |
+| buy_spl_1 | 31377 | +221 |
+| sponsor_new | 26378 | +221 |
+| sponsor_top_up | 23983 | +221 |
+| rotate_gate_key | 11199 | +221 |
+| close_counter | 6568 | -- |
+| set_var | 16080 | +487 |
+| sample_var | 29687 | -2,677 |
+| sample_var_already_sampled | 14425 | +221 |
+| draw | 19171 | +344 |
+| replace_var | 16357 | +496 |
+
 #### 2026-10-07 21:26:38.345772689 UTC
 
 Solana CLI Version: solana-cli 4.3.0 (src:825efd18; feat:c9ad34d2, client:Agave)

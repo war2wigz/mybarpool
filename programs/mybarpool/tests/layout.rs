@@ -278,9 +278,10 @@ fn constants_match_program_section_1() {
     assert_eq!(KICKOFF_UPDATE_BOUND, 259_200); // 72 h
     assert_eq!(RECLAIM_DELAY, 2_592_000); // 30 d
     assert_eq!(MAX_OWN_BOXES_ABSOLUTE, 25);
+    // PROGRAM §1 (Step 5b): the platform's own Entropy deployment, not Regolith's 3jSk….
     assert_eq!(
         ENTROPY_PROGRAM.to_string(),
-        "3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X"
+        "ASo8r4EEFLPAMDk1w3XdKbEmq4c1GynbsHGa6RGG83fH"
     );
     assert_eq!(CONFIG_SEED, b"config");
     assert_eq!(OVERRIDE_SEED, b"override");
@@ -419,7 +420,8 @@ fn pool_is_1442_bytes_at_the_documented_offsets() {
         locked_at: 0x3D3D_3D3D_3D3D_3D3D,
         bump: 0x3E,
         vault_bump: 0x3F,
-        reserved: [0xEE; 128],
+        var_commit: [0x40; 32],
+        reserved: [0xEE; 96],
     };
     let data = serialize(&pool);
     assert_eq!(data.len(), 1442);
@@ -485,7 +487,8 @@ fn pool_is_1442_bytes_at_the_documented_offsets() {
     assert_eq!(&data[1304..1312], &0x3D3D_3D3D_3D3D_3D3Di64.to_le_bytes()); // locked_at
     assert_eq!(data[1312], 0x3E); // bump
     assert_eq!(data[1313], 0x3F); // vault_bump
-    assert_eq!(&data[1314..1442], &[0xEEu8; 128]); // reserved
+    assert_eq!(&data[1314..1346], &[0x40u8; 32]); // var_commit (Step 5b, out of reserved)
+    assert_eq!(&data[1346..1442], &[0xEEu8; 96]); // reserved (128 through Step 5)
 }
 
 #[test]

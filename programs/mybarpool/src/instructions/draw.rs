@@ -66,6 +66,19 @@ pub fn handle_draw(ctx: Context<Draw>) -> Result<()> {
         v.seed != [0u8; 32] && v.value != [0u8; 32],
         MybarpoolError::VarNotRevealed
     );
+    // PROGRAM §4.4 (Step 5b), the commit binding: the seed must hash to the commit this
+    // program recorded on the pool before the end slot. The Var's own `commit` field is not
+    // read: it is a foreign account the Entropy program may write however it likes; the
+    // pool's copy is the one fixed here. With this and the two checks around it, `value` is a
+    // function of the recorded commit and the verified slot hash alone, so the Entropy
+    // deployment can stop a draw but never steer one.
+    require!(
+        solana_keccak_hasher::hashv(&[&v.seed]).to_bytes() == pool.var_commit,
+        MybarpoolError::VarCommitMismatch
+    );
+    // `samples` must still be 1 (set_var required it; a value recomputed for an edited count
+    // is refused here before the recomputation below).
+    require!(v.samples == 1, MybarpoolError::VarNotFresh);
     require!(
         v.value == expected_value(&v.slot_hash, &v.seed, v.samples),
         MybarpoolError::VarNotRevealed

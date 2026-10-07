@@ -73,12 +73,16 @@ pub fn handle_set_var(ctx: Context<SetVar>) -> Result<()> {
 
     pool.var = var.key();
     pool.var_end_at = v.end_at;
+    // PROGRAM §4.4 (Step 5b): the commit is fixed on the pool before the end slot; `draw`
+    // checks the revealed seed against this copy, never against the Var's own field.
+    pool.var_commit = v.commit;
 
     emit_cpi!(VarSet {
         time: clock.unix_timestamp,
         pool: pool.key(),
         var: var.key(),
         end_at: v.end_at,
+        commit: v.commit,
     });
     Ok(())
 }

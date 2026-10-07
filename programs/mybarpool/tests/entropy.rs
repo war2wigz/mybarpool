@@ -1,7 +1,9 @@
-//! Entropy as deployed (PROGRAM §4.4; the Step 5 first task): the
-//! dumped ELF's hash against the `verify.osec.io` report, the `Var` decoder
-//! against the live ORE `Var` fetched from mainnet, and the two keccak
-//! formulas against vectors the TypeScript side shares.
+//! Entropy as deployed (PROGRAM §4.4; the Step 5 first task) and as forked
+//! (Step 5b): Regolith's dumped ELF against the `verify.osec.io` report, the
+//! fork's ELF against the hash the fork's CI printed, the `Var` decoder
+//! against the live ORE `Var` fetched from mainnet, the two keccak formulas
+//! against vectors the TypeScript side shares, `Open` on both bytecodes, and
+//! the whole flow with nothing planted under Mollusk.
 
 mod common;
 
@@ -33,23 +35,60 @@ fn decode(owner: &APubkey, data: &mut [u8]) -> anchor_lang::Result<Var> {
     Var::try_from_account(&info)
 }
 
+/// `e_shoff + e_shentsize × e_shnum`: where the section-header table ends.
+fn section_header_end(elf: &[u8]) -> u64 {
+    let shoff = u64::from_le_bytes(elf[0x28..0x30].try_into().unwrap());
+    let shentsize = u16::from_le_bytes(elf[0x3a..0x3c].try_into().unwrap());
+    let shnum = u16::from_le_bytes(elf[0x3c..0x3e].try_into().unwrap());
+    shoff + u64::from(shentsize) * u64::from(shnum)
+}
+
 #[test]
 fn the_elf_fixture_is_the_verified_deployed_bytecode() {
     // verify.osec.io/status/3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X, fetched 2026-10-07:
     // repo regolith-labs/entropy, commit f26ae03c…, on_chain_hash == executable_hash below.
-    assert_eq!(ENTROPY_ELF.len(), 98_929);
+    assert_eq!(REGOLITH_ENTROPY_ELF.len(), 98_929);
     // The section-header table runs to byte 98,944; the fixture's last 15 bytes of it are zero
-    // and were stripped with the padding, which is why `with_entropy` pads before loading.
-    let shoff = u64::from_le_bytes(ENTROPY_ELF[0x28..0x30].try_into().unwrap());
-    let shentsize = u16::from_le_bytes(ENTROPY_ELF[0x3a..0x3c].try_into().unwrap());
-    let shnum = u16::from_le_bytes(ENTROPY_ELF[0x3c..0x3e].try_into().unwrap());
+    // and were stripped with the padding, which is why `with_regolith_entropy` pads first.
     assert_eq!(
-        shoff + u64::from(shentsize) * u64::from(shnum),
-        ENTROPY_ELF_LOADABLE_LEN as u64
+        section_header_end(REGOLITH_ENTROPY_ELF),
+        REGOLITH_ENTROPY_ELF_LOADABLE_LEN as u64
     );
     assert_eq!(
-        hex(&solana_sha256_hasher::hashv(&[ENTROPY_ELF]).to_bytes()),
+        hex(&solana_sha256_hasher::hashv(&[REGOLITH_ENTROPY_ELF]).to_bytes()),
         "b64ffdfef7bb05839fbe0d24196697cc20de6bc72081031bc0523699181b18b1"
+    );
+}
+
+#[test]
+fn the_fork_elf_fixture_is_the_forks_verifiable_build() {
+    // war2wigz/entropy at ENTROPY_FORK_COMMIT, `solana-verify build --arch v3` on the Agave
+    // 4.3.0 image: 106,648 bytes; file sha256 below (NOTES › First task). The executable hash
+    // (trailing zeros stripped, 106,633 bytes) is dae04201…bf53f1. CI rebuilds the fork and
+    // compares the bytes with this fixture.
+    assert_eq!(ENTROPY_FORK_ELF.len(), 106_648);
+    // The verifiable build's section-header table ends exactly at the file's end: no padding.
+    assert_eq!(
+        section_header_end(ENTROPY_FORK_ELF),
+        ENTROPY_FORK_ELF.len() as u64
+    );
+    assert_eq!(
+        hex(&solana_sha256_hasher::hashv(&[ENTROPY_FORK_ELF]).to_bytes()),
+        "2ec504ac1a71ff0f0f515c70a541522a5c58ef126aebb893dbf6ad7245d65fe8"
+    );
+    let stripped_len = ENTROPY_FORK_ELF
+        .iter()
+        .rposition(|&b| b != 0)
+        .map_or(0, |i| i + 1);
+    assert_eq!(stripped_len, 106_633);
+    assert_eq!(
+        hex(&solana_sha256_hasher::hashv(&[&ENTROPY_FORK_ELF[..stripped_len]]).to_bytes()),
+        "dae042011c5d881edd8287a61694d60cf19471fb68c7fccd45f8965734bf53f1"
+    );
+    // SBPFv3: e_flags at 0x30 is 0x3.
+    assert_eq!(
+        u32::from_le_bytes(ENTROPY_FORK_ELF[0x30..0x34].try_into().unwrap()),
+        3
     );
 }
 
@@ -183,8 +222,9 @@ fn the_sample_instruction_is_entropys_with_a_read_only_signer() {
 }
 
 #[test]
-fn mollusk_loads_the_entropy_elf_and_runs_sample_against_a_planted_var() {
-    // The real bytecode writes the SlotHashes entry for end_at into a planted, fresh Var.
+fn mollusk_loads_the_fork_elf_and_runs_sample_against_a_planted_var() {
+    // The fork's bytecode (`Sample` is Regolith's, unmodified) writes the SlotHashes entry for
+    // end_at into a planted, fresh Var.
     let f = Fixture::new();
     let mut m = mollusk_for_draw(END_AT + 3, &standard_window());
     with_entropy(&mut m);
@@ -220,6 +260,236 @@ fn mollusk_loads_the_entropy_elf_and_runs_sample_against_a_planted_var() {
         "Entropy Sample under Mollusk: {} CU",
         result.compute_units_consumed
     );
+}
+
+/// `Open` on `program` for the standard Var from `authority`, provider `provider`,
+/// `commit_of(&SEED)`, one manual sample, `END_AT`; the accounts an `Open` needs (the PDA slot
+/// empty).
+fn open_setup(
+    f: &Fixture,
+    program: &solana_pubkey::Pubkey,
+    authority: &solana_pubkey::Pubkey,
+    provider: &solana_pubkey::Pubkey,
+) -> (
+    solana_instruction::Instruction,
+    Vec<(solana_pubkey::Pubkey, solana_account::Account)>,
+    solana_pubkey::Pubkey,
+) {
+    let ix = open_ix_at(
+        program,
+        authority,
+        authority,
+        provider,
+        VAR_ID,
+        commit_of(&SEED),
+        false,
+        1,
+        END_AT,
+    );
+    let var = ix.accounts[3].pubkey;
+    let mut accounts = vec![
+        (*authority, system_account(LAMPORTS_PER_SOL)),
+        (var, system_account(0)),
+        mollusk_svm::program::keyed_account_for_system_program(),
+    ];
+    if provider != authority {
+        accounts.push((*provider, system_account(0)));
+    }
+    let _ = f;
+    (ix, accounts, var)
+}
+
+#[test]
+fn open_succeeds_on_the_fork_and_leaves_a_fresh_var() {
+    // PROGRAM §4.4 `Open`, enabled in the platform's deployment: a 240-byte Var owned by
+    // ENTROPY_PROGRAM with the commit, samples 1, is_auto 0, end_at as given, zero
+    // seed/hash/value, provider as passed.
+    let f = Fixture::new();
+    let mut m = mollusk_for_draw(900, &[]);
+    with_entropy(&mut m);
+    let (ix, accounts, var) = open_setup(&f, &entropy_id(), &f.keeper, &f.entropy_provider);
+    let result = m.process_and_validate_instruction(
+        &ix,
+        &accounts,
+        &[mollusk_svm::result::Check::success()],
+    );
+    let after = account_of(&result, &var);
+    assert_eq!(after.owner, entropy_id());
+    assert_eq!(after.data.len(), VAR_LEN);
+    assert_eq!(after.lamports, rent_for(VAR_LEN));
+    let mut data = after.data.clone();
+    let v = decode(&mybarpool::constants::ENTROPY_PROGRAM, &mut data).expect("decodes");
+    assert_eq!(v.authority, to_a(&f.keeper));
+    assert_eq!(v.id, VAR_ID);
+    assert_eq!(v.provider, to_a(&f.entropy_provider));
+    assert_eq!(v.commit, commit_of(&SEED));
+    assert_eq!(
+        (v.seed, v.slot_hash, v.value),
+        ([0u8; 32], [0u8; 32], [0u8; 32])
+    );
+    assert_eq!((v.samples, v.is_auto, v.end_at), (1, 0, END_AT));
+    // The planter's bytes for the same state agree with what the real program wrote
+    // (`start_at` is the slot of the Open; the fixture's default differs, so compare around it).
+    let planted = var_bytes(&VarFields {
+        start_at: v.start_at,
+        ..f.fresh_var(END_AT)
+    });
+    assert_eq!(after.data, planted.to_vec());
+    println!(
+        "Entropy Open under Mollusk: {} CU",
+        result.compute_units_consumed
+    );
+}
+
+#[test]
+fn open_with_an_unsigned_stranger_as_provider_also_succeeds_on_the_fork() {
+    // The fork keeps Regolith's commented `provider_info.is_signer()?`: the provider is a label
+    // the opener sets, which is why set_var's provider check is a label too (PROGRAM §4.4).
+    let f = Fixture::new();
+    let mut m = mollusk_for_draw(900, &[]);
+    with_entropy(&mut m);
+    let (ix, accounts, var) = open_setup(&f, &entropy_id(), &f.keeper, &f.stranger);
+    assert!(!ix.accounts[2].is_signer);
+    let result = m.process_and_validate_instruction(
+        &ix,
+        &accounts,
+        &[mollusk_svm::result::Check::success()],
+    );
+    let mut data = account_of(&result, &var).data.clone();
+    assert_eq!(
+        decode(&mybarpool::constants::ENTROPY_PROGRAM, &mut data)
+            .unwrap()
+            .provider,
+        to_a(&f.stranger)
+    );
+}
+
+#[test]
+fn open_canary_regoliths_deployed_bytecode_still_refuses_open() {
+    // The Step 5 finding, kept against Regolith's bytecode (loaded at ENTROPY_PROGRAM for this
+    // test only): the same Open fails with InvalidInstructionData from the dispatcher's `_` arm.
+    // If this ever passes, Regolith re-enabled `Open`; tell the auditor before anything else.
+    let f = Fixture::new();
+    let mut m = mollusk_for_draw(900, &[]);
+    with_regolith_entropy(&mut m);
+    let (ix, accounts, _) = open_setup(&f, &regolith_entropy_id(), &f.keeper, &f.entropy_provider);
+    assert_eq!(ix.data.len(), 65);
+    m.process_and_validate_instruction(
+        &ix,
+        &accounts,
+        &[mollusk_svm::result::Check::err(
+            solana_program_error::ProgramError::InvalidInstructionData,
+        )],
+    );
+}
+
+#[test]
+fn the_real_flow_under_mollusk_open_set_var_sample_var_reveal_draw_close() {
+    // PROGRAM §4.4 flow with nothing planted: Open (fork) → set_var → clock to END_AT + 3 with
+    // the standard window → sample_var by a stranger (CPI) → Reveal(SEED) by a stranger (the
+    // real bytecode) → draw → Close by the keeper (three accounts).
+    use mollusk_svm::result::Check;
+    use mybarpool::axes::draw_axes;
+    use mybarpool::{Pool, PoolStatus};
+
+    let f = Fixture::new();
+    let mut m = mollusk_for_draw(900, &[]);
+    with_entropy(&mut m);
+    let var = f.var_key();
+    let pool = pool_with(&f, PoolStatus::Locked, 25, &f.buyer_2);
+    let pool_key = pool_pda(&standard_game(), &f.creator, NONCE).0;
+
+    // Open: the keeper is authority, payer and provider.
+    let mut accounts = draw_accounts(&f, &m, &pool, None);
+    set_account(&mut accounts, var, system_account(0));
+    set_account(&mut accounts, f.entropy_provider, system_account(0));
+    accounts.push(mollusk_svm::program::keyed_account_for_system_program());
+    let open = open_ix(
+        &f.keeper,
+        &f.keeper,
+        &f.entropy_provider,
+        VAR_ID,
+        commit_of(&SEED),
+        false,
+        1,
+        END_AT,
+    );
+    let r = m.process_and_validate_instruction(&open, &accounts, &[Check::success()]);
+    let keeper_after_open = account_of(&r, &f.keeper).lamports;
+
+    // set_var: the pool records var, end_at and the commit.
+    let r = m.process_and_validate_instruction(
+        &set_var_ix(&f.keeper, &pool, &var),
+        &r.resulting_accounts,
+        &[Check::success()],
+    );
+    let p: Pool = decode_pool(account_of(&r, &pool_key));
+    assert_eq!(
+        (p.var, p.var_end_at, p.var_commit),
+        (to_a(&var), END_AT, commit_of(&SEED))
+    );
+
+    // The window: clock to END_AT + 3, the standard SlotHashes.
+    let mut m2 = mollusk_for_draw(END_AT + 3, &standard_window());
+    with_entropy(&mut m2);
+    let mut accounts = r.resulting_accounts.clone();
+    set_account(
+        &mut accounts,
+        to_m(&solana_sdk_ids::sysvar::slot_hashes::ID),
+        m2.sysvars.keyed_account_for_slot_hashes_sysvar().1,
+    );
+    set_account(
+        &mut accounts,
+        to_m(&solana_sdk_ids::sysvar::clock::ID),
+        m2.sysvars.keyed_account_for_clock_sysvar().1,
+    );
+    let r = m2.process_and_validate_instruction(
+        &sample_var_ix(&f.stranger, &p, &var),
+        &accounts,
+        &[Check::success()],
+    );
+    let p = decode_pool(account_of(&r, &pool_key));
+    assert_eq!((p.sampled_slot, p.sampled_hash), (END_AT + 3, END_HASH));
+
+    // Reveal(SEED) by the stranger: the real bytecode computes the value.
+    let r = m2.process_and_validate_instruction(
+        &reveal_ix(&f.stranger, &var, &SEED),
+        &r.resulting_accounts,
+        &[Check::success()],
+    );
+    let mut data = account_of(&r, &var).data.clone();
+    let v = decode(&mybarpool::constants::ENTROPY_PROGRAM, &mut data).unwrap();
+    assert_eq!(v.seed, SEED);
+    assert_eq!(v.value, expected_value(&END_HASH, &SEED, 1));
+
+    // draw.
+    let r = m2.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &p, &var),
+        &r.resulting_accounts,
+        &[Check::success()],
+    );
+    let p = decode_pool(account_of(&r, &pool_key));
+    assert_eq!(p.status, PoolStatus::Drawn);
+    let (home, away) = draw_axes(&expected_value(&END_HASH, &SEED, 1));
+    assert_eq!((p.home_axis, p.away_axis), (home, away));
+
+    // Close by the keeper: the account is gone and the rent came back.
+    let keeper_before_close = account_of(&r, &f.keeper).lamports;
+    let r = m2.process_and_validate_instruction(
+        &close_ix(&f.keeper, &var),
+        &r.resulting_accounts,
+        &[Check::success()],
+    );
+    let closed = account_of(&r, &var);
+    assert_eq!(
+        (closed.lamports, closed.data.len(), closed.owner),
+        (0, 0, solana_pubkey::Pubkey::default())
+    );
+    assert_eq!(
+        account_of(&r, &f.keeper).lamports - keeper_before_close,
+        rent_for(VAR_LEN)
+    );
+    assert!(keeper_after_open < keeper_before_close + rent_for(VAR_LEN));
 }
 
 /// Anchor's custom code offset + the variant index.

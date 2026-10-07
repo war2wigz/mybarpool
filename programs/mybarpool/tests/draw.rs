@@ -62,9 +62,12 @@ fn set_var_binds_a_fresh_var_and_changes_nothing_else() {
     let after = decode_pool(account_of(&result, &pool_key(&f)));
     assert_eq!(after.var, to_a(&var));
     assert_eq!(after.var_end_at, END_AT);
+    // PROGRAM §3.3 / §4.4 (Step 5b): the Var's commit is recorded on the pool.
+    assert_eq!(after.var_commit, *COMMIT);
     let mut expected = pool;
     expected.var = to_a(&var);
     expected.var_end_at = END_AT;
+    expected.var_commit = *COMMIT;
     assert_eq!(after, expected);
     assert_eq!(event_names(&result), ["VarSet"]);
     let event: VarSet = emitted_event(&result).expect("VarSet");
@@ -72,6 +75,7 @@ fn set_var_binds_a_fresh_var_and_changes_nothing_else() {
         (event.pool, event.var, event.end_at),
         (to_a(&pool_key(&f)), to_a(&var), END_AT)
     );
+    assert_eq!(event.commit, *COMMIT);
     assert_eq!(event.time, T0);
 }
 
@@ -634,16 +638,139 @@ fn draw_refuses_an_unrevealed_or_inconsistent_value() {
             ..f.sampled_var(END_AT, END_HASH)
         },
         off_by_one_bit,
-        VarFields {
-            samples: 2,
-            ..revealed
-        }, // value computed for samples == 1
     ];
     for (i, fields) in cases.iter().enumerate() {
         let accounts = draw_accounts(&f, &m, &pool, Some((&var, fields)));
         let r = m.process_instruction(&draw_ix(&f.keeper, &pool, &var), &accounts);
         assert_eq!(custom_error(&r), Some(err(E::VarNotRevealed)), "case {i}");
     }
+    // Step 5's fourth case, `samples = 2` with the value computed for 1, is `VarNotFresh` since
+    // Step 5b: the `samples == 1` check runs before the recomputation (PROGRAM §4.4 order).
+    let accounts = draw_accounts(
+        &f,
+        &m,
+        &pool,
+        Some((
+            &var,
+            &VarFields {
+                samples: 2,
+                ..revealed
+            },
+        )),
+    );
+    let r = m.process_instruction(&draw_ix(&f.keeper, &pool, &var), &accounts);
+    assert_eq!(custom_error(&r), Some(err(E::VarNotFresh)));
+}
+
+// ---------------------------------------------------------------------------
+// The commit binding (PROGRAM §4.4, Step 5b)
+// ---------------------------------------------------------------------------
+
+/// A second seed and the Var `Reveal` would leave for it on the standard window.
+const SEED2: [u8; 32] = [0x22; 32];
+
+#[test]
+fn draw_refuses_a_self_consistent_var_whose_seed_matches_a_different_commit() {
+    // PROGRAM §4.4 "Why the two Step 5b checks". This is what proves the draw does not trust
+    // the Entropy program: every field on the Var is exactly as `Reveal` would have left it for
+    // SEED2 — commit = keccak(SEED2), seed = SEED2, slot_hash = END_HASH (the hash this program
+    // verified), samples 1, value = expected_value(END_HASH, SEED2, 1) — and the draw still
+    // refuses, because the commit the pool recorded before the end slot is keccak(SEED).
+    let f = Fixture::new();
+    let m = draw_mollusk(false);
+    let var = f.var_key();
+    let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
+    assert_eq!(pool.var_commit, *COMMIT);
+    let for_seed2 = f.revealed_var(END_AT, END_HASH, &SEED2);
+    assert_eq!(for_seed2.commit, commit_of(&SEED2));
+    assert_eq!(
+        for_seed2.value,
+        mybarpool::entropy::expected_value(&END_HASH, &SEED2, 1)
+    );
+    let accounts = draw_accounts(&f, &m, &pool, Some((&var, &for_seed2)));
+    let result = m.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::err(custom(err(E::VarCommitMismatch)))],
+    );
+    assert_eq!(decode_pool(account_of(&result, &pool_key(&f))), pool);
+    assert_eq!(err(E::VarCommitMismatch), 6064);
+
+    // The same Var revealed for SEED succeeds.
+    let for_seed = f.revealed_var(END_AT, END_HASH, &SEED);
+    let accounts = draw_accounts(&f, &m, &pool, Some((&var, &for_seed)));
+    m.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::success()],
+    );
+}
+
+#[test]
+fn draw_refuses_a_var_whose_samples_was_edited_after_the_sample() {
+    // PROGRAM §4.4 (Step 5b): `samples == 1` at draw, before the recomputation; a value
+    // recomputed to be consistent for samples = 2 is still refused, as VarNotFresh.
+    let f = Fixture::new();
+    let m = draw_mollusk(false);
+    let var = f.var_key();
+    let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
+    let edited = VarFields {
+        samples: 2,
+        value: mybarpool::entropy::expected_value(&END_HASH, &SEED, 2),
+        ..f.revealed_var(END_AT, END_HASH, &SEED)
+    };
+    let accounts = draw_accounts(&f, &m, &pool, Some((&var, &edited)));
+    m.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::err(custom(err(E::VarNotFresh)))],
+    );
+}
+
+#[test]
+fn draw_ignores_the_vars_own_commit_field() {
+    // this brief, Part B `draw.rs`: the pool's copy is the binding, not the account's field. A
+    // revealed Var whose `commit` is garbage but whose seed hashes to pool.var_commit and whose
+    // value recomputes succeeds.
+    let f = Fixture::new();
+    let m = draw_mollusk(false);
+    let var = f.var_key();
+    let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
+    let garbage_commit = VarFields {
+        commit: [0xDE; 32],
+        ..f.revealed_var(END_AT, END_HASH, &SEED)
+    };
+    let accounts = draw_accounts(&f, &m, &pool, Some((&var, &garbage_commit)));
+    let result = m.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::success()],
+    );
+    assert_eq!(
+        decode_pool(account_of(&result, &pool_key(&f))).status,
+        PoolStatus::Drawn
+    );
+}
+
+#[test]
+fn draw_reports_var_commit_mismatch_before_var_not_fresh() {
+    // PROGRAM §4.4 order: a Var with both faults (seed for SEED2, samples 2, value consistent
+    // for both) is 6064, not 6036.
+    let f = Fixture::new();
+    let m = draw_mollusk(false);
+    let var = f.var_key();
+    let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
+    let both = VarFields {
+        samples: 2,
+        value: mybarpool::entropy::expected_value(&END_HASH, &SEED2, 2),
+        ..f.revealed_var(END_AT, END_HASH, &SEED2)
+    };
+    let accounts = draw_accounts(&f, &m, &pool, Some((&var, &both)));
+    m.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::err(custom(err(E::VarCommitMismatch)))],
+    );
 }
 
 #[test]
@@ -739,11 +866,15 @@ fn draw_by_the_admin_is_unauthorized() {
 // replace_var
 // ---------------------------------------------------------------------------
 
+/// The replacement Var's seed: B is a fresh commit-reveal of its own (PROGRAM §4.4).
+const SEED_B: [u8; 32] = [0x33; 32];
+
 fn var_b(f: &Fixture) -> (Pubkey, VarFields) {
     (
         var_pda(&f.keeper, VAR_ID + 1).0,
         VarFields {
             id: VAR_ID + 1,
+            commit: commit_of(&SEED_B),
             ..f.fresh_var(END_AT + 1_000)
         },
     )
@@ -767,12 +898,15 @@ fn replace_var_by_the_admin_on_an_unsampled_pool_rebinds_and_counts() {
     let after = decode_pool(account_of(&result, &pool_key(&f)));
     assert_eq!(after.var, to_a(&b));
     assert_eq!(after.var_end_at, END_AT + 1_000);
+    // Step 5b: the pool's recorded commit moves with the replacement.
+    assert_eq!(after.var_commit, commit_of(&SEED_B));
     assert_eq!((after.sampled_slot, after.sampled_hash), (0, [0u8; 32]));
     assert_eq!(after.var_replacements, 1);
     assert_eq!(event_names(&result), ["VarReplaced"]);
     let event: VarReplaced = emitted_event(&result).expect("VarReplaced");
     assert_eq!((event.old_var, event.new_var), (to_a(&a), to_a(&b)));
     assert_eq!((event.end_at, event.replacements), (END_AT + 1_000, 1));
+    assert_eq!(event.commit, commit_of(&SEED_B));
 }
 
 #[test]
@@ -978,7 +1112,7 @@ fn after_a_replacement_the_new_var_samples_and_draws() {
     assert_eq!((p2.sampled_slot, p2.sampled_hash), (b_end + 3, b_hash));
 
     // Reveal happens off-program (the provider); plant the revealed Var and draw.
-    let seed_b = [0x33; 32];
+    let seed_b = SEED_B;
     let revealed = VarFields {
         commit: commit_of(&seed_b),
         seed: seed_b,
