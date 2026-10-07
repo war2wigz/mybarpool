@@ -1284,11 +1284,27 @@ export async function send(
   assertIsTransactionWithBlockhashLifetime(tx);
   // Any instruction that creates a PDA makes Surfpool ask mainnet whether the address exists,
   // and the public endpoint stalls on some of those (Step 3 audit M1); a stall is never the
-  // answer a test is after, so it is retried here, and only it.
-  await withRetry(() => sendAndConfirm(tx, { commitment: "confirmed" }), {
-    onlyRpcStalls: true,
-  });
-  return getSignatureFromTransaction(tx);
+  // answer a test is after, so it is retried here, and only it. Surfpool's stall surfaces at
+  // simulation, before the transaction is accepted, so a re-send cannot double-process; all
+  // the same, a retry first asks whether the signature is already known and, if it is, waits
+  // for it instead of re-sending (Step 4 audit L2).
+  const signature = getSignatureFromTransaction(tx);
+  let attempt = 0;
+  await withRetry(
+    async () => {
+      if (attempt++ > 0) {
+        const { value } = await rpc.getSignatureStatuses([signature]).send();
+        const status = value[0];
+        if (status !== null && status !== undefined) {
+          if (status.err) throw new Error(`transaction failed: ${JSON.stringify(status.err)}`);
+          return;
+        }
+      }
+      await sendAndConfirm(tx, { commitment: "confirmed" });
+    },
+    { onlyRpcStalls: true },
+  );
+  return signature;
 }
 
 /**

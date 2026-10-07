@@ -36,18 +36,23 @@ describe("winningBox (PROGRAM §6.3)", () => {
     for (const n of hits) expect(n).toBe(40_000);
   });
 
-  it("equals the box whose digit pairs contain (home % 10, away % 10), for 50 random axes", () => {
-    for (let t = 0; t < 50; t++) {
-      const { home: homeAxis, away: awayAxis } = drawAxes(rng.bytes(32));
-      for (let home = 0; home < 100; home++) {
-        for (let away = 0; away < 100; away++) {
-          const box = winningBox({ home, away, homeAxis, awayAxis });
-          const pairs = boxDigitPairs(box, homeAxis, awayAxis);
-          expect(pairs.some(([h, a]) => h === home % 10 && a === away % 10)).toBe(true);
+  it(
+    "equals the box whose digit pairs contain (home % 10, away % 10), for 50 random axes",
+    // 3–4 s uninstrumented; past vitest's 5 s default under coverage (Step 4 audit).
+    { timeout: 20_000 },
+    () => {
+      for (let t = 0; t < 50; t++) {
+        const { home: homeAxis, away: awayAxis } = drawAxes(rng.bytes(32));
+        for (let home = 0; home < 100; home++) {
+          for (let away = 0; away < 100; away++) {
+            const box = winningBox({ home, away, homeAxis, awayAxis });
+            const pairs = boxDigitPairs(box, homeAxis, awayAxis);
+            expect(pairs.some(([h, a]) => h === home % 10 && a === away % 10)).toBe(true);
+          }
         }
       }
-    }
-  });
+    },
+  ); // 3–4 s uninstrumented; past vitest's 5 s default under coverage (Step 4 audit)
 
   it("every box covers exactly 4 digit pairs and the 25 boxes partition the 100 pairs", () => {
     // ARCHITECTURE › Grid: "Each box covers 4 of the 100 possible last-digit pairs".
