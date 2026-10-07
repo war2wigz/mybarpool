@@ -21,7 +21,7 @@ Hard-coded in the program. Changing any of these is a program upgrade.
 | `KICKOFF_UPDATE_BOUND` | 259 200 | 72 hours; how far a recorded kickoff may move from the scheduled one |
 | `RECLAIM_DELAY` | 2 592 000 | 30 days; abandoned-pool reclaim opens this long after the scheduled kickoff |
 | `MAX_OWN_BOXES_ABSOLUTE` | 25 | Upper bound on any configured creator box cap |
-| `ENTROPY_PROGRAM` | MyBarPool's Entropy deployment (id fixed in Step 5b, published in the README) | The platform's deployment of the Entropy fork (ARCHITECTURE › Randomness). Through Step 5 the constant is Regolith's `3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X`, the bytecode those tests run against; Step 5b moves it |
+| `ENTROPY_PROGRAM` | `ASo8r4EEFLPAMDk1w3XdKbEmq4c1GynbsHGa6RGG83fH` from Step 5b | The platform's deployment of the Entropy fork (ARCHITECTURE › Randomness); the id is fixed and published here before the deployment exists. Through Step 5 the constant is Regolith's `3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X`, the bytecode those tests run against; Step 5b moves it |
 
 Payout presets, an enum with exactly three values. The program rejects any other discriminant.
 
