@@ -776,6 +776,26 @@ fn replace_var_by_the_admin_on_an_unsampled_pool_rebinds_and_counts() {
 }
 
 #[test]
+fn replace_var_on_a_never_bound_pool_is_var_not_set() {
+    // PROGRAM §4.4: the admin replaces a Var, never binds the first one (Step 5 audit L1).
+    let f = Fixture::new();
+    let m = mollusk_for_draw(END_AT + 600, &[]);
+    let (b, b_fields) = var_b(&f);
+    let pool = pool_with(&f, PoolStatus::Locked, 25, &f.buyer_2);
+    assert_eq!(pool.var, to_a(&Pubkey::default()));
+    let mut accounts = draw_accounts(&f, &m, &pool, None);
+    set_account(&mut accounts, b, var_account(&b_fields));
+    let result = m.process_and_validate_instruction(
+        &replace_var_ix(&f.admin, &pool, &b),
+        &accounts,
+        &[Check::err(custom(err(E::VarNotSet)))],
+    );
+    let after = decode_pool(account_of(&result, &pool_key(&f)));
+    assert_eq!(after, pool);
+    assert_eq!(after.var_replacements, 0);
+}
+
+#[test]
 fn replace_var_on_a_sampled_pool_is_var_already_sampled() {
     // this brief: a Var with a verified sample is never abandoned.
     let f = Fixture::new();

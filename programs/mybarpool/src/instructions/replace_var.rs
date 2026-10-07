@@ -53,6 +53,9 @@ pub fn handle_replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
     // PROGRAM §4.4 checks, in order.
     pool.require_locked()?;
     require!(!pool.drawn, MybarpoolError::AlreadyDrawn);
+    // PROGRAM §4.4: the admin replaces a Var, never binds the first one; a pool with no Var has
+    // no window to miss, and the first binding is the keeper's `set_var` (Step 5 audit L1).
+    require_keys_neq!(pool.var, Pubkey::default(), MybarpoolError::VarNotSet);
     require!(
         pool.var_replacements < VAR_REPLACEMENTS_MAX,
         MybarpoolError::TooManyVarReplacements
