@@ -1,5 +1,5 @@
-//! The SlotHashes sysvar, read as an account (PROGRAM §4.3 lists it in the
-//! account lists; Mollusk and Surfpool both supply it). The `sol_get_sysvar`
+//! The SlotHashes sysvar, read as an account (PROGRAM §4.4 `sample_var` and
+//! §6.1 `slothash`; Mollusk and Surfpool both supply it). The `sol_get_sysvar`
 //! syscall path is deliberately not used.
 
 use anchor_lang::prelude::*;
