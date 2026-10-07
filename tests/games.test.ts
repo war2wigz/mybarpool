@@ -474,8 +474,8 @@ describe("game instructions (Surfpool, mainnet fork)", () => {
     expect(third.homeScore[0]).toBe(3);
   });
 
-  it("6. the committed IDL freezes 62 errors from 6000 and carries the game types and events", () => {
-    expect(IDL.errors).toHaveLength(62);
+  it("6. the committed IDL freezes 64 errors from 6000 and carries the game types and events", () => {
+    expect(IDL.errors).toHaveLength(64);
     IDL.errors.forEach((e, i) => expect(e.code).toBe(6000 + i));
     expect(IDL.errors[60]!.name).toBe("InvalidGameKey");
     expect(IDL.errors[61]!.name).toBe("InvalidGameStatus");

@@ -1,6 +1,6 @@
 /**
- * Hand-rolled Kit codecs for the admin and game instructions, the three
- * accounts and the seven events (build plan Steps 2 and 3). Discriminators are
+ * Hand-rolled Kit codecs for the admin, game, pool and draw instructions,
+ * the six accounts and the sixteen events (build plan Steps 2–5). Discriminators are
  * read from `idl/mybarpool.json` at test time so the committed IDL is
  * exercised, not just diffed. Step 9 replaces this file with the
  * Codama-generated client.
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import {
   AccountRole,
   address,
-  appendTransactionMessageInstruction,
+  appendTransactionMessageInstructions,
   assertIsTransactionWithBlockhashLifetime,
   createDefaultRpcTransport,
   createSolanaRpcFromTransport,
@@ -45,6 +45,7 @@ import {
   getU8Decoder,
   getU8Encoder,
   getU32Decoder,
+  getU32Encoder,
   getUtf8Encoder,
   isSolanaError,
   pipe,
@@ -1230,6 +1231,162 @@ export async function closeCounterInstruction(
 }
 
 // ---------------------------------------------------------------------------
+// Step 5: the draw (PROGRAM §4.4). Four discriminator-only instructions.
+// ---------------------------------------------------------------------------
+
+export const ENTROPY_PROGRAM_ADDRESS = address("3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X");
+
+const bytes32 = () => fixDecoderSize(getBytesDecoder(), 32);
+const digits10 = () => getArrayDecoder(getU8Decoder(), { size: 10 });
+
+export interface VarSet {
+  time: bigint;
+  pool: Address;
+  var: Address;
+  endAt: bigint;
+}
+export const varSetDecoder: Decoder<VarSet> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["var", getAddressDecoder()],
+  ["endAt", getU64Decoder()],
+]);
+
+export interface VarSampled {
+  time: bigint;
+  pool: Address;
+  var: Address;
+  sampler: Address;
+  slot: bigint;
+  endAt: bigint;
+  slotHash: ReadonlyUint8Array;
+}
+export const varSampledDecoder: Decoder<VarSampled> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["var", getAddressDecoder()],
+  ["sampler", getAddressDecoder()],
+  ["slot", getU64Decoder()],
+  ["endAt", getU64Decoder()],
+  ["slotHash", bytes32()],
+]);
+
+export interface VarReplaced {
+  time: bigint;
+  pool: Address;
+  oldVar: Address;
+  newVar: Address;
+  endAt: bigint;
+  replacements: number;
+}
+export const varReplacedDecoder: Decoder<VarReplaced> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["oldVar", getAddressDecoder()],
+  ["newVar", getAddressDecoder()],
+  ["endAt", getU64Decoder()],
+  ["replacements", getU8Decoder()],
+]);
+
+export interface DigitsDrawn {
+  time: bigint;
+  pool: Address;
+  var: Address;
+  value: ReadonlyUint8Array;
+  homeAxis: number[];
+  awayAxis: number[];
+}
+export const digitsDrawnDecoder: Decoder<DigitsDrawn> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["var", getAddressDecoder()],
+  ["value", bytes32()],
+  ["homeAxis", digits10()],
+  ["awayAxis", digits10()],
+]);
+
+/** `set_var`: `score_authority (s)`, `config`, `pool (w)`, `var`, event CPI. */
+export async function setVarInstruction(
+  keeper: TransactionSigner,
+  pool: Address,
+  varAddress: Address,
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: keeper.address, role: AccountRole.READONLY_SIGNER, signer: keeper },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: pool, role: AccountRole.WRITABLE },
+    { address: varAddress, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("set_var", new Uint8Array(0)),
+  };
+}
+
+/** `sample_var` (permissionless): `sampler (s)`, `pool (w)`, `var (w)`, SlotHashes, Entropy, event CPI. */
+export async function sampleVarInstruction(
+  sampler: TransactionSigner,
+  pool: Address,
+  varAddress: Address,
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: sampler.address, role: AccountRole.READONLY_SIGNER, signer: sampler },
+    { address: pool, role: AccountRole.WRITABLE },
+    { address: varAddress, role: AccountRole.WRITABLE },
+    { address: SLOT_HASHES_SYSVAR, role: AccountRole.READONLY },
+    { address: ENTROPY_PROGRAM_ADDRESS, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("sample_var", new Uint8Array(0)),
+  };
+}
+
+/** `draw`: `score_authority (s)`, `config`, `pool (w)`, `var`, event CPI. */
+export async function drawInstruction(
+  keeper: TransactionSigner,
+  pool: Address,
+  varAddress: Address,
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: keeper.address, role: AccountRole.READONLY_SIGNER, signer: keeper },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: pool, role: AccountRole.WRITABLE },
+    { address: varAddress, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("draw", new Uint8Array(0)),
+  };
+}
+
+/** `replace_var`: `admin (s)`, `config`, `pool (w)`, `new_var`, event CPI. */
+export async function replaceVarInstruction(
+  admin: TransactionSigner,
+  pool: Address,
+  newVar: Address,
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: admin.address, role: AccountRole.READONLY_SIGNER, signer: admin },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: pool, role: AccountRole.WRITABLE },
+    { address: newVar, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("replace_var", new Uint8Array(0)),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Sending and reading back
 // ---------------------------------------------------------------------------
 
@@ -1267,44 +1424,58 @@ const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions 
 
 /** An instruction whose signer metas carry their `TransactionSigner`, so `send` needs no extra signers. */
 export type SignedInstruction = Instruction & InstructionWithSigners;
-type SignedMetas = (AccountMeta | AccountSignerMeta)[];
+export type SignedMetas = (AccountMeta | AccountSignerMeta)[];
 
+type Instructions = Instruction | SignedInstruction | (Instruction | SignedInstruction)[];
+
+/** One transaction with `instructions` in order (a single instruction, or a list such as
+ * `[setComputeUnitLimit(400_000), sampleVar]`). */
 export async function send(
   payer: TransactionSigner,
-  instruction: Instruction | SignedInstruction,
+  instructions: Instructions,
 ): Promise<Signature> {
-  const { value: blockhash } = await rpc.getLatestBlockhash().send();
-  const message = pipe(
-    createTransactionMessage({ version: 0 }),
-    (m) => setTransactionMessageFeePayerSigner(payer, m),
-    (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
-    (m) => appendTransactionMessageInstruction(instruction, m),
-  );
-  const tx = await signTransactionMessageWithSigners(message);
-  assertIsTransactionWithBlockhashLifetime(tx);
-  // Any instruction that creates a PDA makes Surfpool ask mainnet whether the address exists,
-  // and the public endpoint stalls on some of those (Step 3 audit M1); a stall is never the
+  const build = async () => {
+    const { value: blockhash } = await rpc.getLatestBlockhash().send();
+    const message = pipe(
+      createTransactionMessage({ version: 0 }),
+      (m) => setTransactionMessageFeePayerSigner(payer, m),
+      (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
+      (m) =>
+        appendTransactionMessageInstructions(
+          Array.isArray(instructions) ? instructions : [instructions],
+          m,
+        ),
+    );
+    const tx = await signTransactionMessageWithSigners(message);
+    assertIsTransactionWithBlockhashLifetime(tx);
+    return tx;
+  };
+  // Any instruction that touches an account Surfpool has not seen makes it ask mainnet, and
+  // the public endpoint stalls on some of those (Step 3 audit M1); a stall is never the
   // answer a test is after, so it is retried here, and only it. Surfpool's stall surfaces at
   // simulation, before the transaction is accepted, so a re-send cannot double-process; all
   // the same, a retry first asks whether the signature is already known and, if it is, waits
-  // for it instead of re-sending (Step 4 audit L2).
-  const signature = getSignatureFromTransaction(tx);
+  // for it instead of re-sending (Step 4 audit L2). A stall can outlive the blockhash (150
+  // slots is 30 s at 200 ms slots once Surfpool produces blocks on the clock, Step 5), so an
+  // unknown signature is re-signed over a fresh blockhash.
+  let tx = await build();
   let attempt = 0;
   await withRetry(
     async () => {
       if (attempt++ > 0) {
-        const { value } = await rpc.getSignatureStatuses([signature]).send();
+        const { value } = await rpc.getSignatureStatuses([getSignatureFromTransaction(tx)]).send();
         const status = value[0];
         if (status !== null && status !== undefined) {
           if (status.err) throw new Error(`transaction failed: ${JSON.stringify(status.err)}`);
           return;
         }
+        tx = await build();
       }
       await sendAndConfirm(tx, { commitment: "confirmed" });
     },
     { onlyRpcStalls: true },
   );
-  return signature;
+  return getSignatureFromTransaction(tx);
 }
 
 /**
@@ -1346,10 +1517,10 @@ function hasCustomErrorCode(error: unknown): boolean {
 /** Send and return the Anchor custom error code the program failed with, or `null` on success. */
 export async function sendExpectingError(
   payer: TransactionSigner,
-  instruction: Instruction | SignedInstruction,
+  instructions: Instructions,
 ): Promise<number | null> {
   try {
-    await send(payer, instruction);
+    await send(payer, instructions);
     return null;
   } catch (error) {
     return customErrorCode(error);
@@ -1391,6 +1562,31 @@ export async function fetchAccountData(addr: Address): Promise<Uint8Array | null
 export async function fetchLamports(addr: Address): Promise<bigint> {
   const { value } = await rpc.getBalance(addr, { commitment: "confirmed" }).send();
   return value;
+}
+
+export const COMPUTE_BUDGET_PROGRAM = address("ComputeBudget111111111111111111111111111111");
+
+/** `ComputeBudgetInstruction::SetComputeUnitLimit(units)`: `[2] ‖ u32 LE`. */
+export function setComputeUnitLimit(units: number): Instruction {
+  const data = new Uint8Array(5);
+  data[0] = 2;
+  data.set(getU32Encoder().encode(units), 1);
+  return { programAddress: COMPUTE_BUDGET_PROGRAM, accounts: [], data };
+}
+
+/** `meta.computeUnitsConsumed` of a confirmed transaction. */
+export async function computeUnitsConsumed(signature: Signature): Promise<bigint> {
+  const tx = await rpc
+    .getTransaction(signature, {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+      encoding: "json",
+    })
+    .send();
+  if (!tx?.meta) throw new Error("transaction not found");
+  const consumed = tx.meta.computeUnitsConsumed;
+  if (consumed === undefined || consumed === null) throw new Error("no computeUnitsConsumed");
+  return BigInt(consumed);
 }
 
 /**

@@ -28,6 +28,10 @@ ws_port = 8900
 online = true
 datasource_rpc_url = "https://api.mainnet-beta.solana.com"
 slot_time = 200
+# Anchor's default is "transaction": a slot is produced only when a transaction
+# lands, so nothing that waits for a slot (the Entropy sample window, Step 5)
+# ever sees one arrive. "clock" produces a slot every slot_time.
+block_production_mode = "clock"
 log_level = "info"
 startup_wait = 30000
 shutdown_wait = 5000

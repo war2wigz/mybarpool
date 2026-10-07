@@ -29,7 +29,7 @@ export type TimeTravel =
 /** Fields of `surfnet_setAccount`'s update; every field is optional. */
 export interface AccountUpdate {
   lamports?: number;
-  /** Base64 account data. */
+  /** Account data as a hex string (Surfpool 1.6.0 rejects base64: "Invalid hex data provided"). */
   data?: string;
   owner?: string;
   executable?: boolean;
