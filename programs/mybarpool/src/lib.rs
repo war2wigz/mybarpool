@@ -19,6 +19,7 @@ pub mod errors;
 pub mod events;
 pub mod instructions;
 pub mod money;
+pub mod payout;
 pub mod slot_hashes;
 pub mod state;
 pub mod vault;

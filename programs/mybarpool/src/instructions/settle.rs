@@ -15,8 +15,9 @@ use crate::constants::{CONFIG_SEED, POOL_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
 use crate::events::QuarterSettled;
 use crate::money::{prize_pool, quarter_prizes, FeeAmounts};
+use crate::payout::{pay_out, Spl};
 use crate::state::{GameRecord, PlatformConfig, Pool, PoolStatus};
-use crate::vault::{create_ata_idempotent, pool_signer_seeds, transfer_out_sol, transfer_out_spl};
+use crate::vault::pool_signer_seeds;
 use crate::winner::winning_box;
 
 #[derive(Accounts)]
@@ -95,58 +96,6 @@ pub struct Settle<'info> {
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
     /// For the SOL transfers out of the vault and any ATA rent.
     pub system_program: Program<'info, System>,
-}
-
-/// The SPL plumbing of a settlement, present only for an SPL pool.
-struct Spl<'a, 'info> {
-    mint: &'a InterfaceAccount<'info, Mint>,
-    token_program: &'a Interface<'info, TokenInterface>,
-    associated_token_program: &'a Program<'info, AssociatedToken>,
-}
-
-/// One payment out of the vault to a verified wallet: SOL directly; SPL to the wallet's ATA,
-/// created idempotently first (PROGRAM §5.4). Nothing is created when `amount == 0`.
-#[allow(clippy::too_many_arguments)]
-fn pay<'info>(
-    spl: Option<&Spl<'_, 'info>>,
-    vault: &AccountInfo<'info>,
-    pool_info: &AccountInfo<'info>,
-    pool_key: &Pubkey,
-    vault_bump: u8,
-    pool_seeds: &[&[u8]],
-    payer: &AccountInfo<'info>,
-    system_program: &AccountInfo<'info>,
-    wallet: &AccountInfo<'info>,
-    token_account: Option<&AccountInfo<'info>>,
-    amount: u64,
-) -> Result<()> {
-    if amount == 0 {
-        return Ok(());
-    }
-    match spl {
-        None => transfer_out_sol(vault, wallet, system_program, pool_key, vault_bump, amount),
-        Some(spl) => {
-            let ata = token_account.ok_or(ErrorCode::ConstraintAccountIsNone)?;
-            create_ata_idempotent(
-                payer,
-                ata,
-                wallet,
-                &spl.mint.to_account_info(),
-                system_program,
-                &spl.token_program.to_account_info(),
-                &spl.associated_token_program.to_account_info(),
-            )?;
-            transfer_out_spl(
-                vault,
-                spl.mint,
-                ata,
-                pool_info,
-                spl.token_program,
-                pool_seeds,
-                amount,
-            )
-        }
-    }
 }
 
 /// `missing_mut_constraint` names `config` and `game` here: both are read-only and the lint
@@ -305,7 +254,7 @@ pub fn handle_settle(ctx: Context<Settle>, quarter: u8) -> Result<()> {
         let system_info = system_program.to_account_info();
         let winner_ta = winner_token_account.as_ref().map(|a| a.to_account_info());
 
-        pay(
+        pay_out(
             spl.as_ref(),
             &vault_info,
             &pool_info,
@@ -329,7 +278,7 @@ pub fn handle_settle(ctx: Context<Settle>, quarter: u8) -> Result<()> {
             let integrator_ta = integrator_token_account
                 .as_ref()
                 .map(|a| a.to_account_info());
-            pay(
+            pay_out(
                 spl.as_ref(),
                 &vault_info,
                 &pool_info,
@@ -342,7 +291,7 @@ pub fn handle_settle(ctx: Context<Settle>, quarter: u8) -> Result<()> {
                 fee_ta.as_ref(),
                 platform_fee,
             )?;
-            pay(
+            pay_out(
                 spl.as_ref(),
                 &vault_info,
                 &pool_info,
@@ -356,7 +305,7 @@ pub fn handle_settle(ctx: Context<Settle>, quarter: u8) -> Result<()> {
                 creator_fee,
             )?;
             if let Some(integrator_info) = integrator_info.as_ref() {
-                pay(
+                pay_out(
                     spl.as_ref(),
                     &vault_info,
                     &pool_info,

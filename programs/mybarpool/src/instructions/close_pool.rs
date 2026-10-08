@@ -13,7 +13,7 @@ use anchor_spl::token_2022::spl_token_2022::extension::StateWithExtensions;
 use anchor_spl::token_2022::spl_token_2022::state::Account as TokenAccount2022;
 use anchor_spl::token_interface::{Mint, TokenInterface};
 
-use crate::constants::{BOXES, CONFIG_SEED, POOL_SEED, VAULT_SEED};
+use crate::constants::{CONFIG_SEED, POOL_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
 use crate::events::PoolClosed;
 use crate::state::{PlatformConfig, Pool, PoolStatus};
@@ -96,14 +96,10 @@ pub fn handle_close_pool(ctx: Context<ClosePool>) -> Result<()> {
     );
     if pool.status != PoolStatus::Settled {
         // Returned / Split: every sold box must have been returned, split or reclaimed.
-        for i in 0..usize::from(BOXES) {
-            if pool.owners[i] != Pubkey::default() {
-                require!(
-                    pool.returned & (1u32 << i) != 0,
-                    MybarpoolError::BoxesStillOutstanding
-                );
-            }
-        }
+        require!(
+            pool.all_sold_returned(),
+            MybarpoolError::BoxesStillOutstanding
+        );
     }
     let destination = if pool.abandoned {
         creator.to_account_info()

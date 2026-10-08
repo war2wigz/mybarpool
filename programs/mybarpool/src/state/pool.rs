@@ -214,6 +214,29 @@ impl Pool {
         self.preset.split()
     }
 
+    /// Bit `b` of `returned` (PROGRAM §3.3: returned, split or reclaimed).
+    pub fn is_returned(&self, b: u8) -> bool {
+        self.returned & (1u32 << b) != 0
+    }
+
+    /// Set bit `b` of `returned`.
+    pub fn mark_returned(&mut self, b: u8) {
+        self.returned |= 1u32 << b;
+    }
+
+    /// The boxes `b` with `owners[b] == wallet` and bit `b` clear, in ascending index order
+    /// (PROGRAM §4.6 owner batches).
+    pub fn unreturned_boxes_of(&self, wallet: &Pubkey) -> Vec<u8> {
+        (0..BOXES)
+            .filter(|&b| self.owners[usize::from(b)] == *wallet && !self.is_returned(b))
+            .collect()
+    }
+
+    /// Every sold box has its `returned` bit set (PROGRAM §4.5 `close_pool` on `Returned`/`Split`).
+    pub fn all_sold_returned(&self) -> bool {
+        (0..BOXES).all(|b| self.owners[usize::from(b)] == Pubkey::default() || self.is_returned(b))
+    }
+
     /// `status ∈ {Open, Locked, Drawn}`, else `PoolNotOpen` (PROGRAM §4.3 `sponsor`, §9: a full
     /// pool is usually drawn before kickoff and can still be sponsored).
     pub fn require_sponsorable(&self) -> Result<()> {
