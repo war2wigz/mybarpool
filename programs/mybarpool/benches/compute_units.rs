@@ -11,7 +11,7 @@ mod common;
 
 use common::*;
 use mollusk_svm_bencher::MolluskComputeUnitBencher;
-use mybarpool::{CreatePoolParams, PayoutPreset, PoolStatus};
+use mybarpool::{CreatePoolParams, GameStatus, PayoutPreset, PoolStatus};
 
 fn main() {
     let f = Fixture::new();
@@ -384,6 +384,324 @@ fn main() {
     let mut close_ore_accounts = settlement_accounts(&f, &m, &config, &settled_ore, 4, Some(2));
     set_account(&mut close_ore_accounts, dest_ata, system_account(0));
 
+    // Step 7 — the §4.6 returns. The bench clock is T0 (before the standard kickoff), so the
+    // time-gated rows plant the game record they need: `moved_record(now)` makes the pool
+    // unfilled-at-kickoff, and a record whose scheduled kickoff is RECLAIM_DELAY in the past
+    // opens the reclaim window; a marked record needs no clock at all.
+    let now = m.sysvars.clock.unix_timestamp;
+    let game = standard_game();
+    let counter_key = counter_pda(&f.creator, &game).0;
+    let plan_unfilled = unfilled_15_plan(&f);
+    let plan_full = full_plan(&f);
+    let owners_of = |n: u8, base: u8| -> Vec<solana_pubkey::Pubkey> {
+        (0..n)
+            .map(|i| solana_pubkey::Pubkey::new_from_array([base + i; 32]))
+            .collect()
+    };
+    let sol_batch = |owners: &[solana_pubkey::Pubkey]| -> Vec<(solana_pubkey::Pubkey, Option<solana_pubkey::Pubkey>)> {
+        owners.iter().map(|o| (*o, None)).collect()
+    };
+
+    // return_boxes_first_sol_2_owners: Open UNFILLED_15 at its recorded kickoff, the counter
+    // decremented, two transfers.
+    let unfilled = pool_with_owners(
+        &f,
+        &config,
+        &sol_params(0),
+        PoolStatus::Open,
+        &plan_unfilled,
+    );
+    let return_first = return_boxes_ix(
+        &f.keeper,
+        &unfilled,
+        &game,
+        Some(counter_key),
+        &sol_batch(&[f.creator, f.buyer]),
+        None,
+    );
+    let return_first_accounts =
+        returns_accounts(&f, &m, &config, &unfilled, &moved_record(now), 1, None);
+
+    // return_boxes_25_owners_sol: a Drawn pool on a postponed game, 25 distinct owners.
+    let mut twenty_five =
+        pool_with_owners(&f, &config, &sol_params(0), PoolStatus::Drawn, &plan_full);
+    let owners_25 = owners_of(25, 100);
+    for (i, o) in owners_25.iter().enumerate() {
+        twenty_five.owners[i] = to_a(o);
+    }
+    twenty_five.creator_boxes = 0;
+    let return_25 = return_boxes_ix(
+        &f.keeper,
+        &twenty_five,
+        &game,
+        None,
+        &sol_batch(&owners_25),
+        None,
+    );
+    let mut return_25_accounts = returns_accounts(
+        &f,
+        &m,
+        &config,
+        &twenty_five,
+        &marked_record(GameStatus::Postponed),
+        0,
+        None,
+    );
+    for o in &owners_25 {
+        return_25_accounts.push((*o, system_account(LAMPORTS_PER_SOL)));
+    }
+
+    // return_boxes_ore_3_owners_atas_missing / _11_owners_atas_missing: the SPL batch with
+    // every ATA created on the way.
+    let ore_drawn = pool_with_owners(&f, &config, &ore_params(0), PoolStatus::Drawn, &plan_full);
+    let ore_batch = SplBatch::of(&ore_drawn);
+    let ore_3: Vec<_> = [f.creator, f.buyer, f.buyer_2]
+        .iter()
+        .map(|w| (*w, Some(ore_batch.ata(w))))
+        .collect();
+    let return_ore_3 = return_boxes_ix(&f.keeper, &ore_drawn, &game, None, &ore_3, Some(ore_batch));
+    let mut return_ore_3_accounts = returns_accounts(
+        &f,
+        &m,
+        &config,
+        &ore_drawn,
+        &marked_record(GameStatus::Postponed),
+        0,
+        Some(25 * PRICE_ORE),
+    );
+    for (_, a) in &ore_3 {
+        set_account(&mut return_ore_3_accounts, a.unwrap(), system_account(0));
+    }
+    // The SPL page. With every ATA missing each owner costs seven inner instructions (the
+    // ATA program's create and its nested System and Token calls, the transfer_checked, the
+    // event), and the runtime's instruction trace is capped at 64, so nine owners is the
+    // largest batch that can create its ATAs (ten fails with
+    // MaxInstructionTraceLengthExceeded, measured). Eleven owners — the transaction-size
+    // page the brief estimated — fits only when the ATAs already exist (three inner
+    // instructions per owner). Both rows are benched; NOTES records the limit.
+    let owners_9 = owners_of(9, 10);
+    let mut ore_nine = ore_drawn.clone();
+    for (i, o) in owners_9.iter().enumerate() {
+        ore_nine.owners[i] = to_a(o);
+    }
+    ore_nine.creator_boxes = 0;
+    let ore_9: Vec<_> = owners_9
+        .iter()
+        .map(|w| (*w, Some(ore_batch.ata(w))))
+        .collect();
+    let return_ore_9 = return_boxes_ix(&f.keeper, &ore_nine, &game, None, &ore_9, Some(ore_batch));
+    let mut return_ore_9_accounts = returns_accounts(
+        &f,
+        &m,
+        &config,
+        &ore_nine,
+        &marked_record(GameStatus::Postponed),
+        0,
+        Some(25 * PRICE_ORE),
+    );
+    for (o, a) in &ore_9 {
+        return_ore_9_accounts.push((*o, system_account(LAMPORTS_PER_SOL)));
+        set_account(&mut return_ore_9_accounts, a.unwrap(), system_account(0));
+    }
+    let owners_11 = owners_of(11, 30);
+    let mut ore_eleven = ore_drawn.clone();
+    for (i, o) in owners_11.iter().enumerate() {
+        ore_eleven.owners[i] = to_a(o);
+    }
+    ore_eleven.creator_boxes = 0;
+    let ore_11: Vec<_> = owners_11
+        .iter()
+        .map(|w| (*w, Some(ore_batch.ata(w))))
+        .collect();
+    let return_ore_11 = return_boxes_ix(
+        &f.keeper,
+        &ore_eleven,
+        &game,
+        None,
+        &ore_11,
+        Some(ore_batch),
+    );
+    let mut return_ore_11_accounts = returns_accounts(
+        &f,
+        &m,
+        &config,
+        &ore_eleven,
+        &marked_record(GameStatus::Postponed),
+        0,
+        Some(25 * PRICE_ORE),
+    );
+    for (o, a) in &ore_11 {
+        return_ore_11_accounts.push((*o, system_account(LAMPORTS_PER_SOL)));
+        set_account(
+            &mut return_ore_11_accounts,
+            a.unwrap(),
+            token_account(&f.ore_mint, o, 0),
+        );
+    }
+
+    // return_sponsorship_sol / _ore_ata_missing: a Returned pool, every box paid, one open
+    // sponsorship.
+    let all_15: Vec<u8> = (0..15).collect();
+    let returned_sol = common::sponsored(
+        returned_partial(
+            pool_with_owners(
+                &f,
+                &config,
+                &sol_params(0),
+                PoolStatus::Open,
+                &plan_unfilled,
+            ),
+            &all_15,
+        ),
+        LAMPORTS_PER_SOL,
+    );
+    let return_sponsorship_sol =
+        return_sponsorship_ix(&f.keeper, &returned_sol, &f.sponsor, None, None);
+    let mut return_sponsorship_sol_accounts =
+        returns_accounts(&f, &m, &config, &returned_sol, &moved_record(now), 0, None);
+    let returned_sol_key = pool_pda(&game, &f.creator, returned_sol.nonce).0;
+    set_account(
+        &mut return_sponsorship_sol_accounts,
+        sponsorship_pda(&returned_sol_key, &f.sponsor).0,
+        sponsorship_account(&returned_sol_key, &f.sponsor, LAMPORTS_PER_SOL),
+    );
+    let all_25: Vec<u8> = (0..25).collect();
+    let returned_ore = common::sponsored(
+        returned_partial(
+            pool_with_owners(&f, &config, &ore_params(0), PoolStatus::Drawn, &plan_full),
+            &all_25,
+        ),
+        10 * PRICE_ORE,
+    );
+    let sponsor_one = SplOne::derived(&returned_ore, &f.sponsor);
+    let return_sponsorship_ore = return_sponsorship_ix(
+        &f.keeper,
+        &returned_ore,
+        &f.sponsor,
+        None,
+        Some(sponsor_one),
+    );
+    let mut return_sponsorship_ore_accounts = returns_accounts(
+        &f,
+        &m,
+        &config,
+        &returned_ore,
+        &marked_record(GameStatus::Postponed),
+        0,
+        Some(10 * PRICE_ORE),
+    );
+    let returned_ore_key = pool_pda(&game, &f.creator, returned_ore.nonce).0;
+    set_account(
+        &mut return_sponsorship_ore_accounts,
+        sponsorship_pda(&returned_ore_key, &f.sponsor).0,
+        sponsorship_account(&returned_ore_key, &f.sponsor, 10 * PRICE_ORE),
+    );
+    set_account(
+        &mut return_sponsorship_ore_accounts,
+        sponsor_one.ata,
+        system_account(0),
+    );
+
+    // cancel_pool_open: the counter decremented.
+    let cancel_open = cancel_pool_ix(&f.admin, &unfilled, Some(counter_key));
+    let cancel_open_accounts =
+        returns_accounts(&f, &m, &config, &unfilled, &standard_record(), 1, None);
+
+    // split_first_sol_3_owners / split_ore_3_owners_atas_missing: after Q1 on a suspended game.
+    let split_sol_pool = settled_pool(&f, &config, &sol_params(0), 0, 1, true);
+    let split_first = split_ix(
+        &f.keeper,
+        &split_sol_pool,
+        &game,
+        &sol_batch(&[f.creator, f.buyer, f.buyer_2]),
+        None,
+    );
+    let split_first_accounts = returns_accounts(
+        &f,
+        &m,
+        &config,
+        &split_sol_pool,
+        &suspended_record_with_quarters(1),
+        0,
+        None,
+    );
+    let split_ore_pool = settled_pool(&f, &config, &ore_params(0), 0, 1, true);
+    let split_ore_batch = SplBatch::of(&split_ore_pool);
+    let split_ore_3: Vec<_> = [f.creator, f.buyer, f.buyer_2]
+        .iter()
+        .map(|w| (*w, Some(split_ore_batch.ata(w))))
+        .collect();
+    let split_ore = split_ix(
+        &f.keeper,
+        &split_ore_pool,
+        &game,
+        &split_ore_3,
+        Some(split_ore_batch),
+    );
+    let mut split_ore_accounts = returns_accounts(
+        &f,
+        &m,
+        &config,
+        &split_ore_pool,
+        &suspended_record_with_quarters(1),
+        0,
+        Some(split_ore_pool.unpaid_prize_pool),
+    );
+    for (_, a) in &split_ore_3 {
+        set_account(&mut split_ore_accounts, a.unwrap(), system_account(0));
+    }
+
+    // reclaim_sol_open / reclaim_ore_locked_ata_missing / reclaim_sponsorship_sol: a record
+    // whose scheduled kickoff is RECLAIM_DELAY in the past.
+    let mut reclaimable = standard_record();
+    reclaimable.scheduled_kickoff = now - RECLAIM_DELAY;
+    reclaimable.recorded_kickoff = reclaimable.scheduled_kickoff;
+    let reclaim_sol = reclaim_ix(&f.buyer, &unfilled, &game, Some(counter_key), None);
+    let reclaim_sol_accounts = returns_accounts(&f, &m, &config, &unfilled, &reclaimable, 1, None);
+    let ore_locked = pool_with_owners(&f, &config, &ore_params(0), PoolStatus::Locked, &plan_full);
+    let buyer_one = SplOne::derived(&ore_locked, &f.buyer);
+    let reclaim_ore = reclaim_ix(&f.buyer, &ore_locked, &game, None, Some(buyer_one));
+    let mut reclaim_ore_accounts = returns_accounts(
+        &f,
+        &m,
+        &config,
+        &ore_locked,
+        &reclaimable,
+        0,
+        Some(25 * PRICE_ORE),
+    );
+    set_account(&mut reclaim_ore_accounts, buyer_one.ata, system_account(0));
+    let sponsored_open = common::sponsored(unfilled.clone(), 50_000_000);
+    let reclaim_sponsorship_sol =
+        reclaim_sponsorship_ix(&f.sponsor, &sponsored_open, &game, Some(counter_key), None);
+    let mut reclaim_sponsorship_sol_accounts =
+        returns_accounts(&f, &m, &config, &sponsored_open, &reclaimable, 1, None);
+    let sponsored_open_key = pool_pda(&game, &f.creator, sponsored_open.nonce).0;
+    set_account(
+        &mut reclaim_sponsorship_sol_accounts,
+        sponsorship_pda(&sponsored_open_key, &f.sponsor).0,
+        sponsorship_account(&sponsored_open_key, &f.sponsor, 50_000_000),
+    );
+
+    // close_sponsorship: on the Step 6 dust pool (Settled, one sponsorship open).
+    let settled_sponsored = settled_pool(&f, &config, &sol_params(0), 1_000_000_003, 4, true);
+    let close_sponsorship = close_sponsorship_ix(&settled_sponsored, &f.sponsor, None);
+    let mut close_sponsorship_accounts = returns_accounts(
+        &f,
+        &m,
+        &config,
+        &settled_sponsored,
+        &record_with_quarters(4),
+        0,
+        None,
+    );
+    let settled_sponsored_key = pool_pda(&game, &f.creator, settled_sponsored.nonce).0;
+    set_account(
+        &mut close_sponsorship_accounts,
+        sponsorship_pda(&settled_sponsored_key, &f.sponsor).0,
+        sponsorship_account(&settled_sponsored_key, &f.sponsor, 1_000_000_003),
+    );
+
     MolluskComputeUnitBencher::new(m)
         .bench(("initialize", &initialize, &initialize_accounts))
         .bench(("update_config_full", &update_config_full, &update_accounts))
@@ -444,6 +762,68 @@ fn main() {
         ))
         .bench(("close_pool_sol", &close_sol, &close_sol_accounts))
         .bench(("close_pool_ore", &close_ore, &close_ore_accounts))
+        .bench((
+            "return_boxes_first_sol_2_owners",
+            &return_first,
+            &return_first_accounts,
+        ))
+        .bench((
+            "return_boxes_25_owners_sol",
+            &return_25,
+            &return_25_accounts,
+        ))
+        .bench((
+            "return_boxes_ore_3_owners_atas_missing",
+            &return_ore_3,
+            &return_ore_3_accounts,
+        ))
+        .bench((
+            "return_boxes_ore_9_owners_atas_missing",
+            &return_ore_9,
+            &return_ore_9_accounts,
+        ))
+        .bench((
+            "return_boxes_ore_11_owners_atas_exist",
+            &return_ore_11,
+            &return_ore_11_accounts,
+        ))
+        .bench((
+            "return_sponsorship_sol",
+            &return_sponsorship_sol,
+            &return_sponsorship_sol_accounts,
+        ))
+        .bench((
+            "return_sponsorship_ore_ata_missing",
+            &return_sponsorship_ore,
+            &return_sponsorship_ore_accounts,
+        ))
+        .bench(("cancel_pool_open", &cancel_open, &cancel_open_accounts))
+        .bench((
+            "split_first_sol_3_owners",
+            &split_first,
+            &split_first_accounts,
+        ))
+        .bench((
+            "split_ore_3_owners_atas_missing",
+            &split_ore,
+            &split_ore_accounts,
+        ))
+        .bench(("reclaim_sol_open", &reclaim_sol, &reclaim_sol_accounts))
+        .bench((
+            "reclaim_ore_locked_ata_missing",
+            &reclaim_ore,
+            &reclaim_ore_accounts,
+        ))
+        .bench((
+            "reclaim_sponsorship_sol",
+            &reclaim_sponsorship_sol,
+            &reclaim_sponsorship_sol_accounts,
+        ))
+        .bench((
+            "close_sponsorship",
+            &close_sponsorship,
+            &close_sponsorship_accounts,
+        ))
         .must_pass(true)
         .out_dir(env!("CARGO_MANIFEST_DIR"))
         .execute();

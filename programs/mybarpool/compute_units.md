@@ -1,3 +1,59 @@
+#### 2026-10-08 22:30:09.741686864 UTC
+
+Solana CLI Version: solana-cli 4.3.0 (src:825efd18; feat:c9ad34d2, client:Agave)
+
+| Name | CUs | Delta |
+|------|------|-------|
+| initialize | 20280 | +2 |
+| update_config_full | 15217 | +8 |
+| set_wallet_override_create | 13159 | +6 |
+| set_wallet_override_update | 10819 | +6 |
+| close_wallet_override | 9393 | +4 |
+| create_game | 18057 | +8 |
+| update_kickoff | 10936 | +6 |
+| post_scores_q1 | 10955 | +8 |
+| post_scores_final | 10967 | +8 |
+| mark_game | 10401 | +4 |
+| create_pool_sol | 41554 | +2 |
+| create_pool_sol_5_boxes | 47646 | +6 |
+| create_pool_spl | 51309 | +6 |
+| buy_1 | 29257 | +2 |
+| buy_3 | 29635 | +2 |
+| buy_25th_locks | 31227 | +6 |
+| buy_spl_1 | 31377 | +2 |
+| sponsor_new | 26380 | +4 |
+| sponsor_top_up | 23985 | +4 |
+| rotate_gate_key | 11201 | -- |
+| close_counter | 6570 | -- |
+| set_var | 16086 | +8 |
+| sample_var | 29691 | +6 |
+| sample_var_already_sampled | 14429 | +6 |
+| draw | 19173 | +4 |
+| replace_var | 16359 | +4 |
+| settle_q1_sol | 26525 | +9 |
+| settle_q2_sol | 22033 | +7 |
+| settle_q4_sol | 22034 | +7 |
+| settle_q1_final_only | 21019 | +6 |
+| settle_q1_sol_integrator | 28425 | +10 |
+| settle_q1_ore | 105084 | +18 |
+| settle_q1_ore_atas_exist | 77841 | +18 |
+| close_pool_sol | 17436 | +4 |
+| close_pool_ore | 48987 | +4 |
+| return_boxes_first_sol_2_owners | 29344 | - new - |
+| return_boxes_25_owners_sol | 135146 | - new - |
+| return_boxes_ore_3_owners_atas_missing | 106160 | - new - |
+| return_boxes_ore_9_owners_atas_missing | 279629 | - new - |
+| return_boxes_ore_11_owners_atas_exist | 251536 | - new - |
+| return_sponsorship_sol | 22778 | - new - |
+| return_sponsorship_ore_ata_missing | 48043 | - new - |
+| cancel_pool_open | 17042 | - new - |
+| split_first_sol_3_owners | 31889 | - new - |
+| split_ore_3_owners_atas_missing | 105988 | - new - |
+| reclaim_sol_open | 21284 | - new - |
+| reclaim_ore_locked_ata_missing | 43778 | - new - |
+| reclaim_sponsorship_sol | 23043 | - new - |
+| close_sponsorship | 14523 | - new - |
+
 #### 2026-10-08 21:45:33.556380803 UTC
 
 Solana CLI Version: solana-cli 4.3.0 (src:825efd18; feat:c9ad34d2, client:Agave)
