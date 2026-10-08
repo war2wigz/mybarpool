@@ -181,7 +181,7 @@ Approximate size: 8 (discriminator) + 800 (owners) + ~465 (the other fields: 8 p
 - SOL pools: a system-program-owned account at the PDA, holding lamports. Transfers out are `system_program::transfer` signed with the vault seeds. It must hold its own rent-exempt minimum at all times; that minimum is paid by the creator at creation and is part of the creation fee, and it is what closes to the rent destination at `close_pool`.
 - SPL pools: a token account at the PDA for the pool's mint, `owner = pool` PDA. Transfers out are `transfer_checked` signed with the pool seeds. The mint's own token program (Token or Token-2022, from `TokenRule.token_program`) is used throughout.
 
-Vault balance invariants, checked in tests, not enforced by the program (SOL: the balance above the vault's own rent-exempt minimum): while `Open`/`Locked`/`Drawn` before the first settlement, `sold × price + sponsored_total`; after the first settlement, `unpaid_prize_pool`. The dust `prize_pool − Σ quarter_prize` is inside `unpaid_prize_pool` (§4.5 only ever subtracts prizes paid from it), so a `Settled` pool's `unpaid_prize_pool` equals the dust, and that is what `close_pool` sweeps.
+Vault balance invariants, checked in tests, not enforced by the program (SOL: the balance above the vault's own rent-exempt minimum): while `Open`/`Locked`/`Drawn` before the first settlement, `sold × price + sponsored_total`; after the first settlement, `unpaid_prize_pool`, plus `platform_fee + creator_fee + integrator_fee` while `fees_paid` is still false (a `FinalOnly` pool through Q3: its first three settlements move nothing, so the fees are still in the vault until the final pays them). The dust `prize_pool − Σ quarter_prize` is inside `unpaid_prize_pool` (§4.5 only ever subtracts prizes paid from it), so a `Settled` pool's `unpaid_prize_pool` equals the dust, and that is what `close_pool` sweeps.
 
 ### 3.5 `CreatorCounter` — seeds `["counter", creator, game_record]`
 
@@ -299,7 +299,7 @@ Effects, in one transaction:
 2. `winning_box[quarter − 1] = box`.
 3. If `quarter_prize[quarter − 1] > 0`: transfer it to the winner; `unpaid_prize_pool −= it`. If additionally `!fees_paid`: transfer `platform_fee` to `fee_wallet`, `creator_fee` to `creator`, `integrator_fee` to `integrator` (skipped when zero), and set `fees_paid = true`.
 4. `quarters_settled += 1`; if it reaches 4, `status = Settled`.
-Emits `QuarterSettled { quarter, home, away, box, winner, amount, fees_paid_now: bool, platform_fee, creator_fee, integrator_fee }`, the three fee fields being the amounts moved in this call (the pool's stored fees when `fees_paid_now`, zero otherwise; the stored amounts themselves are in `PoolCreated`). A zero-share quarter (Q1–Q3 on `FinalOnly`) still records the winning box and emits the event with `amount = 0`; it moves no funds and does not pay fees.
+Emits `QuarterSettled { quarter, home, away, box, winner, amount, fees_paid_now: bool, platform_fee, creator_fee, integrator_fee }` (the `box` field is `box_index` in the Rust struct and the IDL, since `box` is a Rust keyword and Anchor would carry the raw identifier `r#box` into the IDL; §7), the three fee fields being the amounts moved in this call (the pool's stored fees when `fees_paid_now`, zero otherwise; the stored amounts themselves are in `PoolCreated`). A zero-share quarter (Q1–Q3 on `FinalOnly`) still records the winning box and emits the event with `amount = 0`; it moves no funds and does not pay fees.
 
 Idempotency: a repeated `settle` for the same quarter fails on the ordering check, so the keeper can retry blindly after a timeout.
 
@@ -451,7 +451,7 @@ Events are emitted with Anchor's `emit_cpi!` (a self-CPI whose instruction data 
 | `VarReplaced` | pool, old_var, new_var, end_at, replacements, commit (Step 5b) |
 | `VarSampled` | pool, var, sampler, slot, end_at, slot_hash |
 | `DigitsDrawn` | pool, var, value, home_axis, away_axis |
-| `QuarterSettled` | pool, quarter, home, away, box, winner, amount, fees_paid_now, platform_fee, creator_fee, integrator_fee |
+| `QuarterSettled` | pool, quarter, home, away, box (`box_index` in the IDL: `box` is a Rust keyword), winner, amount, fees_paid_now, platform_fee, creator_fee, integrator_fee |
 | `PoolCancelled` | pool |
 | `BoxesReturned` / `BoxesSplit` / `BoxesReclaimed` | pool, owner, boxes, amount |
 | `SponsorshipReturned` / `SponsorshipClosed` | pool, sponsor, amount |
