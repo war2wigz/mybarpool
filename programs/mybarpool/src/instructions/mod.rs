@@ -1,8 +1,11 @@
-//! Instruction handlers: PROGRAM §4.1 (administration), §4.2 (games), §4.3 (pools), §4.4 (draw).
+//! Instruction handlers: PROGRAM §4.1 (administration), §4.2 (games), §4.3 (pools), §4.4 (draw),
+//! §4.5 (settlement), §4.6 (returns).
 
 pub mod buy;
+pub mod cancel_pool;
 pub mod close_counter;
 pub mod close_pool;
+pub mod close_sponsorship;
 pub mod close_wallet_override;
 pub mod create_game;
 pub mod create_pool;
@@ -11,32 +14,45 @@ pub mod initialize;
 pub mod mark_game;
 pub mod mint_check;
 pub mod post_scores;
+pub mod reclaim;
+pub mod reclaim_sponsorship;
 pub mod replace_var;
+pub mod return_boxes;
+pub mod return_sponsorship;
 pub mod rotate_gate_key;
 pub mod sample_var;
 pub mod set_var;
 pub mod set_wallet_override;
 pub mod settle;
+pub mod split;
 pub mod sponsor;
 pub mod update_config;
 pub mod update_kickoff;
 
 pub use buy::*;
+pub use cancel_pool::*;
 pub use close_counter::*;
 pub use close_pool::*;
+pub use close_sponsorship::*;
 pub use close_wallet_override::*;
 pub use create_game::*;
 pub use create_pool::*;
 pub use draw::*;
 pub use initialize::*;
 pub use mark_game::*;
+pub use mint_check::*;
 pub use post_scores::*;
+pub use reclaim::*;
+pub use reclaim_sponsorship::*;
 pub use replace_var::*;
+pub use return_boxes::*;
+pub use return_sponsorship::*;
 pub use rotate_gate_key::*;
 pub use sample_var::*;
 pub use set_var::*;
 pub use set_wallet_override::*;
 pub use settle::*;
+pub use split::*;
 pub use sponsor::*;
 pub use update_config::*;
 pub use update_kickoff::*;

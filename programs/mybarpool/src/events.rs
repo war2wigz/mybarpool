@@ -334,6 +334,90 @@ pub struct PoolClosed {
     pub dust: u64,
 }
 
+/// PROGRAM §7 `BoxesReturned`: `return_boxes` paid one owner the purchase price of their
+/// unreturned boxes (§4.6).
+#[event]
+pub struct BoxesReturned {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The box owner paid.
+    pub owner: Pubkey,
+    /// The boxes paid in this call, 0-based, ascending.
+    pub boxes: Vec<u8>,
+    /// The sum paid in this call.
+    pub amount: u64,
+}
+
+/// PROGRAM §7 `BoxesSplit`: `split` paid one owner `split_amount` per unreturned box (§4.6).
+#[event]
+pub struct BoxesSplit {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The box owner paid.
+    pub owner: Pubkey,
+    /// The boxes paid in this call, 0-based, ascending.
+    pub boxes: Vec<u8>,
+    /// The sum paid in this call.
+    pub amount: u64,
+}
+
+/// PROGRAM §7 `BoxesReclaimed`: a box owner took their own boxes back after the 30-day clock
+/// (§4.6 `reclaim`).
+#[event]
+pub struct BoxesReclaimed {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The signer, paid for their own boxes.
+    pub owner: Pubkey,
+    /// The boxes paid in this call, 0-based, ascending.
+    pub boxes: Vec<u8>,
+    /// The sum paid in this call.
+    pub amount: u64,
+}
+
+/// PROGRAM §7 `SponsorshipReturned`: a sponsorship paid back in full to its wallet and its
+/// account closed (`return_sponsorship` or `reclaim_sponsorship`, §4.6).
+#[event]
+pub struct SponsorshipReturned {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// `sponsorship.wallet`, the only possible destination.
+    pub sponsor: Pubkey,
+    /// The amount returned.
+    pub amount: u64,
+}
+
+/// PROGRAM §7 `SponsorshipClosed`: a committed sponsorship's account closed on a terminal pool
+/// (`close_sponsorship`, §4.6); the amount stays in the pool.
+#[event]
+pub struct SponsorshipClosed {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// `sponsorship.wallet`, who receives the account's rent.
+    pub sponsor: Pubkey,
+    /// The committed amount, informational.
+    pub amount: u64,
+}
+
+/// PROGRAM §7 `PoolCancelled`: the admin moved an unpaid pool to `Returned` (§4.6 `cancel_pool`).
+#[event]
+pub struct PoolCancelled {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+}
+
 /// PROGRAM §7 `DigitsDrawn`: `draw` derived both axes from the `Var`'s value.
 #[event]
 pub struct DigitsDrawn {

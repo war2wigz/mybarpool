@@ -232,6 +232,23 @@ impl Pool {
             .collect()
     }
 
+    /// `status != Settled`, else `NotReturnable` (PROGRAM §4.6 `reclaim`, `reclaim_sponsorship`).
+    pub fn require_not_settled(&self) -> Result<()> {
+        require!(
+            self.status != PoolStatus::Settled,
+            MybarpoolError::NotReturnable
+        );
+        Ok(())
+    }
+
+    /// `status ∈ {Open, Locked, Drawn}`: the pool has not been resolved (PROGRAM §4.6).
+    pub fn is_unresolved(&self) -> bool {
+        matches!(
+            self.status,
+            PoolStatus::Open | PoolStatus::Locked | PoolStatus::Drawn
+        )
+    }
+
     /// Every sold box has its `returned` bit set (PROGRAM §4.5 `close_pool` on `Returned`/`Split`).
     pub fn all_sold_returned(&self) -> bool {
         (0..BOXES).all(|b| self.owners[usize::from(b)] == Pubkey::default() || self.is_returned(b))

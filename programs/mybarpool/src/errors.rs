@@ -168,25 +168,35 @@ pub enum MybarpoolError {
     /// 6045: a fee destination does not match the pool or config.
     #[msg("Fee account does not match")]
     FeeAccountMismatch,
-    /// 6046: no return precondition holds.
+    /// 6046 (PROGRAM §4.6): `return_boxes` with no precondition holding (a `Settled` or `Split`
+    /// pool included; `Locked`/`Drawn` on a `Scheduled` game however late; `Open` before the
+    /// recorded kickoff; a marked or suspended game once fees are paid); `cancel_pool` outside
+    /// `Open`/`Locked`/`Drawn`; `reclaim` or `reclaim_sponsorship` on `Settled`;
+    /// `return_sponsorship` on a pool that is not `Returned`.
     #[msg("Pool is not returnable")]
     NotReturnable,
-    /// 6047: fees have already been paid.
+    /// 6047 (PROGRAM §4.6, §8): `cancel_pool`, `return_sponsorship` and `reclaim_sponsorship`
+    /// on a pool whose fees have been paid — the pool can only be split and the sponsorship
+    /// is committed. Reserved through Step 6; raised from Step 7.
     #[msg("Fees already paid")]
     FeesAlreadyPaid,
-    /// 6048: the game is not marked suspended.
+    /// 6048 (PROGRAM §4.6): `split` on a game not marked `Suspended`.
     #[msg("Game is not suspended")]
     NotSuspended,
-    /// 6049: the pool cannot be split.
+    /// 6049 (PROGRAM §4.6): `split` before any payout (`return_boxes` returns the pool in full)
+    /// or outside `Drawn`/`Split`.
     #[msg("Pool is not splittable")]
     NotSplittable,
-    /// 6050: fewer than 30 days since the scheduled kickoff.
+    /// 6050 (PROGRAM §4.6): `reclaim` or `reclaim_sponsorship` before
+    /// `scheduled_kickoff + RECLAIM_DELAY` — the scheduled kickoff, never the recorded one.
     #[msg("Reclaim is not yet available")]
     ReclaimTooEarly,
-    /// 6051: the signer owns none of the boxes in question.
+    /// 6051 (PROGRAM §4.6): `reclaim` by a wallet that owns no box in the pool.
     #[msg("Signer is not the owner")]
     NotOwner,
-    /// 6052: every box in the batch is already returned.
+    /// 6052 (PROGRAM §4.6): a `return_boxes` or `split` that neither changed the status nor paid
+    /// a box (the retry of a finished batch), or a `reclaim` by an owner whose boxes are all
+    /// returned.
     #[msg("Nothing to return")]
     NothingToReturn,
     /// 6053: Sponsorship accounts are still open.

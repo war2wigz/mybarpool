@@ -7,8 +7,12 @@
 //! that fill them, the §4.4 draw over an Entropy `Var` on the platform's own
 //! deployment, and (Step 6) the §4.5 settlement — `settle` and `close_pool`,
 //! the first instructions that move money out, every destination verified
-//! against the pool or the config in the same instruction. Step 7 adds the
-//! returns, each built and audited against `docs/PROGRAM.md`.
+//! against the pool or the config in the same instruction, and (Step 7) the
+//! §4.6 returns — `return_boxes`, `return_sponsorship`, `cancel_pool`,
+//! `split`, `reclaim`, `reclaim_sponsorship` and `close_sponsorship`, every
+//! return the full purchase price or the recorded sponsorship, every
+//! destination read from the pool or the `Sponsorship`, never from the
+//! caller — each built and audited against `docs/PROGRAM.md`.
 #![allow(unexpected_cfgs)]
 
 pub mod assignment;
@@ -194,5 +198,51 @@ pub mod mybarpool {
     /// abandoned). Permissionless. Emits `PoolClosed`.
     pub fn close_pool(ctx: Context<ClosePool>) -> Result<()> {
         instructions::close_pool::handle_close_pool(ctx)
+    }
+
+    /// PROGRAM §4.6 `return_boxes`: on a pool that is unfilled at kickoff, on a game marked
+    /// postponed, cancelled or suspended before any payout, or on a pool the admin cancelled,
+    /// move the pool to `Returned` and pay the owners in the remaining accounts the purchase
+    /// price of their unreturned boxes.
+    pub fn return_boxes<'info>(ctx: Context<'info, ReturnBoxes<'info>>) -> Result<()> {
+        instructions::return_boxes::handle_return_boxes(ctx)
+    }
+
+    /// PROGRAM §4.6 `return_sponsorship`: on a `Returned` pool with its fees untaken, return
+    /// one sponsorship in full to the recorded wallet and close its account.
+    pub fn return_sponsorship(ctx: Context<ReturnSponsorship>) -> Result<()> {
+        instructions::return_sponsorship::handle_return_sponsorship(ctx)
+    }
+
+    /// PROGRAM §4.6 `cancel_pool`: the admin cancels a pool that has paid nobody; it becomes
+    /// `Returned` with `cancelled_by_admin` set, and `return_boxes` pays the owners.
+    pub fn cancel_pool(ctx: Context<CancelPool>) -> Result<()> {
+        instructions::cancel_pool::handle_cancel_pool(ctx)
+    }
+
+    /// PROGRAM §4.6 `split`: on a suspended game after a prize was paid, fix
+    /// `split_amount = unpaid_prize_pool / 25`, move the pool to `Split` and pay the owners in
+    /// the remaining accounts that share per unreturned box.
+    pub fn split<'info>(ctx: Context<'info, Split<'info>>) -> Result<()> {
+        instructions::split::handle_split(ctx)
+    }
+
+    /// PROGRAM §4.6 `reclaim`: thirty days after the scheduled kickoff, a box owner takes back
+    /// their unreturned boxes (price while fees are untaken, split share once they are); an
+    /// unresolved pool becomes `abandoned`.
+    pub fn reclaim(ctx: Context<Reclaim>) -> Result<()> {
+        instructions::reclaim::handle_reclaim(ctx)
+    }
+
+    /// PROGRAM §4.6 `reclaim_sponsorship`: thirty days after the scheduled kickoff, a sponsor
+    /// of a pool with its fees untaken takes their sponsorship back and closes its account.
+    pub fn reclaim_sponsorship(ctx: Context<ReclaimSponsorship>) -> Result<()> {
+        instructions::reclaim_sponsorship::handle_reclaim_sponsorship(ctx)
+    }
+
+    /// PROGRAM §4.6 `close_sponsorship`: on a `Settled` or `Split` pool, close a spent
+    /// sponsorship's account to its wallet.
+    pub fn close_sponsorship(ctx: Context<CloseSponsorship>) -> Result<()> {
+        instructions::close_sponsorship::handle_close_sponsorship(ctx)
     }
 }

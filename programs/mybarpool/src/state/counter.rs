@@ -25,4 +25,13 @@ pub struct CreatorCounter {
 impl CreatorCounter {
     /// Account size: 8-byte discriminator + 66.
     pub const SIZE: usize = 8 + Self::INIT_SPACE;
+
+    /// `open_count −= 1`, checked (PROGRAM §3.5: a pool leaving `Open`).
+    pub fn decrement(&mut self) -> Result<()> {
+        self.open_count = self
+            .open_count
+            .checked_sub(1)
+            .ok_or(crate::errors::MybarpoolError::MathOverflow)?;
+        Ok(())
+    }
 }
