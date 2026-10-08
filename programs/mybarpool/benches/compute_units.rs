@@ -352,6 +352,20 @@ fn main() {
     for k in [ore_spl.winner_ata, ore_spl.fee_ata, ore_spl.creator_ata] {
         set_account(&mut settle_ore_accounts, k, system_account(0));
     }
+    // The same call with the three ATAs present at balance 0: three transfer_checked and three
+    // no-op idempotent creates (Step 6 audit L1, the row the table was missing).
+    let mut settle_ore_atas_exist_accounts = settle_ore_accounts.clone();
+    for (k, wallet) in [
+        (ore_spl.winner_ata, f.buyer_2),
+        (ore_spl.fee_ata, f.fee_wallet),
+        (ore_spl.creator_ata, f.creator),
+    ] {
+        set_account(
+            &mut settle_ore_atas_exist_accounts,
+            k,
+            token_account(&f.ore_mint, &wallet, 0),
+        );
+    }
     let settled = settled_pool(&f, &config, &sol_params(0), 0, 4, true);
     let close_sol = close_pool_ix(&f, &f.stranger, &settled, None);
     let close_sol_accounts = settlement_accounts(&f, &m, &config, &settled, 4, None);
@@ -423,6 +437,11 @@ fn main() {
             &settle_integrator_accounts,
         ))
         .bench(("settle_q1_ore", &settle_ore, &settle_ore_accounts))
+        .bench((
+            "settle_q1_ore_atas_exist",
+            &settle_ore,
+            &settle_ore_atas_exist_accounts,
+        ))
         .bench(("close_pool_sol", &close_sol, &close_sol_accounts))
         .bench(("close_pool_ore", &close_ore, &close_ore_accounts))
         .must_pass(true)

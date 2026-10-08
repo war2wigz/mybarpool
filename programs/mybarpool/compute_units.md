@@ -1,3 +1,45 @@
+#### 2026-10-08 21:45:33.556380803 UTC
+
+Solana CLI Version: solana-cli 4.3.0 (src:825efd18; feat:c9ad34d2, client:Agave)
+
+| Name | CUs | Delta |
+|------|------|-------|
+| initialize | 20278 | -- |
+| update_config_full | 15209 | -- |
+| set_wallet_override_create | 13153 | -- |
+| set_wallet_override_update | 10813 | -- |
+| close_wallet_override | 9389 | -- |
+| create_game | 18049 | -- |
+| update_kickoff | 10930 | -- |
+| post_scores_q1 | 10947 | -- |
+| post_scores_final | 10959 | -- |
+| mark_game | 10397 | -- |
+| create_pool_sol | 41552 | -- |
+| create_pool_sol_5_boxes | 47640 | -- |
+| create_pool_spl | 51303 | -- |
+| buy_1 | 29255 | -- |
+| buy_3 | 29633 | -- |
+| buy_25th_locks | 31221 | -- |
+| buy_spl_1 | 31375 | -- |
+| sponsor_new | 26376 | -- |
+| sponsor_top_up | 23981 | -- |
+| rotate_gate_key | 11201 | -- |
+| close_counter | 6570 | -- |
+| set_var | 16078 | -- |
+| sample_var | 29685 | -- |
+| sample_var_already_sampled | 14423 | -- |
+| draw | 19169 | -- |
+| replace_var | 16355 | -- |
+| settle_q1_sol | 26516 | -- |
+| settle_q2_sol | 22026 | -- |
+| settle_q4_sol | 22027 | -- |
+| settle_q1_final_only | 21013 | -- |
+| settle_q1_sol_integrator | 28415 | -- |
+| settle_q1_ore | 105066 | -- |
+| settle_q1_ore_atas_exist | 77823 | - new - |
+| close_pool_sol | 17432 | -- |
+| close_pool_ore | 48983 | -- |
+
 #### 2026-10-08 19:43:36.757091199 UTC
 
 Solana CLI Version: solana-cli 4.3.0 (src:825efd18; feat:c9ad34d2, client:Agave)
