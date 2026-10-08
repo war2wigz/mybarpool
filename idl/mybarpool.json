@@ -237,6 +237,134 @@
       ]
     },
     {
+      "name": "cancel_pool",
+      "docs": [
+        "PROGRAM §4.6 `cancel_pool`: the admin cancels a pool that has paid nobody; it becomes",
+        "`Returned` with `cancelled_by_admin` set, and `return_boxes` pays the owners."
+      ],
+      "discriminator": [
+        211,
+        11,
+        27,
+        100,
+        252,
+        115,
+        57,
+        77
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "`config.admin`."
+          ],
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; `has_one = admin`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields; `Open`, `Locked` or `Drawn` with",
+            "fees untaken."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "counter",
+          "docs": [
+            "PROGRAM §3.5 the creator's counter for this game; required and decremented exactly when",
+            "the pool is `Open`, never read otherwise."
+          ],
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "close_counter",
       "docs": [
         "PROGRAM §3.5 `close_counter`: close a `CreatorCounter` whose `open_count` is zero, rent to",
@@ -482,6 +610,110 @@
             "For the SOL sweep out of the vault and any ATA rent."
           ],
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_sponsorship",
+      "docs": [
+        "PROGRAM §4.6 `close_sponsorship`: on a `Settled` or `Split` pool, close a spent",
+        "sponsorship's account to its wallet."
+      ],
+      "discriminator": [
+        48,
+        49,
+        37,
+        139,
+        2,
+        175,
+        255,
+        161
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields; `Settled` or `Split`."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          },
+          "relations": [
+            "sponsorship"
+          ]
+        },
+        {
+          "name": "sponsorship",
+          "docs": [
+            "PROGRAM §3.7 `Sponsorship` for this pool and `sponsor`; closed to `sponsor`."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  112,
+                  111,
+                  110,
+                  115,
+                  111,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "sponsorship.wallet",
+                "account": "Sponsorship"
+              }
+            ]
+          }
+        },
+        {
+          "name": "sponsor",
+          "writable": true
         },
         {
           "name": "event_authority"
@@ -1316,6 +1548,399 @@
       ]
     },
     {
+      "name": "reclaim",
+      "docs": [
+        "PROGRAM §4.6 `reclaim`: thirty days after the scheduled kickoff, a box owner takes back",
+        "their unreturned boxes (price while fees are untaken, split share once they are); an",
+        "unresolved pool becomes `abandoned`."
+      ],
+      "discriminator": [
+        44,
+        177,
+        236,
+        249,
+        145,
+        109,
+        163,
+        186
+      ],
+      "accounts": [
+        {
+          "name": "box_owner",
+          "docs": [
+            "A box owner of the pool; pays the rent of their own associated token account when this",
+            "call creates it."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the scheduled kickoff."
+          ],
+          "relations": [
+            "pool"
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields; anything but `Settled`."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PROGRAM §3.4 vault; the reclaim comes out of it."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "counter",
+          "docs": [
+            "PROGRAM §3.5 the creator's counter for this game; required and decremented exactly when",
+            "the pool is still `Open`, never read otherwise."
+          ],
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's mint (`address = pool.mint`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "box_owner_token_account",
+          "docs": [
+            "pools only."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The pool's token program (checked against `pool.token_program`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "docs": [
+            "The associated-token program, a fixed address; SPL pools only."
+          ],
+          "optional": true,
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "For the SOL transfer out of the vault and any ATA rent."
+          ],
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "reclaim_sponsorship",
+      "docs": [
+        "PROGRAM §4.6 `reclaim_sponsorship`: thirty days after the scheduled kickoff, a sponsor",
+        "of a pool with its fees untaken takes their sponsorship back and closes its account."
+      ],
+      "discriminator": [
+        12,
+        191,
+        46,
+        60,
+        198,
+        100,
+        209,
+        198
+      ],
+      "accounts": [
+        {
+          "name": "sponsor",
+          "docs": [
+            "The sponsor, the wallet of the `Sponsorship` (its seed); receives the sponsorship and",
+            "the rent, and pays the rent of their own associated token account when this call",
+            "creates it."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the scheduled kickoff."
+          ],
+          "relations": [
+            "pool"
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields; fees untaken."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          },
+          "relations": [
+            "sponsorship"
+          ]
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PROGRAM §3.4 vault; the sponsorship comes out of it."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "sponsorship",
+          "docs": [
+            "PROGRAM §3.7 `Sponsorship` for this pool and the signer; closed to `sponsor` on",
+            "success."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  112,
+                  111,
+                  110,
+                  115,
+                  111,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "sponsor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "counter",
+          "docs": [
+            "PROGRAM §3.5 the creator's counter for this game; required and decremented exactly when",
+            "the pool is still `Open`, never read otherwise."
+          ],
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's mint (`address = pool.mint`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "sponsor_token_account",
+          "docs": [
+            "pools only."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The pool's token program (checked against `pool.token_program`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "docs": [
+            "The associated-token program, a fixed address; SPL pools only."
+          ],
+          "optional": true,
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "For the SOL transfer out of the vault and any ATA rent."
+          ],
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "replace_var",
       "docs": [
         "PROGRAM §4.4 `replace_var`: bind a fresh `Var` in place of one whose window was missed;",
@@ -1404,6 +2029,401 @@
           "docs": [
             "The fresh `Var` bound in place of `pool.var`."
           ]
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "return_boxes",
+      "docs": [
+        "PROGRAM §4.6 `return_boxes`: on a pool that is unfilled at kickoff, on a game marked",
+        "postponed, cancelled or suspended before any payout, or on a pool the admin cancelled,",
+        "move the pool to `Returned` and pay the owners in the remaining accounts the purchase",
+        "price of their unreturned boxes."
+      ],
+      "discriminator": [
+        42,
+        233,
+        137,
+        168,
+        139,
+        124,
+        219,
+        211
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "docs": [
+            "The keeper, `config.score_authority`; pays the rent of any associated token account",
+            "this call creates."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; `has_one = score_authority`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for its status and the",
+            "recorded kickoff."
+          ],
+          "relations": [
+            "pool"
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PROGRAM §3.4 vault; every return comes out of it."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "counter",
+          "docs": [
+            "PROGRAM §3.5 the creator's counter for this game; required and decremented exactly on",
+            "the call that takes the pool out of `Open`, never read otherwise."
+          ],
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's mint (`address = pool.mint`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The pool's token program (checked against `pool.token_program`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "docs": [
+            "The associated-token program, a fixed address; SPL pools only."
+          ],
+          "optional": true,
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "For the SOL transfers out of the vault and any ATA rent."
+          ],
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "return_sponsorship",
+      "docs": [
+        "PROGRAM §4.6 `return_sponsorship`: on a `Returned` pool with its fees untaken, return",
+        "one sponsorship in full to the recorded wallet and close its account."
+      ],
+      "discriminator": [
+        25,
+        227,
+        145,
+        44,
+        236,
+        10,
+        215,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "docs": [
+            "The keeper, `config.score_authority`; pays the rent of the sponsor's associated token",
+            "account when this call creates it."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; `has_one = score_authority`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields; must be `Returned` with fees",
+            "untaken."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          },
+          "relations": [
+            "sponsorship"
+          ]
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PROGRAM §3.4 vault; the sponsorship comes out of it."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "sponsorship",
+          "docs": [
+            "PROGRAM §3.7 `Sponsorship` for this pool and `sponsor`; closed to `sponsor` on success."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  112,
+                  111,
+                  110,
+                  115,
+                  111,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "sponsorship.wallet",
+                "account": "Sponsorship"
+              }
+            ]
+          }
+        },
+        {
+          "name": "sponsor",
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's mint (`address = pool.mint`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "sponsor_token_account",
+          "docs": [
+            "SPL pools only."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The pool's token program (checked against `pool.token_program`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "docs": [
+            "The associated-token program, a fixed address; SPL pools only."
+          ],
+          "optional": true,
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "For the SOL transfer out of the vault and any ATA rent."
+          ],
+          "address": "11111111111111111111111111111111"
         },
         {
           "name": "event_authority"
@@ -2014,6 +3034,164 @@
       ]
     },
     {
+      "name": "split",
+      "docs": [
+        "PROGRAM §4.6 `split`: on a suspended game after a prize was paid, fix",
+        "`split_amount = unpaid_prize_pool / 25`, move the pool to `Split` and pay the owners in",
+        "the remaining accounts that share per unreturned box."
+      ],
+      "discriminator": [
+        124,
+        189,
+        27,
+        43,
+        216,
+        40,
+        147,
+        66
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "docs": [
+            "The keeper, `config.score_authority`; pays the rent of any associated token account",
+            "this call creates."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; `has_one = score_authority`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); must be `Suspended`."
+          ],
+          "relations": [
+            "pool"
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PROGRAM §3.4 vault; every share comes out of it."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's mint (`address = pool.mint`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The pool's token program (checked against `pool.token_program`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "docs": [
+            "The associated-token program, a fixed address; SPL pools only."
+          ],
+          "optional": true,
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "For the SOL transfers out of the vault and any ATA rent."
+          ],
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "sponsor",
       "docs": [
         "PROGRAM §4.3 `sponsor`: add `amount` (≥ one box price, within the token's cap) to the",
@@ -2453,6 +3631,45 @@
       ]
     },
     {
+      "name": "BoxesReclaimed",
+      "discriminator": [
+        67,
+        91,
+        84,
+        181,
+        58,
+        120,
+        40,
+        81
+      ]
+    },
+    {
+      "name": "BoxesReturned",
+      "discriminator": [
+        36,
+        123,
+        96,
+        27,
+        215,
+        109,
+        129,
+        108
+      ]
+    },
+    {
+      "name": "BoxesSplit",
+      "discriminator": [
+        30,
+        221,
+        84,
+        234,
+        127,
+        211,
+        121,
+        113
+      ]
+    },
+    {
       "name": "ConfigUpdated",
       "discriminator": [
         40,
@@ -2557,6 +3774,19 @@
       ]
     },
     {
+      "name": "PoolCancelled",
+      "discriminator": [
+        204,
+        15,
+        86,
+        4,
+        124,
+        97,
+        170,
+        173
+      ]
+    },
+    {
       "name": "PoolClosed",
       "discriminator": [
         106,
@@ -2632,6 +3862,32 @@
         80,
         85,
         131
+      ]
+    },
+    {
+      "name": "SponsorshipClosed",
+      "discriminator": [
+        31,
+        212,
+        135,
+        159,
+        167,
+        69,
+        47,
+        35
+      ]
+    },
+    {
+      "name": "SponsorshipReturned",
+      "discriminator": [
+        99,
+        40,
+        101,
+        124,
+        66,
+        225,
+        22,
+        53
       ]
     },
     {
@@ -3075,6 +4331,146 @@
               "`pool.sold` after this purchase."
             ],
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BoxesReclaimed",
+      "docs": [
+        "PROGRAM §7 `BoxesReclaimed`: a box owner took their own boxes back after the 30-day clock",
+        "(§4.6 `reclaim`)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "docs": [
+              "The signer, paid for their own boxes."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "boxes",
+            "docs": [
+              "The boxes paid in this call, 0-based, ascending."
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "The sum paid in this call."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BoxesReturned",
+      "docs": [
+        "PROGRAM §7 `BoxesReturned`: `return_boxes` paid one owner the purchase price of their",
+        "unreturned boxes (§4.6)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "docs": [
+              "The box owner paid."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "boxes",
+            "docs": [
+              "The boxes paid in this call, 0-based, ascending."
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "The sum paid in this call."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BoxesSplit",
+      "docs": [
+        "PROGRAM §7 `BoxesSplit`: `split` paid one owner `split_amount` per unreturned box (§4.6)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "docs": [
+              "The box owner paid."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "boxes",
+            "docs": [
+              "The boxes paid in this call, 0-based, ascending."
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "The sum paid in this call."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -4533,6 +5929,31 @@
       }
     },
     {
+      "name": "PoolCancelled",
+      "docs": [
+        "PROGRAM §7 `PoolCancelled`: the admin moved an unpaid pool to `Returned` (§4.6 `cancel_pool`)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "PoolClosed",
       "docs": [
         "PROGRAM §7 `PoolClosed`: a terminal pool's vault and account closed to `destination`."
@@ -5009,6 +6430,86 @@
               "PDA bump."
             ],
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SponsorshipClosed",
+      "docs": [
+        "PROGRAM §7 `SponsorshipClosed`: a committed sponsorship's account closed on a terminal pool",
+        "(`close_sponsorship`, §4.6); the amount stays in the pool."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "sponsor",
+            "docs": [
+              "`sponsorship.wallet`, who receives the account's rent."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "The committed amount, informational."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SponsorshipReturned",
+      "docs": [
+        "PROGRAM §7 `SponsorshipReturned`: a sponsorship paid back in full to its wallet and its",
+        "account closed (`return_sponsorship` or `reclaim_sponsorship`, §4.6)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "sponsor",
+            "docs": [
+              "`sponsorship.wallet`, the only possible destination."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "The amount returned."
+            ],
+            "type": "u64"
           }
         ]
       }

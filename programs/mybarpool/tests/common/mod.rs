@@ -1295,6 +1295,18 @@ pub fn event_names(result: &InstructionResult) -> Vec<&'static str> {
                 "QuarterSettled"
             } else if d == mybarpool::PoolClosed::DISCRIMINATOR {
                 "PoolClosed"
+            } else if d == mybarpool::BoxesReturned::DISCRIMINATOR {
+                "BoxesReturned"
+            } else if d == mybarpool::BoxesSplit::DISCRIMINATOR {
+                "BoxesSplit"
+            } else if d == mybarpool::BoxesReclaimed::DISCRIMINATOR {
+                "BoxesReclaimed"
+            } else if d == mybarpool::SponsorshipReturned::DISCRIMINATOR {
+                "SponsorshipReturned"
+            } else if d == mybarpool::SponsorshipClosed::DISCRIMINATOR {
+                "SponsorshipClosed"
+            } else if d == mybarpool::PoolCancelled::DISCRIMINATOR {
+                "PoolCancelled"
             } else {
                 "other"
             }
@@ -1830,23 +1842,42 @@ pub fn settled_pool(
     pool
 }
 
-/// The SOL vault balance the §3.4 invariant gives a pool: `rent + 25 × price + sponsored_total`
+/// The SOL vault balance the §3.4 invariant gives a pool: `rent + sold × price + sponsored_total`
 /// before the first settlement; after it, `rent + unpaid_prize_pool` **plus the three fees while
 /// `fees_paid` is false** (a `FinalOnly` pool's Q1–Q3 move nothing, so the fees are still in
 /// the vault — §3.4's "after the first settlement, `unpaid_prize_pool`" omits them; NOTES).
-/// Saturating, so a planted `u64::MAX / 25` price does not panic here (the overflow test
-/// replaces the vault anyway).
+/// Step 7: `Returned` holds the outstanding (sold, bit clear) boxes at `price` plus the
+/// sponsorships still open (the fixtures plant one sponsorship, so `sponsored_total` while
+/// `sponsorships_open > 0`); `Split` holds `unpaid_prize_pool`. Saturating, so a planted
+/// `u64::MAX / 25` price does not panic here (the overflow test replaces the vault anyway).
 pub fn vault_balance_for(pool: &Pool) -> u64 {
-    let above_rent = if pool.quarters_settled == 0 {
-        pool.price
-            .saturating_mul(25)
-            .saturating_add(pool.sponsored_total)
-    } else if pool.fees_paid {
-        pool.unpaid_prize_pool
-    } else {
-        pool.unpaid_prize_pool + pool.platform_fee + pool.creator_fee + pool.integrator_fee
+    let above_rent = match pool.status {
+        PoolStatus::Returned => {
+            let open = if pool.sponsorships_open > 0 {
+                pool.sponsored_total
+            } else {
+                0
+            };
+            pool.price
+                .saturating_mul(u64::from(outstanding_boxes(pool)))
+                .saturating_add(open)
+        }
+        PoolStatus::Split => pool.unpaid_prize_pool,
+        _ if pool.quarters_settled == 0 => pool
+            .price
+            .saturating_mul(u64::from(pool.sold))
+            .saturating_add(pool.sponsored_total),
+        _ if pool.fees_paid => pool.unpaid_prize_pool,
+        _ => pool.unpaid_prize_pool + pool.platform_fee + pool.creator_fee + pool.integrator_fee,
     };
     rent_for(0).saturating_add(above_rent)
+}
+
+/// Sold boxes whose `returned` bit is clear.
+pub fn outstanding_boxes(pool: &Pool) -> u8 {
+    (0..BOXES)
+        .filter(|&b| pool.owners[usize::from(b)] != APubkey::default() && !pool.is_returned(b))
+        .count() as u8
 }
 
 /// The SPL vault token account for `pool` holding `amount` through the pool's token program.
@@ -2006,4 +2037,410 @@ pub fn settlement_accounts(
         system_account(LAMPORTS_PER_SOL),
     );
     accounts
+}
+
+// ---------------------------------------------------------------------------
+// Returns fixtures (Step 7)
+// ---------------------------------------------------------------------------
+
+/// PROGRAM §1 `RECLAIM_DELAY`, re-exported for the boundary clocks.
+pub const RECLAIM_DELAY: i64 = mybarpool::constants::RECLAIM_DELAY;
+/// The first second a reclaim is accepted on the standard record (`SCHEDULED + 30 days`).
+pub const RECLAIM_AT: i64 = SCHEDULED + RECLAIM_DELAY;
+/// A Token / Token-2022 (no extensions) account is 165 bytes; its rent is what an ATA costs.
+pub const TOKEN_ACCOUNT_LEN: usize = 165;
+
+/// `standard_record()` marked `status` by the admin a minute after kickoff.
+pub fn marked_record(status: GameStatus) -> GameRecord {
+    let mut r = standard_record();
+    r.status = status;
+    r.marked_at = SCHEDULED + 60;
+    r
+}
+
+/// `record_with_quarters(n)` then suspended (the admin may suspend at any time before `Final`).
+pub fn suspended_record_with_quarters(n: u8) -> GameRecord {
+    let mut r = record_with_quarters(n);
+    r.status = GameStatus::Suspended;
+    r.marked_at = r.posted_at[usize::from(n.saturating_sub(1))] + 60;
+    r
+}
+
+/// `standard_record()` after an `update_kickoff` to `recorded_kickoff` (`scheduled_kickoff`
+/// unchanged).
+pub fn moved_record(recorded_kickoff: i64) -> GameRecord {
+    let mut r = standard_record();
+    r.recorded_kickoff = recorded_kickoff;
+    r
+}
+
+/// An owner plan: who owns which box indices.
+pub type OwnerPlan = Vec<(Pubkey, std::ops::Range<usize>)>;
+
+/// `FULL`: 0–4 the creator, 5–14 `buyer`, 15–24 `buyer_2` (the Step 6 drawn pool).
+pub fn full_plan(f: &Fixture) -> OwnerPlan {
+    vec![(f.creator, 0..5), (f.buyer, 5..15), (f.buyer_2, 15..25)]
+}
+
+/// `UNFILLED_15`: 0–4 the creator, 5–14 `buyer`, ten boxes unsold.
+pub fn unfilled_15_plan(f: &Fixture) -> OwnerPlan {
+    vec![(f.creator, 0..5), (f.buyer, 5..15)]
+}
+
+/// `EMPTY`: nothing sold.
+pub fn empty_plan() -> OwnerPlan {
+    Vec::new()
+}
+
+/// `fresh_pool` with the plan's owners planted, `sold` and `creator_boxes` counted, at `status`:
+/// `Locked`/`Drawn` set `locked_at`; `Drawn` also carries the standard Var bound, sampled and
+/// drawn with the identity axes (as `drawn_pool_for_settlement`).
+pub fn pool_with_owners(
+    f: &Fixture,
+    config: &PlatformConfig,
+    params: &CreatePoolParams,
+    status: PoolStatus,
+    plan: &OwnerPlan,
+) -> Pool {
+    let mut pool = fresh_pool(f, config, params);
+    for (owner, range) in plan {
+        for i in range.clone() {
+            pool.owners[i] = to_a(owner);
+            pool.sold += 1;
+            if *owner == f.creator {
+                pool.creator_boxes += 1;
+            }
+        }
+    }
+    pool.status = status;
+    if !matches!(status, PoolStatus::Open) {
+        pool.locked_at = T0;
+    }
+    if matches!(
+        status,
+        PoolStatus::Drawn | PoolStatus::Settled | PoolStatus::Split
+    ) {
+        pool.var = to_a(&f.var_key());
+        pool.var_end_at = END_AT;
+        pool.var_commit = *COMMIT;
+        pool.sampled_slot = END_AT + 3;
+        pool.sampled_hash = END_HASH;
+        pool.drawn = true;
+        pool.home_axis = IDENTITY_AXIS;
+        pool.away_axis = IDENTITY_AXIS;
+    }
+    pool
+}
+
+/// A keeper-partial `Returned` pool: `bits` already paid, `abandoned` false.
+pub fn returned_partial(mut pool: Pool, bits: &[u8]) -> Pool {
+    pool.status = PoolStatus::Returned;
+    for &b in bits {
+        pool.mark_returned(b);
+    }
+    pool.abandoned = false;
+    pool
+}
+
+/// A keeper-partial `Split` pool at a planted `split_amount` and `unpaid_prize_pool`.
+pub fn split_partial(mut pool: Pool, bits: &[u8], split_amount: u64, unpaid: u64) -> Pool {
+    pool.status = PoolStatus::Split;
+    for &b in bits {
+        pool.mark_returned(b);
+    }
+    pool.split_amount = split_amount;
+    pool.unpaid_prize_pool = unpaid;
+    pool.fees_paid = true;
+    pool.abandoned = false;
+    pool
+}
+
+/// One sponsorship of `amount` on the pool (`sponsor_count 1`, `sponsorships_open 1`).
+pub fn sponsored(mut pool: Pool, amount: u64) -> Pool {
+    pool.sponsored_total = amount;
+    pool.sponsor_count = 1;
+    pool.sponsorships_open = 1;
+    pool
+}
+
+/// A `Sponsorship { pool, wallet, amount, bump }` at `rent_for(Sponsorship::SIZE)`.
+pub fn sponsorship_account(pool_key: &Pubkey, wallet: &Pubkey, amount: u64) -> Account {
+    let value = Sponsorship {
+        pool: to_a(pool_key),
+        wallet: to_a(wallet),
+        amount,
+        bump: sponsorship_pda(pool_key, wallet).1,
+    };
+    let mut a = account_for(&value, &program_id(), Sponsorship::SIZE);
+    a.lamports = rent_for(Sponsorship::SIZE);
+    a
+}
+
+/// `returned` bitmap value for a list of boxes.
+pub fn returned_bits(boxes: &[u8]) -> u32 {
+    boxes.iter().fold(0u32, |acc, &b| acc | (1u32 << b))
+}
+
+/// `settlement_accounts` for a Step 7 state: the pool at its real rent, its vault at
+/// `vault_balance_for(pool)` (or an SPL vault at `spl_amount`), `record` as the game, the
+/// counter at `open_count`, the ATA program and the fee wallet.
+pub fn returns_accounts(
+    f: &Fixture,
+    m: &Mollusk,
+    config: &PlatformConfig,
+    pool: &Pool,
+    record: &GameRecord,
+    open_count: u8,
+    spl_amount: Option<u64>,
+) -> Vec<(Pubkey, Account)> {
+    let mut accounts = settlement_accounts(f, m, config, pool, 0, spl_amount);
+    set_account(&mut accounts, standard_game(), game_record_account(record));
+    set_account(
+        &mut accounts,
+        counter_pda(&f.creator, &standard_game()).0,
+        counter_account(&f.creator, &standard_game(), open_count),
+    );
+    accounts
+}
+
+/// The SPL side of an owner batch.
+#[derive(Clone, Copy)]
+pub struct SplBatch {
+    pub mint: Pubkey,
+    pub token_program: Pubkey,
+}
+
+impl SplBatch {
+    pub fn of(pool: &Pool) -> Self {
+        Self {
+            mint: to_m(&pool.mint),
+            token_program: to_m(&pool.token_program),
+        }
+    }
+
+    /// The derived ATA of `wallet` under this mint and program.
+    pub fn ata(&self, wallet: &Pubkey) -> Pubkey {
+        ata(wallet, &self.mint, &self.token_program)
+    }
+}
+
+/// The SPL side of a single-recipient payout.
+#[derive(Clone, Copy)]
+pub struct SplOne {
+    pub mint: Pubkey,
+    pub token_program: Pubkey,
+    pub ata: Pubkey,
+}
+
+impl SplOne {
+    /// The derived ATA of `wallet` for `pool`.
+    pub fn derived(pool: &Pool, wallet: &Pubkey) -> Self {
+        let batch = SplBatch::of(pool);
+        Self {
+            mint: batch.mint,
+            token_program: batch.token_program,
+            ata: batch.ata(wallet),
+        }
+    }
+}
+
+fn pool_key_of(pool: &Pool) -> Pubkey {
+    pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0
+}
+
+/// The owner batch as writable metas: `[owner]` or `[owner, ata]` per entry.
+fn batch_metas(batch: &[(Pubkey, Option<Pubkey>)]) -> Vec<AccountMeta> {
+    batch
+        .iter()
+        .flat_map(|(owner, ata)| {
+            let mut v = vec![AccountMeta::new(*owner, false)];
+            if let Some(a) = ata {
+                v.push(AccountMeta::new(*a, false));
+            }
+            v
+        })
+        .collect()
+}
+
+/// `return_boxes` by `signer` with the batch appended after the event-CPI pair.
+pub fn return_boxes_ix(
+    signer: &Pubkey,
+    pool: &Pool,
+    game: &Pubkey,
+    counter: Option<Pubkey>,
+    batch: &[(Pubkey, Option<Pubkey>)],
+    spl: Option<SplBatch>,
+) -> Instruction {
+    let pool_key = pool_key_of(pool);
+    let mut ix = instruction(
+        mybarpool::accounts::ReturnBoxes {
+            score_authority: to_a(signer),
+            config: to_a(&config_pda().0),
+            game: to_a(game),
+            pool: to_a(&pool_key),
+            vault: to_a(&vault_pda(&pool_key).0),
+            counter: counter.map(|k| to_a(&k)),
+            mint: spl.map(|s| to_a(&s.mint)),
+            token_program: spl.map(|s| to_a(&s.token_program)),
+            associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            system_program: APubkey::default(),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::ReturnBoxes {},
+    );
+    ix.accounts.extend(batch_metas(batch));
+    ix
+}
+
+/// `split` by `signer` with the batch appended after the event-CPI pair.
+pub fn split_ix(
+    signer: &Pubkey,
+    pool: &Pool,
+    game: &Pubkey,
+    batch: &[(Pubkey, Option<Pubkey>)],
+    spl: Option<SplBatch>,
+) -> Instruction {
+    let pool_key = pool_key_of(pool);
+    let mut ix = instruction(
+        mybarpool::accounts::Split {
+            score_authority: to_a(signer),
+            config: to_a(&config_pda().0),
+            game: to_a(game),
+            pool: to_a(&pool_key),
+            vault: to_a(&vault_pda(&pool_key).0),
+            mint: spl.map(|s| to_a(&s.mint)),
+            token_program: spl.map(|s| to_a(&s.token_program)),
+            associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            system_program: APubkey::default(),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::Split {},
+    );
+    ix.accounts.extend(batch_metas(batch));
+    ix
+}
+
+/// `return_sponsorship` by `signer` for `sponsor_wallet`'s account; `destination` substitutes
+/// the `sponsor` slot (defaults to the wallet).
+pub fn return_sponsorship_ix(
+    signer: &Pubkey,
+    pool: &Pool,
+    sponsor_wallet: &Pubkey,
+    destination: Option<Pubkey>,
+    spl: Option<SplOne>,
+) -> Instruction {
+    let pool_key = pool_key_of(pool);
+    instruction(
+        mybarpool::accounts::ReturnSponsorship {
+            score_authority: to_a(signer),
+            config: to_a(&config_pda().0),
+            pool: to_a(&pool_key),
+            vault: to_a(&vault_pda(&pool_key).0),
+            sponsorship: to_a(&sponsorship_pda(&pool_key, sponsor_wallet).0),
+            sponsor: to_a(&destination.unwrap_or(*sponsor_wallet)),
+            mint: spl.map(|s| to_a(&s.mint)),
+            sponsor_token_account: spl.map(|s| to_a(&s.ata)),
+            token_program: spl.map(|s| to_a(&s.token_program)),
+            associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            system_program: APubkey::default(),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::ReturnSponsorship {},
+    )
+}
+
+/// `cancel_pool` by `signer`.
+pub fn cancel_pool_ix(signer: &Pubkey, pool: &Pool, counter: Option<Pubkey>) -> Instruction {
+    let pool_key = pool_key_of(pool);
+    instruction(
+        mybarpool::accounts::CancelPool {
+            admin: to_a(signer),
+            config: to_a(&config_pda().0),
+            pool: to_a(&pool_key),
+            counter: counter.map(|k| to_a(&k)),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::CancelPool {},
+    )
+}
+
+/// `reclaim` by `signer` (a box owner).
+pub fn reclaim_ix(
+    signer: &Pubkey,
+    pool: &Pool,
+    game: &Pubkey,
+    counter: Option<Pubkey>,
+    spl: Option<SplOne>,
+) -> Instruction {
+    let pool_key = pool_key_of(pool);
+    instruction(
+        mybarpool::accounts::Reclaim {
+            box_owner: to_a(signer),
+            game: to_a(game),
+            pool: to_a(&pool_key),
+            vault: to_a(&vault_pda(&pool_key).0),
+            counter: counter.map(|k| to_a(&k)),
+            mint: spl.map(|s| to_a(&s.mint)),
+            box_owner_token_account: spl.map(|s| to_a(&s.ata)),
+            token_program: spl.map(|s| to_a(&s.token_program)),
+            associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            system_program: APubkey::default(),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::Reclaim {},
+    )
+}
+
+/// `reclaim_sponsorship` by `signer` (the sponsor; the `Sponsorship` seed).
+pub fn reclaim_sponsorship_ix(
+    signer: &Pubkey,
+    pool: &Pool,
+    game: &Pubkey,
+    counter: Option<Pubkey>,
+    spl: Option<SplOne>,
+) -> Instruction {
+    let pool_key = pool_key_of(pool);
+    instruction(
+        mybarpool::accounts::ReclaimSponsorship {
+            sponsor: to_a(signer),
+            game: to_a(game),
+            pool: to_a(&pool_key),
+            vault: to_a(&vault_pda(&pool_key).0),
+            sponsorship: to_a(&sponsorship_pda(&pool_key, signer).0),
+            counter: counter.map(|k| to_a(&k)),
+            mint: spl.map(|s| to_a(&s.mint)),
+            sponsor_token_account: spl.map(|s| to_a(&s.ata)),
+            token_program: spl.map(|s| to_a(&s.token_program)),
+            associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            system_program: APubkey::default(),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::ReclaimSponsorship {},
+    )
+}
+
+/// `close_sponsorship` for `sponsor_wallet`'s account; `destination` substitutes the `sponsor`
+/// slot.
+pub fn close_sponsorship_ix(
+    pool: &Pool,
+    sponsor_wallet: &Pubkey,
+    destination: Option<Pubkey>,
+) -> Instruction {
+    let pool_key = pool_key_of(pool);
+    instruction(
+        mybarpool::accounts::CloseSponsorship {
+            pool: to_a(&pool_key),
+            sponsorship: to_a(&sponsorship_pda(&pool_key, sponsor_wallet).0),
+            sponsor: to_a(&destination.unwrap_or(*sponsor_wallet)),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::CloseSponsorship {},
+    )
 }
