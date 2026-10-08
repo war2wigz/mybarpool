@@ -164,7 +164,7 @@ One per scheduled game. Created and rent-paid by the platform. Never closed.
 | `returned` | u32 | Bitmap over boxes: returned, split or reclaimed |
 | `split_amount` | u64 | Per-box amount fixed when the pool enters `Split` or is first reclaimed after a payout |
 | `cancelled_by_admin` | bool | |
-| `abandoned` | bool | Set by the first `reclaim` or `reclaim_sponsorship` |
+| `abandoned` | bool | Set by the first `reclaim` or `reclaim_sponsorship` on a pool that was still `Open`, `Locked` or `Drawn` (§4.6); a pool the keeper had already moved to `Returned` or `Split` is not abandoned, however late its last box is reclaimed |
 | `created_at` | i64 | |
 | `locked_at` | i64 | 0 until locked |
 | `bump` | u8 | |
@@ -181,7 +181,7 @@ Approximate size: 8 (discriminator) + 800 (owners) + ~465 (the other fields: 8 p
 - SOL pools: a system-program-owned account at the PDA, holding lamports. Transfers out are `system_program::transfer` signed with the vault seeds. It must hold its own rent-exempt minimum at all times; that minimum is paid by the creator at creation and is part of the creation fee, and it is what closes to the rent destination at `close_pool`.
 - SPL pools: a token account at the PDA for the pool's mint, `owner = pool` PDA. Transfers out are `transfer_checked` signed with the pool seeds. The mint's own token program (Token or Token-2022, from `TokenRule.token_program`) is used throughout.
 
-Vault balance invariants, checked in tests, not enforced by the program (SOL: the balance above the vault's own rent-exempt minimum): while `Open`/`Locked`/`Drawn` before the first settlement, `sold × price + sponsored_total`; after the first settlement, `unpaid_prize_pool`, plus `platform_fee + creator_fee + integrator_fee` while `fees_paid` is still false (a `FinalOnly` pool through Q3: its first three settlements move nothing, so the fees are still in the vault until the final pays them). The dust `prize_pool − Σ quarter_prize` is inside `unpaid_prize_pool` (§4.5 only ever subtracts prizes paid from it), so a `Settled` pool's `unpaid_prize_pool` equals the dust, and that is what `close_pool` sweeps.
+Vault balance invariants, checked in tests, not enforced by the program (SOL: the balance above the vault's own rent-exempt minimum): while `Open`/`Locked`/`Drawn` before the first settlement, `sold × price + sponsored_total`; after the first settlement, `unpaid_prize_pool`, plus `platform_fee + creator_fee + integrator_fee` while `fees_paid` is still false (a `FinalOnly` pool through Q3: its first three settlements move nothing, so the fees are still in the vault until the final pays them). The dust `prize_pool − Σ quarter_prize` is inside `unpaid_prize_pool` (§4.5 only ever subtracts prizes paid from it), so a `Settled` pool's `unpaid_prize_pool` equals the dust, and that is what `close_pool` sweeps. In `Returned`, `price × (sold − popcount(returned))` plus the `amount` of every `Sponsorship` account still open (`sponsored_total` and `sponsor_count` are history and are never decremented; §4.6). In `Split`, `unpaid_prize_pool`: §4.6 subtracts every split share paid from it, so once all 25 boxes are paid it is what the first `split` or after-payout `reclaim` found minus `25 × split_amount`, at most 24 base units, the dust `close_pool` sweeps.
 
 ### 3.5 `CreatorCounter` — seeds `["counter", creator, game_record]`
 
@@ -192,7 +192,7 @@ Vault balance invariants, checked in tests, not enforced by the program (SOL: th
 | `open_count` | u8 | Pools in `Open` |
 | `bump` | u8 | |
 
-Created by `create_pool` when absent (creator pays rent), incremented there, decremented whenever one of the creator's pools on that game leaves `Open` (lock, first return call, admin cancel, first reclaim). Closed by `close_counter` when `open_count == 0`; rent to `fee_wallet`.
+Created by `create_pool` when absent (creator pays rent), incremented there, decremented whenever one of the creator's pools on that game leaves `Open` (lock, first return call, admin cancel, first reclaim or sponsorship reclaim; the §4.6 instructions take it as an optional account that is required exactly on that call). Closed by `close_counter` when `open_count == 0`; rent to `fee_wallet`.
 
 ### 3.6 `WalletOverride` — seeds `["override", wallet]`
 
@@ -310,32 +310,38 @@ Checks: `status ∈ {Settled, Returned, Split}` (`PoolNotTerminal`); `sponsorshi
 
 ### 4.6 Returns, splits, cancellation, reclaim
 
-Returns are executed per owner set so a full pool fits in a few transactions. All of them are idempotent through the `returned` bitmap.
+Returns are executed per owner set so a full pool fits in a few transactions. All of them are idempotent through the `returned` bitmap: a box is paid at most once in a pool's life, whichever of `return_boxes`, `split` or `reclaim` pays it, and nothing but a status change or a box paid counts as progress.
 
-**`return_boxes()`** — signer: keeper. Remaining accounts: a list of owner wallets (each followed by its ATA for SPL). Payer for ATA creation: keeper.
-Precondition, one of:
+Owner batches, shared by `return_boxes` and `split`: the remaining accounts are the owner wallets, each followed by its associated token account for the pool's mint on an SPL pool (`[owner, ata]*`; `[owner]*` on SOL). The list is the keeper's choice of **which** owners to pay in this call, never of how much or to where: for every passed wallet the program collects the boxes `b` with `owners[b]` equal to it and bit `b` clear, pays one transfer for their sum to that wallet (or to the ATA it derived for that wallet, created idempotently with the keeper as payer when funds move to it), sets the bits and emits one event, boxes in ascending index order. A passed wallet that owns no unreturned box moves nothing and emits nothing, so a duplicate or a stranger in the list is harmless; a call that neither changes the pool's status nor pays a box fails with `NothingToReturn`, which is what a blind retry of a finished batch sees. A token account that is not the derived ATA, an SPL list with an odd number of entries, or a missing mint or token program fail with Anchor's own errors (`RequireKeysEqViolated`, `AccountNotEnoughKeys`, `ConstraintAccountIsNone`), as in §4.3. Nothing is created for a transfer that does not happen.
+
+The counter: `return_boxes`, `cancel_pool`, `reclaim` and `reclaim_sponsorship` take the creator's `CreatorCounter` (§3.5) as an optional account. It is required (`ConstraintAccountIsNone` when absent) and decremented on the one call that moves the pool out of `Open`, and is not read otherwise.
+
+**`return_boxes()`** — signer: keeper (payer for ATA creation). Accounts: config, game, pool, vault, counter (optional, above), and for SPL pools the mint, the token program and the associated-token program; system program. Remaining accounts: the owner batch.
+Precondition, one of (else `NotReturnable`; a `Settled` or `Split` pool satisfies none, and the program refuses both before looking):
 - unfilled: `status == Open` and `now ≥ game.recorded_kickoff`;
 - marked: `game.status ∈ {Postponed, Cancelled}` and `!fees_paid`;
-- suspended before any payout: `game.status == Suspended` and `!fees_paid`;
+- suspended before any payout: `game.status == Suspended` and `!fees_paid` (a `FinalOnly` pool whose first three settlements moved nothing is still before any payout);
 - cancelled: `cancelled_by_admin`;
-- already returning: `status == Returned` and `!fees_paid` (continuation calls).
-Effects: on the first call (`status != Returned`): if `status == Open` decrement the counter; set `status = Returned`. Then for every box `b` with `owners[b]` in the passed set and bit `b` clear: transfer `price`, set bit `b`. One transfer per owner (sum of their boxes). Emits `BoxesReturned { owner, boxes[], amount }` per owner.
+- already returning: `status == Returned` and `!fees_paid` (continuation calls, including after a `reclaim` or `reclaim_sponsorship` moved the pool there).
+Effects: on the first call (`status != Returned`): if `status == Open` decrement the counter; set `status = Returned`. Then for every box `b` with `owners[b]` in the passed set and bit `b` clear: transfer `price`, set bit `b`. One transfer per owner (sum of their boxes). Emits `BoxesReturned { owner, boxes[], amount }` per owner paid. An unfilled pool with no box sold becomes `Returned` with an empty batch.
 
-**`return_sponsorship()`** — signer: keeper. Accounts: pool, vault, sponsorship, `sponsorship.wallet` (and ATA).
-Checks: `status == Returned` and `!fees_paid`; the destination account equals `sponsorship.wallet`. Effects: transfer `amount`; close the `Sponsorship` with rent to the wallet; `sponsorships_open −= 1`. Emits `SponsorshipReturned`.
+**`return_sponsorship()`** — signer: keeper (payer for ATA creation). Accounts: config, pool, vault, sponsorship, `sponsorship.wallet` (and its ATA, the token program and the associated-token program for SPL); system program. No `game`.
+Checks, in order: `!fees_paid` (`FeesAlreadyPaid`: the sponsorship is committed, §5.3); `status == Returned` (`NotReturnable`); the destination account equals `sponsorship.wallet` (an `address` constraint, so a substituted account is Anchor's `ConstraintAddress`). Effects: transfer `amount`; close the `Sponsorship` with rent to the wallet; `sponsorships_open −= 1`. `sponsored_total` and `sponsor_count` are not changed. Emits `SponsorshipReturned`.
 
-**`cancel_pool()`** — signer: admin. Checks: `status ∈ {Open, Locked, Drawn}`; `!fees_paid`. Effects: `cancelled_by_admin = true`; if `Open`, decrement counter; `status = Returned`. Emits `PoolCancelled`. The keeper then runs `return_boxes` and `return_sponsorship`.
+**`cancel_pool()`** — signer: admin. Accounts: config, pool, counter (optional). No `game`, no vault. Checks, in order: `status ∈ {Open, Locked, Drawn}` (`NotReturnable`); `!fees_paid` (`FeesAlreadyPaid`: after the first prize only the game-level suspended path applies). Effects: `cancelled_by_admin = true`; if `Open`, decrement counter; `status = Returned`. Emits `PoolCancelled`. The keeper then runs `return_boxes` and `return_sponsorship`.
 
-**`split()`** — signer: keeper. Remaining accounts as for `return_boxes`.
-Checks: `game.status == Suspended`; `fees_paid`; `status ∈ {Drawn, Split}`. Effects: on the first call, `split_amount = floor(unpaid_prize_pool / 25)`, `status = Split`. For each unreturned box owned by a passed owner: transfer `split_amount`, set the bit. Emits `BoxesSplit { owner, boxes[], amount }`. Sponsorships are inside `unpaid_prize_pool` and go with it; `return_sponsorship` fails because `fees_paid`.
+**`split()`** — signer: keeper (payer for ATA creation). Accounts: config, game, pool, vault, and for SPL pools the mint, the token program and the associated-token program; system program. Remaining accounts: the owner batch.
+Checks, in order: `game.status == Suspended` (`NotSuspended`); `fees_paid` (`NotSplittable`: before the first payout the pool is returned in full by `return_boxes`); `status ∈ {Drawn, Split}` (`NotSplittable`). Effects: on the first call (`status == Drawn`), `split_amount = floor(unpaid_prize_pool / 25)`, `status = Split`. For each unreturned box owned by a passed owner: transfer `split_amount`, set the bit, `unpaid_prize_pool −= split_amount`. Emits `BoxesSplit { owner, boxes[], amount }` per owner paid. Sponsorships are inside `unpaid_prize_pool` and go with it; `return_sponsorship` fails because `fees_paid`, and `close_sponsorship` closes the account. What the division leaves (`unpaid_prize_pool` at the first call minus `25 × split_amount`, at most 24 base units) stays in `unpaid_prize_pool` and in the vault, and is the dust `close_pool` sweeps. The program does not require every posted quarter to be settled before the split; the keeper settles every posted quarter first and then splits, since a `Split` pool can no longer be settled.
 
-**`reclaim()`** — signer: the box owner. Accounts: pool, vault, game, owner (and ATA), counter if the pool is `Open`.
-Checks: `status != Settled`; `now ≥ game.scheduled_kickoff + RECLAIM_DELAY`; the signer owns at least one unreturned box. (A pool already in `Returned` or `Split` whose keeper never finished the batches is covered too: after 30 days the owner takes what the pool already owes them, at the amount the pool already fixed.)
-Effects: if `status ∈ {Open, Locked, Drawn}` (the pool was never resolved): `abandoned = true`; if `status == Open` decrement the counter; if `!fees_paid`, `status = Returned`, else `status = Split` and `split_amount = floor(unpaid_prize_pool / 25)`. Then for every unreturned box the signer owns: transfer `price` (if `!fees_paid`) or `split_amount`, set the bit. Emits `BoxesReclaimed`.
+**`reclaim()`** — signer: the box owner (payer for their own missing ATA). Accounts: game, pool, vault, counter (optional), and for SPL pools the mint, the signer's ATA, the token program and the associated-token program; system program. No `config`.
+Checks, in order: `status != Settled` (`NotReturnable`); `now ≥ game.scheduled_kickoff + RECLAIM_DELAY` (`ReclaimTooEarly`; the scheduled kickoff, never `recorded_kickoff`); the signer owns at least one box (`NotOwner`) and at least one of them is unreturned (`NothingToReturn`, so a second reclaim fails). (A pool already in `Returned` or `Split` whose keeper never finished the batches is covered too: after 30 days the owner takes what the pool already owes them, at the amount the pool already fixed, and the pool is not marked abandoned.)
+Effects: if `status ∈ {Open, Locked, Drawn}` (the pool was never resolved): `abandoned = true`; if `status == Open` decrement the counter; if `!fees_paid`, `status = Returned`, else `status = Split` and `split_amount = floor(unpaid_prize_pool / 25)`. Then for every unreturned box the signer owns: transfer `price` (if `!fees_paid`) or `split_amount` (and `unpaid_prize_pool −= split_amount`), set the bit; one transfer for the sum. Emits `BoxesReclaimed`.
 
-**`reclaim_sponsorship()`** — signer: the sponsor. Checks: `!fees_paid`; `now ≥ scheduled_kickoff + RECLAIM_DELAY`; `status != Settled`. Effects: as the unresolved-pool step above if needed; transfer `amount` to `sponsorship.wallet`; close the account to the wallet; `sponsorships_open −= 1`. Emits `SponsorshipReturned`.
+**`reclaim_sponsorship()`** — signer: the sponsor (payer for their own missing ATA; the `Sponsorship` is at `["sponsorship", pool, signer]`, so a wallet that never sponsored has no account to pass). Accounts: game, pool, vault, sponsorship, counter (optional), SPL accounts as for `reclaim`; system program. No `config`. Checks, in order: `!fees_paid` (`FeesAlreadyPaid`); `now ≥ scheduled_kickoff + RECLAIM_DELAY` (`ReclaimTooEarly`); `status != Settled` (`NotReturnable`). Effects: as the unresolved-pool step above if needed (`abandoned`, the counter, `status = Returned`); transfer `amount` to `sponsorship.wallet`; close the account to the wallet; `sponsorships_open −= 1`. Emits `SponsorshipReturned`.
 
-**`close_sponsorship()`** — permissionless. Checks: `status ∈ {Settled, Split}` (the sponsorship is committed and the pool is terminal). Closes the account with rent to `sponsorship.wallet`; `sponsorships_open −= 1`. Emits `SponsorshipClosed`.
+**`close_sponsorship()`** — permissionless (no signer). Accounts: pool, sponsorship, `sponsorship.wallet` (`address`-constrained). Checks: `status ∈ {Settled, Split}` (`PoolNotTerminal`: the sponsorship is committed and the pool is terminal; on a `Returned` pool the sponsorship is paid back by `return_sponsorship` or `reclaim_sponsorship`, never closed empty-handed). Closes the account with rent to `sponsorship.wallet`; `sponsorships_open −= 1`. Emits `SponsorshipClosed { sponsor, amount }` with the amount that stays committed.
+
+None of the seven consults `paused` (ARCHITECTURE › Trust model: pausing can never trap funds). Every wallet that receives funds here was verified by the program in the same instruction: a box owner against `owners`, a sponsor against its own `Sponsorship` account; the keeper and the reclaiming party choose which, never where.
 
 ## 5. Money
 
@@ -471,7 +477,11 @@ Numbered from 6000 (Anchor custom errors). Names are the contract; numbers follo
 
 `SampleTooEarly` (6062) is `sample_var` before `var.end_at`, and `VarAlreadySampled` (6063) is a second `sample_var` on a pool with a sample recorded, or `replace_var` on one (§4.4). Both added in Step 5. `VarCommitMismatch` (6064) is `draw` on a `Var` whose revealed `seed` does not hash to the commit `set_var` recorded on the pool; added in Step 5b with the `var_commit` field.
 
-`OverrideRequired` (6023) is reserved and never raised: the override slot is a required account of `create_pool` and `buy` (§3.6), so there is no way to omit it. `FeesAlreadyPaid` (6047) is reserved the same way: `settle` moves the fees exactly when `!fees_paid` and the quarter's prize is non-zero (§4.5), and there is no separate fee instruction that could be repeated. Both numbers stay because the list is frozen in declaration order. Client-side account mistakes on the §4.3 instructions fail with Anchor's own constraint errors, not with a code from this list (see the end of §4.3).
+`OverrideRequired` (6023) is reserved and never raised: the override slot is a required account of `create_pool` and `buy` (§3.6), so there is no way to omit it; the number stays because the list is frozen in declaration order. `FeesAlreadyPaid` (6047) was reserved the same way through Step 6 (`settle` moves the fees exactly when `!fees_paid` and the quarter's prize is non-zero, and there is no separate fee instruction to repeat) and is raised from Step 7 on by `cancel_pool`, `return_sponsorship` and `reclaim_sponsorship` on a pool whose fees have been paid (§4.6): the pool can only be split, and the sponsorship is committed.
+
+The §4.6 block, by instruction: `NotReturnable` (6046) is `return_boxes` with no precondition holding (a `Settled` or `Split` pool included), `cancel_pool` outside `Open`/`Locked`/`Drawn`, `reclaim` or `reclaim_sponsorship` on a `Settled` pool, and `return_sponsorship` on a pool that is not `Returned`; `NotSuspended` (6048) is `split` on a game not marked suspended; `NotSplittable` (6049) is `split` before any payout or outside `Drawn`/`Split`; `ReclaimTooEarly` (6050) is `reclaim` or `reclaim_sponsorship` before `scheduled_kickoff + RECLAIM_DELAY`; `NotOwner` (6051) is `reclaim` by a wallet that owns no box in the pool; `NothingToReturn` (6052) is a `return_boxes`, `split` or `reclaim` that would change nothing (the retry of a finished batch; a second reclaim); `PoolNotTerminal` (6055) is also `close_sponsorship` outside `Settled`/`Split`.
+
+Client-side account mistakes on the §4.3 and §4.6 instructions fail with Anchor's own constraint errors, not with a code from this list (see the end of §4.3 and the §4.6 preamble: a substituted sponsor wallet is `ConstraintAddress`, a token account that is not the derived ATA is `RequireKeysEqViolated`, a missing counter on the call that needs it is `ConstraintAccountIsNone`).
 
 ## 9. State machines
 
@@ -491,16 +501,16 @@ Terminal: `Postponed`, `Cancelled`, `Suspended`, `Final`.
 
 ```
 Open   --buy (25th)-------------> Locked
-Open   --return_boxes (kickoff passed) | cancel_pool | return_boxes (game marked) | reclaim--> Returned
+Open   --return_boxes (kickoff passed) | cancel_pool | return_boxes (game marked) | reclaim / reclaim_sponsorship--> Returned
 Locked --set_var, sample_var, draw--> Drawn
-Locked --cancel_pool | return_boxes (game marked / suspended, no payout) | reclaim--> Returned
+Locked --cancel_pool | return_boxes (game marked / suspended, no payout) | reclaim / reclaim_sponsorship--> Returned
 Drawn  --settle × 4--> Settled
-Drawn  --cancel_pool | return_boxes (game marked / suspended, no payout) | reclaim (no payout)--> Returned
+Drawn  --cancel_pool | return_boxes (game marked / suspended, no payout) | reclaim / reclaim_sponsorship (no payout)--> Returned
 Drawn  --split (suspended, after payout) | reclaim (after payout)--> Split
 Settled | Returned | Split --close_pool--> (account closed)
 ```
 
-Terminal: `Settled`, `Returned`, `Split`. `sponsor` is allowed in `Open`, `Locked` and `Drawn` while `now < recorded_kickoff`.
+Terminal: `Settled`, `Returned`, `Split`. `sponsor` is allowed in `Open`, `Locked` and `Drawn` while `now < recorded_kickoff`. `return_boxes` and `reclaim` keep paying boxes inside `Returned`, `split` and `reclaim` inside `Split`, until every sold box has its bit set; the status does not change again.
 
 ## 10. Invariants the test suite must prove
 
