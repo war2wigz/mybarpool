@@ -366,8 +366,10 @@ fn open_with_an_unsigned_stranger_as_provider_also_succeeds_on_the_fork() {
 
 #[test]
 fn open_canary_regoliths_deployed_bytecode_still_refuses_open() {
-    // The Step 5 finding, kept against Regolith's bytecode (loaded at ENTROPY_PROGRAM for this
-    // test only): the same Open fails with InvalidInstructionData from the dispatcher's `_` arm.
+    // The Step 5 finding, kept against Regolith's bytecode, loaded at Regolith's own id
+    // (`with_regolith_entropy` / `regolith_entropy_id()`: steel's entrypoint checks the program
+    // id before dispatching, so it cannot stand in at ENTROPY_PROGRAM): the same Open fails with
+    // InvalidInstructionData from the dispatcher's `_` arm.
     // If this ever passes, Regolith re-enabled `Open`; tell the auditor before anything else.
     let f = Fixture::new();
     let mut m = mollusk_for_draw(900, &[]);
