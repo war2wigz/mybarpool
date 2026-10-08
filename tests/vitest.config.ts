@@ -22,5 +22,9 @@ export default defineConfig({
     hookTimeout: 60_000,
     fileParallelism: false,
     sequence: { sequencer: PathOrderSequencer },
+    // The suites report measured compute units, time-travel targets and transaction profiles
+    // through console.log; vitest 5 hides the output of passing tests unless told otherwise,
+    // and the numbers are what NOTES.md and the CI log record (Step 7).
+    silent: false,
   },
 });

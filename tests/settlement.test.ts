@@ -5,8 +5,8 @@
  * One `describe`, ordered.
  *
  * One game `G` carries every pool, so one set of four score posts serves them
- * all. Pools are drawn with nothing planted (`draw.test.ts` item 2's recipe):
- * `Open` → `set_var` → wait → `sample_var` → `Reveal` → `draw`. The winner is
+ * all. Pools are drawn with nothing planted (`draw.test.ts` item 2's recipe,
+ * shared as `tests/helpers/scenario.ts` since Step 7). The winner is
  * never hard-coded: `expectedWinner` reads the pool's axes and owners and
  * computes the box with the shared `winningBox`.
  */
@@ -14,14 +14,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import {
-  drawAxes,
-  entropyValue,
-  INITIAL_LADDERS,
-  keccak,
-  winningBox,
-  type Digits,
-} from "@mybarpool/shared";
+import { winningBox, type Digits } from "@mybarpool/shared";
 import {
   airdropFactory,
   createKeyPairSignerFromBytes,
@@ -34,18 +27,17 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { Localnet } from "../scripts/localnet.js";
 import {
-  currentSlot,
-  entropyVarPda,
-  fetchVar,
-  openInstruction,
-  revealInstruction,
-  waitForSlot,
-} from "./helpers/entropy.js";
+  CU_LIMIT,
+  drawnPool as drawnPoolScenario,
+  fetchPool,
+  PRICE,
+  PRICE_ORE,
+} from "./helpers/scenario.js";
 import {
   ata,
-  buyInstruction,
   chainNow,
   closePoolInstruction,
+  closeSponsorshipInstruction,
   closeTokenAccountInstruction,
   COMPUTE_BUDGET_PROGRAM,
   computeUnitsConsumed,
@@ -54,7 +46,6 @@ import {
   createPoolInstruction,
   decodeAccount,
   decodeEvent,
-  drawInstruction,
   emittedEvents,
   errorCode,
   eventName,
@@ -65,7 +56,6 @@ import {
   ORE_MINT,
   platformConfigDecoder,
   poolClosedDecoder,
-  poolDecoder,
   poolParams,
   poolPda,
   PoolStatus,
@@ -73,14 +63,14 @@ import {
   quarterSettledDecoder,
   rpc,
   rpcSubscriptions,
-  sampleVarInstruction,
   send,
   sendExpectingError,
   setComputeUnitLimit,
   settleInstruction,
-  setVarInstruction,
   SLOT_HASHES_SYSVAR,
   sponsorInstruction,
+  sponsorshipClosedDecoder,
+  sponsorshipPda,
   TOKEN_PROGRAM,
   tokenAmount,
   updateConfigInstruction,
@@ -88,7 +78,6 @@ import {
   withRetry,
   type CreatePoolParams,
   type GameKey,
-  type Pool,
   type PoolRefs,
   type SplPool,
 } from "./helpers/mybarpool.js";
@@ -96,9 +85,6 @@ import {
 const SOL = 1_000_000_000n;
 const HOUR = 3_600n;
 const MINUTE = 60n;
-/** ARCHITECTURE › Buying: the SOL minimum, 0.05 SOL; the ORE minimum, 0.05 ORE at 11 decimals. */
-const PRICE = INITIAL_LADDERS.SOL.minPrice;
-const PRICE_ORE = INITIAL_LADDERS.ORE.minPrice;
 /** PROGRAM §2 team table: KC hosting DAL in week 4 of 2026. */
 const KEY: GameKey = { season: 2026, week: 4, home: 15, away: 8 };
 /** The Step 3 scores: Q1 7–3, Q2 14–10, Q3 17–17, Q4 24–20 final with overtime. */
@@ -108,20 +94,9 @@ const SCORES: [number, number][] = [
   [17, 17],
   [24, 20],
 ];
-const CU_LIMIT = 400_000;
-/** Slots ahead for `end_at` (6 s at 200 ms): Open and set_var both have to land inside it. */
-const WINDOW_AHEAD = 30n;
 const ORE: SplPool = { mint: ORE_MINT, tokenProgram: TOKEN_PROGRAM };
 
 const localnet = new Localnet();
-const seedOf = (byte: number) => new Uint8Array(32).fill(byte);
-
-async function fetchPool(pool: Address): Promise<Pool> {
-  const data = await fetchAccountData(pool);
-  expect(data).not.toBeNull();
-  expect(data!.length).toBe(1442); // PROGRAM §3.3
-  return decodeAccount("Pool", data!, poolDecoder);
-}
 
 describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
   let admin: KeyPairSigner;
@@ -134,7 +109,7 @@ describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
   let feeWallet: Address;
   let game: Address;
   let kickoff: bigint;
-  let rent: { vault: bigint; pool: bigint; tokenAccount: bigint };
+  let rent: { vault: bigint; pool: bigint; tokenAccount: bigint; sponsorship: bigint };
   let nextNonce = 1n;
   let nextVarId = 500n;
   const measured: Record<string, bigint> = {};
@@ -185,82 +160,21 @@ describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
     ]);
   }
 
-  /** draw.test.ts item 2's recipe: a pool with 25 boxes sold, drawn with nothing planted. */
-  async function drawnPool(params: Partial<CreatePoolParams>, spl?: SplPool): Promise<PoolRefs> {
-    const nonce = nextNonce++;
-    const tokenPath = spl
-      ? {
-          mint: spl.mint,
-          tokenProgram: spl.tokenProgram,
-        }
-      : undefined;
-    await send(
-      creator,
-      await createPoolInstruction(
+  /** The shared recipe (`tests/helpers/scenario.ts`) with this suite's cast. */
+  const drawnPool = (params: Partial<CreatePoolParams>, spl?: SplPool) =>
+    drawnPoolScenario(
+      {
         creator,
+        buyers: [buyerA, buyerB],
+        keeper,
+        sampler: stranger,
         game,
-        poolParams({
-          nonce,
-          token: spl ? 2 : 0, // ORE is token index 2 (ARCHITECTURE › Buying table)
-          price: spl ? PRICE_ORE : PRICE,
-          initialBoxes: 5,
-          ...params,
-        }),
-        tokenPath
-          ? {
-              ...tokenPath,
-              tokenAccount: await ata(creator.address, spl!.mint, spl!.tokenProgram),
-            }
-          : {},
-      ),
+        nextNonce: () => nextNonce++,
+        nextVarId: () => nextVarId++,
+      },
+      params,
+      spl,
     );
-    const refs: PoolRefs = {
-      pool: await poolPda(game, creator.address, nonce),
-      game,
-      creator: creator.address,
-    };
-    for (const buyer of [buyerA, buyerB]) {
-      await send(
-        buyer,
-        await buyInstruction(
-          buyer,
-          refs,
-          10,
-          tokenPath
-            ? { ...tokenPath, tokenAccount: await ata(buyer.address, spl!.mint, spl!.tokenProgram) }
-            : {},
-        ),
-      );
-    }
-    expect((await fetchPool(refs.pool)).status).toBe(PoolStatus.Locked);
-
-    const id = nextVarId++;
-    const seed = seedOf(Number(id % 200n) + 1);
-    const varAddress = await entropyVarPda(keeper.address, id);
-    // First touch of the new PDA: Surfpool asks mainnet whether it exists (Step 3 audit M1), and
-    // a slow answer must not eat the window between Open and set_var.
-    await withRetry(() => rpc.getAccountInfo(varAddress, { encoding: "base64" }).send());
-    const endAt = (await currentSlot()) + WINDOW_AHEAD;
-    await send(
-      keeper,
-      await openInstruction(keeper, keeper, id, keeper.address, keccak(seed), false, 1n, endAt),
-    );
-    await send(keeper, await setVarInstruction(keeper, refs.pool, varAddress));
-    await waitForSlot(endAt + 1n);
-    await send(stranger, [
-      setComputeUnitLimit(CU_LIMIT),
-      await sampleVarInstruction(stranger, refs.pool, varAddress),
-    ]);
-    await send(keeper, revealInstruction(keeper, varAddress, seed));
-    const revealed = (await fetchVar(varAddress))!;
-    expect(revealed.value).toEqual(entropyValue(revealed.slotHash, seed, 1n));
-    await send(keeper, await drawInstruction(keeper, refs.pool, varAddress));
-    const pool = await fetchPool(refs.pool);
-    expect(pool.status).toBe(PoolStatus.Drawn);
-    const axes = drawAxes(revealed.value);
-    expect(pool.homeAxis).toEqual(Array.from(axes.home));
-    return refs;
-  }
 
   /** `games.test.ts`'s pattern: forward only, to `target + 2` seconds. */
   async function travelTo(target: bigint): Promise<void> {
@@ -339,7 +253,12 @@ describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
       await withRetry(() => rpc.getAccountInfo(addr, { encoding: "base64" }).send());
     }
     const r = async (size: bigint) => rpc.getMinimumBalanceForRentExemption(size).send();
-    rent = { vault: await r(0n), pool: await r(1442n), tokenAccount: await r(165n) };
+    rent = {
+      vault: await r(0n),
+      pool: await r(1442n),
+      tokenAccount: await r(165n),
+      sponsorship: await r(81n),
+    };
 
     kickoff = (await chainNow()) + 3n * HOUR;
     game = await gamePda(KEY, kickoff);
@@ -493,6 +412,10 @@ describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
       closeTokenAccountInstruction(winnerSigner, winnerAta, winnerSigner.address),
     );
     expect(await fetchAccountData(winnerAta)).toBeNull();
+    // Since Step 7, returns.test.ts runs first and its ORE split already paid the platform
+    // fee into the fee wallet's ORE ATA, so that balance is asserted as a delta and the keeper
+    // is only certain to have paid the winner's ATA.
+    const feeAta0 = (await tokenAmount(await ata(feeWallet, ORE_MINT))) ?? 0n;
     const k0 = await fetchLamports(keeper.address);
     const sig = await settle(P5, 1, { spl: ORE });
     measured["settle_q1_ore"] = await computeUnitsConsumed(sig);
@@ -503,14 +426,12 @@ describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
     );
     const winnerInfo = await rpc.getAccountInfo(winnerAta, { encoding: "base64" }).send();
     expect(winnerInfo.value?.owner).toBe(TOKEN_PROGRAM);
-    expect(await tokenAmount(await ata(feeWallet, ORE_MINT))).toBe(6_250_000_000n);
+    expect((await tokenAmount(await ata(feeWallet, ORE_MINT)))! - feeAta0).toBe(6_250_000_000n);
     expect(await tokenAmount(await ata(creator.address, ORE_MINT))).toBe(
       8_750_000_000n + (winner === creator.address ? 22_000_000_000n : 0n),
     );
-    // The keeper paid at least the winner's and the fee wallet's ATAs (the creator's existed).
-    expect(k0 - (await fetchLamports(keeper.address))).toBeGreaterThanOrEqual(
-      2n * rent.tokenAccount,
-    );
+    // The keeper paid at least the winner's ATA (the creator's and the fee wallet's existed).
+    expect(k0 - (await fetchLamports(keeper.address))).toBeGreaterThanOrEqual(rent.tokenAccount);
     expect(await tokenAmount(await vaultPda(P5.pool))).toBe(88_000_000_000n);
   });
 
@@ -597,11 +518,31 @@ describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
     expect(ev.destination).toBe(feeWallet);
     expect(ev.dust).toBe(0n);
 
-    // P2 keeps its sponsorship account until Step 7's close_sponsorship: 6053, and it stays open.
+    // P2 keeps its sponsorship account until close_sponsorship: 6053, and it stays open.
     expect((await fetchPool(P2.pool)).sponsorshipsOpen).toBe(1);
     expect(
       await sendExpectingError(stranger, await closePoolInstruction(stranger, P2, feeWallet)),
     ).toBe(errorCode("SponsorshipsStillOpen")); // 6053
+    // Step 7: the sponsor (the stranger sponsored P2) gets the account's rent back through
+    // close_sponsorship — anyone may submit it — and the pool then closes with no dust.
+    const s0 = await fetchLamports(stranger.address);
+    const sigS = await send(admin, await closeSponsorshipInstruction(P2, stranger.address));
+    measured["close_sponsorship"] = await computeUnitsConsumed(sigS);
+    expect((await fetchLamports(stranger.address)) - s0).toBe(rent.sponsorship);
+    expect(await fetchAccountData(await sponsorshipPda(P2.pool, stranger.address))).toBeNull();
+    expect((await fetchPool(P2.pool)).sponsorshipsOpen).toBe(0);
+    const evS = decodeEvent(
+      "SponsorshipClosed",
+      (await emittedEvents(sigS))[0]!,
+      sponsorshipClosedDecoder,
+    );
+    expect([evS.pool, evS.sponsor, evS.amount]).toEqual([P2.pool, stranger.address, SOL]);
+    const f2 = await fetchLamports(feeWallet);
+    const sig2 = await send(stranger, await closePoolInstruction(stranger, P2, feeWallet));
+    expect(await fetchAccountData(P2.pool)).toBeNull();
+    expect((await fetchLamports(feeWallet)) - f2).toBe(rent.vault + rent.pool);
+    const ev2 = decodeEvent("PoolClosed", (await emittedEvents(sig2))[0]!, poolClosedDecoder);
+    expect(ev2.dust).toBe(0n);
 
     const vault5 = await vaultPda(P5.pool);
     const f5 = await fetchLamports(feeWallet);
@@ -659,10 +600,10 @@ describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
     }
   });
 
-  it("9. the IDL has 19 instructions, 6 accounts, 18 events, 65 errors, docs on each new item", () => {
-    expect(IDL.instructions).toHaveLength(19);
+  it("9. the IDL has 26 instructions, 6 accounts, 24 events, 65 errors, docs on each new item", () => {
+    expect(IDL.instructions).toHaveLength(26);
     expect(IDL.accounts).toHaveLength(6);
-    expect(IDL.events).toHaveLength(18);
+    expect(IDL.events).toHaveLength(24);
     expect(IDL.errors).toHaveLength(65);
     const idl = IDL as unknown as {
       instructions: {

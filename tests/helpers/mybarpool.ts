@@ -25,6 +25,7 @@ import {
   getArrayEncoder,
   getBase58Encoder,
   getBase64Encoder,
+  getBase64EncodedWireTransaction,
   getBooleanDecoder,
   getBooleanEncoder,
   getBytesDecoder,
@@ -1583,6 +1584,271 @@ export async function closePoolInstruction(
 }
 
 // ---------------------------------------------------------------------------
+// Step 7: returns, splits, reclaims (PROGRAM §4.6). Seven discriminator-only instructions.
+// ---------------------------------------------------------------------------
+
+/** `BoxesReturned`, `BoxesSplit`, `BoxesReclaimed`: one per owner paid. */
+export interface BoxesEvent {
+  time: bigint;
+  pool: Address;
+  owner: Address;
+  /** 0-based indices, ascending (Borsh Vec<u8>, u32 length prefix). */
+  boxes: number[];
+  /** The sum paid to `owner` in this call, base units. */
+  amount: bigint;
+}
+export const boxesEventDecoder: Decoder<BoxesEvent> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["owner", getAddressDecoder()],
+  ["boxes", getArrayDecoder(getU8Decoder())],
+  ["amount", getU64Decoder()],
+]);
+export const boxesReturnedDecoder = boxesEventDecoder;
+export const boxesSplitDecoder = boxesEventDecoder;
+export const boxesReclaimedDecoder = boxesEventDecoder;
+
+/** `SponsorshipReturned`, `SponsorshipClosed`. */
+export interface SponsorshipEvent {
+  time: bigint;
+  pool: Address;
+  sponsor: Address;
+  amount: bigint;
+}
+export const sponsorshipEventDecoder: Decoder<SponsorshipEvent> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["sponsor", getAddressDecoder()],
+  ["amount", getU64Decoder()],
+]);
+export const sponsorshipReturnedDecoder = sponsorshipEventDecoder;
+export const sponsorshipClosedDecoder = sponsorshipEventDecoder;
+
+export interface PoolCancelled {
+  time: bigint;
+  pool: Address;
+}
+export const poolCancelledDecoder: Decoder<PoolCancelled> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+]);
+
+/** The owner batch: `[owner]` per entry on SOL, `[owner, ata]` on SPL, every meta writable. */
+async function ownerBatch(owners: Address[], spl: SplPool | undefined): Promise<AccountMeta[]> {
+  const metas: AccountMeta[] = [];
+  for (const owner of owners) {
+    metas.push({ address: owner, role: AccountRole.WRITABLE });
+    if (spl) {
+      metas.push({
+        address: await ata(owner, spl.mint, spl.tokenProgram),
+        role: AccountRole.WRITABLE,
+      });
+    }
+  }
+  return metas;
+}
+
+/**
+ * `return_boxes`: `score_authority (s, w)`, `config`, `game`, `pool (w)`, `vault (w)`,
+ * `counter? (w)`, `mint?`, `token_program?`, `associated_token_program?`, `system_program`,
+ * event CPI, then the owner batch. `counter: true` passes the creator's counter PDA.
+ */
+export async function returnBoxesInstruction(
+  keeper: TransactionSigner,
+  refs: PoolRefs,
+  owners: Address[],
+  options: { counter?: boolean; spl?: SplPool } = {},
+): Promise<SignedInstruction> {
+  const { spl } = options;
+  const accounts: SignedMetas = [
+    { address: keeper.address, role: AccountRole.WRITABLE_SIGNER, signer: keeper },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: refs.game, role: AccountRole.READONLY },
+    { address: refs.pool, role: AccountRole.WRITABLE },
+    { address: await vaultPda(refs.pool), role: AccountRole.WRITABLE },
+    optional(options.counter ? await counterPda(refs.creator, refs.game) : undefined, true),
+    optional(spl?.mint),
+    optional(spl?.tokenProgram),
+    optional(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+    ...(await ownerBatch(owners, spl)),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("return_boxes", new Uint8Array(0)),
+  };
+}
+
+/**
+ * `split`: `score_authority (s, w)`, `config`, `game`, `pool (w)`, `vault (w)`, `mint?`,
+ * `token_program?`, `associated_token_program?`, `system_program`, event CPI, the owner batch.
+ */
+export async function splitInstruction(
+  keeper: TransactionSigner,
+  refs: PoolRefs,
+  owners: Address[],
+  options: { spl?: SplPool } = {},
+): Promise<SignedInstruction> {
+  const { spl } = options;
+  const accounts: SignedMetas = [
+    { address: keeper.address, role: AccountRole.WRITABLE_SIGNER, signer: keeper },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: refs.game, role: AccountRole.READONLY },
+    { address: refs.pool, role: AccountRole.WRITABLE },
+    { address: await vaultPda(refs.pool), role: AccountRole.WRITABLE },
+    optional(spl?.mint),
+    optional(spl?.tokenProgram),
+    optional(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+    ...(await ownerBatch(owners, spl)),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("split", new Uint8Array(0)),
+  };
+}
+
+/**
+ * `return_sponsorship`: `score_authority (s, w)`, `config`, `pool (w)`, `vault (w)`,
+ * `sponsorship (w)`, `sponsor (w)`, `mint?`, `sponsor_token_account? (w)`, `token_program?`,
+ * `associated_token_program?`, `system_program`, event CPI. The `Sponsorship` PDA is derived
+ * from `sponsor`; `destination` substitutes the `sponsor` slot (for the ConstraintAddress test).
+ */
+export async function returnSponsorshipInstruction(
+  keeper: TransactionSigner,
+  refs: PoolRefs,
+  sponsor: Address,
+  options: { spl?: SplPool; destination?: Address } = {},
+): Promise<SignedInstruction> {
+  const { spl } = options;
+  const destination = options.destination ?? sponsor;
+  const accounts: SignedMetas = [
+    { address: keeper.address, role: AccountRole.WRITABLE_SIGNER, signer: keeper },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: refs.pool, role: AccountRole.WRITABLE },
+    { address: await vaultPda(refs.pool), role: AccountRole.WRITABLE },
+    { address: await sponsorshipPda(refs.pool, sponsor), role: AccountRole.WRITABLE },
+    { address: destination, role: AccountRole.WRITABLE },
+    optional(spl?.mint),
+    optional(spl ? await ata(destination, spl.mint, spl.tokenProgram) : undefined, true),
+    optional(spl?.tokenProgram),
+    optional(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("return_sponsorship", new Uint8Array(0)),
+  };
+}
+
+/** `cancel_pool`: `admin (s)`, `config`, `pool (w)`, `counter? (w)`, event CPI. */
+export async function cancelPoolInstruction(
+  admin: TransactionSigner,
+  refs: PoolRefs,
+  options: { counter?: boolean } = {},
+): Promise<SignedInstruction> {
+  const accounts: SignedMetas = [
+    { address: admin.address, role: AccountRole.READONLY_SIGNER, signer: admin },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: refs.pool, role: AccountRole.WRITABLE },
+    optional(options.counter ? await counterPda(refs.creator, refs.game) : undefined, true),
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("cancel_pool", new Uint8Array(0)),
+  };
+}
+
+/**
+ * `reclaim`: `box_owner (s, w)`, `game`, `pool (w)`, `vault (w)`, `counter? (w)`, `mint?`,
+ * `box_owner_token_account? (w)`, `token_program?`, `associated_token_program?`,
+ * `system_program`, event CPI. No config.
+ */
+export async function reclaimInstruction(
+  boxOwner: TransactionSigner,
+  refs: PoolRefs,
+  options: { counter?: boolean; spl?: SplPool } = {},
+): Promise<SignedInstruction> {
+  const { spl } = options;
+  const accounts: SignedMetas = [
+    { address: boxOwner.address, role: AccountRole.WRITABLE_SIGNER, signer: boxOwner },
+    { address: refs.game, role: AccountRole.READONLY },
+    { address: refs.pool, role: AccountRole.WRITABLE },
+    { address: await vaultPda(refs.pool), role: AccountRole.WRITABLE },
+    optional(options.counter ? await counterPda(refs.creator, refs.game) : undefined, true),
+    optional(spl?.mint),
+    optional(spl ? await ata(boxOwner.address, spl.mint, spl.tokenProgram) : undefined, true),
+    optional(spl?.tokenProgram),
+    optional(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("reclaim", new Uint8Array(0)),
+  };
+}
+
+/**
+ * `reclaim_sponsorship`: `sponsor (s, w)`, `game`, `pool (w)`, `vault (w)`, `sponsorship (w)`,
+ * `counter? (w)`, `mint?`, `sponsor_token_account? (w)`, `token_program?`,
+ * `associated_token_program?`, `system_program`, event CPI. No config.
+ */
+export async function reclaimSponsorshipInstruction(
+  sponsor: TransactionSigner,
+  refs: PoolRefs,
+  options: { counter?: boolean; spl?: SplPool } = {},
+): Promise<SignedInstruction> {
+  const { spl } = options;
+  const accounts: SignedMetas = [
+    { address: sponsor.address, role: AccountRole.WRITABLE_SIGNER, signer: sponsor },
+    { address: refs.game, role: AccountRole.READONLY },
+    { address: refs.pool, role: AccountRole.WRITABLE },
+    { address: await vaultPda(refs.pool), role: AccountRole.WRITABLE },
+    { address: await sponsorshipPda(refs.pool, sponsor.address), role: AccountRole.WRITABLE },
+    optional(options.counter ? await counterPda(refs.creator, refs.game) : undefined, true),
+    optional(spl?.mint),
+    optional(spl ? await ata(sponsor.address, spl.mint, spl.tokenProgram) : undefined, true),
+    optional(spl?.tokenProgram),
+    optional(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("reclaim_sponsorship", new Uint8Array(0)),
+  };
+}
+
+/** `close_sponsorship`: `pool (w)`, `sponsorship (w)`, `sponsor (w)`, event CPI. No signer. */
+export async function closeSponsorshipInstruction(
+  refs: PoolRefs,
+  sponsor: Address,
+  options: { destination?: Address } = {},
+): Promise<Instruction> {
+  return {
+    programAddress: PROGRAM_ID,
+    accounts: [
+      { address: refs.pool, role: AccountRole.WRITABLE },
+      { address: await sponsorshipPda(refs.pool, sponsor), role: AccountRole.WRITABLE },
+      { address: options.destination ?? sponsor, role: AccountRole.WRITABLE },
+      ...(await eventCpiAccounts()),
+    ],
+    data: withDiscriminator("close_sponsorship", new Uint8Array(0)),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Sending and reading back
 // ---------------------------------------------------------------------------
 
@@ -1626,26 +1892,41 @@ type Instructions = Instruction | SignedInstruction | (Instruction | SignedInstr
 
 /** One transaction with `instructions` in order (a single instruction, or a list such as
  * `[setComputeUnitLimit(400_000), sampleVar]`). */
+/**
+ * Sign one version-0 transaction over a fresh blockhash (no lookup table). Exported so a test
+ * can measure or profile a transaction without sending it (`surfnet_profileTransaction`).
+ */
+export async function buildTransaction(payer: TransactionSigner, instructions: Instructions) {
+  const { value: blockhash } = await rpc.getLatestBlockhash().send();
+  const message = pipe(
+    createTransactionMessage({ version: 0 }),
+    (m) => setTransactionMessageFeePayerSigner(payer, m),
+    (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
+    (m) =>
+      appendTransactionMessageInstructions(
+        Array.isArray(instructions) ? instructions : [instructions],
+        m,
+      ),
+  );
+  const tx = await signTransactionMessageWithSigners(message);
+  assertIsTransactionWithBlockhashLifetime(tx);
+  return tx;
+}
+
+/** The wire form of a signed transaction: base64 and its byte length (the 1,232-byte packet). */
+export function wireTransaction(tx: Awaited<ReturnType<typeof buildTransaction>>): {
+  base64: string;
+  bytes: number;
+} {
+  const base64 = getBase64EncodedWireTransaction(tx);
+  return { base64, bytes: getBase64Encoder().encode(base64).length };
+}
+
 export async function send(
   payer: TransactionSigner,
   instructions: Instructions,
 ): Promise<Signature> {
-  const build = async () => {
-    const { value: blockhash } = await rpc.getLatestBlockhash().send();
-    const message = pipe(
-      createTransactionMessage({ version: 0 }),
-      (m) => setTransactionMessageFeePayerSigner(payer, m),
-      (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
-      (m) =>
-        appendTransactionMessageInstructions(
-          Array.isArray(instructions) ? instructions : [instructions],
-          m,
-        ),
-    );
-    const tx = await signTransactionMessageWithSigners(message);
-    assertIsTransactionWithBlockhashLifetime(tx);
-    return tx;
-  };
+  const build = () => buildTransaction(payer, instructions);
   // Any instruction that touches an account Surfpool has not seen makes it ask mainnet, and
   // the public endpoint stalls on some of those (Step 3 audit M1); a stall is never the
   // answer a test is after, so it is retried here, and only it. Surfpool's stall surfaces at
@@ -1667,11 +1948,30 @@ export async function send(
         }
         tx = await build();
       }
-      await sendAndConfirm(tx, { commitment: "confirmed" });
+      try {
+        await sendAndConfirm(tx, { commitment: "confirmed" });
+      } catch (error) {
+        throw withPreflightLogs(error);
+      }
     },
     { onlyRpcStalls: true },
   );
   return getSignatureFromTransaction(tx);
+}
+
+/**
+ * A preflight failure carries the program logs in its context; Kit's message does not show
+ * them. Wrap the error (keeping it as `cause`, which `customErrorCode` walks) so a failing
+ * test says what the program logged (Step 7).
+ */
+function withPreflightLogs(error: unknown): unknown {
+  if (
+    !isSolanaError(error, SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE)
+  )
+    return error;
+  const logs = (error.context as { logs?: readonly string[] }).logs;
+  if (!logs || logs.length === 0) return error;
+  return new Error(`${error.message}\n${logs.join("\n")}`, { cause: error });
 }
 
 /**

@@ -749,9 +749,9 @@ describe("pool instructions (Surfpool, mainnet fork)", () => {
   });
 
   it("11. the committed IDL carries the Step 4 surface", () => {
-    expect(IDL.instructions).toHaveLength(19); // 13 after Step 4, + the four draw instructions, + settle, close_pool
+    expect(IDL.instructions).toHaveLength(26); // 13 after Step 4, + the four draw instructions, + settle, close_pool, + the seven §4.6 instructions
     expect(IDL.accounts).toHaveLength(6);
-    expect(IDL.events).toHaveLength(18); // 12 after Step 4, + the four draw events, + QuarterSettled, PoolClosed
+    expect(IDL.events).toHaveLength(24); // 12 after Step 4, + the four draw events, + QuarterSettled, PoolClosed, + the six §4.6 events
     expect(IDL.errors).toHaveLength(65);
     const types = IDL.types.map((t) => t.name);
     for (const t of [
