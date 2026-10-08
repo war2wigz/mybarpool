@@ -55,7 +55,7 @@ const localnet = new Localnet();
  * rebuilds the fork at the same commit and compares. The fixture is named by the first seven
  * characters.
  */
-export const ENTROPY_FORK_COMMIT = "486225b288e70aeda37e1179c673ab02254587d2";
+export const ENTROPY_FORK_COMMIT = "170b7ddaee53b7a55d134d614c8ce080e72b4d4f";
 /** SHA-256 of the fixture file (`programs/mybarpool/tests/fixtures/entropy-<fork7>.so`). */
 export const ENTROPY_FORK_ELF_SHA256 =
   "2ec504ac1a71ff0f0f515c70a541522a5c58ef126aebb893dbf6ad7245d65fe8";
