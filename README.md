@@ -215,6 +215,6 @@ anchor test --skip-build      # Surfpool localnet suite, forking mainnet
 ## Licence, trademarks, security
 
 - Code in this repository is licensed under [Apache-2.0](LICENSE).
-- The licence covers the code, not the name or the sign. "MyBarPool", the neon-sign logo and mybarpool.com are trademarks; see [TRADEMARKS.md](TRADEMARKS.md). NFL team names and logos belong to the NFL and its clubs.
+- The licence covers the code, not the name or the sign. "MyBarPool", the neon-sign logo and mybarpool.com are trademarks; see [TRADEMARKS.md](TRADEMARKS.md). NFL team names and logos belong to the NFL and its clubs; MyBarPool is not affiliated with or endorsed by them, and uses no team logos (teams are shown by abbreviation and colors on a generic helmet).
 - Found a vulnerability? See [SECURITY.md](SECURITY.md). Please don't open a public issue for it.
 - An independent audit of the program will be completed and published before the first mainnet deploy.

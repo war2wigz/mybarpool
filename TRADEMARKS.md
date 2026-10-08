@@ -22,7 +22,7 @@ The code in this repository is licensed under Apache-2.0. That licence covers th
 
 ## Third-party marks
 
-NFL team names and logos are the property of the National Football League and its member clubs. Nothing in this repository grants any right to them. Any team logos in the mockups are for design preview only.
+NFL team names and logos are the property of the National Football League and its member clubs. Nothing in this repository grants any right to them. MyBarPool is not affiliated with, sponsored by or endorsed by the NFL or any club. The app and the mockups do not use team logos or any other club artwork: a team is shown by its city abbreviation and its colors on a generic helmet shape, and by its name as plain text identifying the game.
 
 Solana, Seeker, ORE, SKR and Squads are trademarks of their respective owners.
 

@@ -27,7 +27,7 @@ Dark by default. Bars are dark, sportsbooks are dark, and neon only works on dar
 | `amber` | `#FFB020` | Locked, waiting, attention; the leading star on the grid |
 | `red` | `#FF4D6D` | Errors, returned pools |
 
-Team colors come from the NFL team palette and are used only inside grid axes and team chips, never as page chrome, so the app stays consistent across games.
+Team colors (each team's primary and secondary) are used only inside team chips and the grid axes, never as page chrome, so the app stays consistent across games. They are the only team-specific thing the app draws: no league or club artwork anywhere (section 9).
 
 ### Type
 - Display and numerals: a condensed grotesk with tabular figures (scores, prices, payouts must line up). Candidates: Barlow Condensed, Oswald.
@@ -69,7 +69,7 @@ Bottom tab bar on mobile: **Games · My Boxes · Create**. Wallet lives in the t
 ## 4. Screens
 
 ### Rendered mockups
-High-fidelity mockups of the screens below are built in HTML/CSS with the real palette and type, at [mockups/screens.html](mockups/screens.html), and rendered to PNG at 390×844 (2×) in [mockups/png/](mockups/png/). Open the HTML in a browser to see all frames side by side, or add `?screen=<id>` (`games`, `game`, `pool-open`, `pool-live`, `buy`, `bought`, `create`, `me`, `pool-sponsored`, `sponsor`, `share`) to view one at phone size. Team logos in the mockup are hot-linked from ESPN's CDN for preview only; production uses self-hosted assets (section 9).
+High-fidelity mockups of the screens below are built in HTML/CSS with the real palette and type, at [mockups/screens.html](mockups/screens.html), and rendered to PNG at 390×844 (2×) in [mockups/png/](mockups/png/). Open the HTML in a browser to see all frames side by side, or add `?screen=<id>` (`games`, `game`, `pool-open`, `pool-live`, `buy`, `bought`, `create`, `me`, `pool-sponsored`, `sponsor`, `share`) to view one at phone size. Teams in the mockup are drawn as the section 9 team chip (one inline helmet SVG colored from the team table), the same way production draws them; no league or club artwork appears in the mockups or the app.
 
 All eleven frames side by side: [overview.png](mockups/png/overview.png) (wide; open it at full size rather than inline).
 
@@ -134,7 +134,7 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 - Sorted: live games first, then by kickoff. Finished games drop to the bottom, collapsed.
 - Week selector defaults to the current NFL week and covers the whole season: Weeks 1–18, then Wild Card, Divisional, Conference Championships and the Super Bowl. Every game on the schedule gets a page, Thursday night through Monday night, so the home screen has something to play every week from September to February. The Super Bowl is the biggest boxes day of the year and gets the same screen as a Week 4 Sunday afternoon game, not a special mode.
 - Between weeks (Tuesday and Wednesday), the selector already shows the coming week with kickoff times, so creators can open pools days ahead and share them at the bar.
-- Game card shows team chip (logo or abbreviation on team color), score if live, kickoff if not, and a one-line pool summary. Tapping anywhere opens the game.
+- Game card shows the team chip (helmet in team colors) with the team name, score if live, kickoff if not, and a one-line pool summary. Tapping anywhere opens the game.
 - The "in pots" figure is boxes sold × price summed across the game's pools, not the sum of full pots — that is why it isn't a multiple of 25 × price.
 - Live score on the card comes from the scores service and pulses on change.
 
@@ -230,7 +230,7 @@ The most important screen. Three zones stacked: header, grid, details. The buy b
 Grid rules:
 - Boxes numbered 1–25, top-left to bottom-right, number in the corner of each box in `text-2`.
 - Owner shown as .skr name, else first 4 chars of the wallet. The connected wallet's boxes say YOU on a purple fill. Multiple boxes by one owner share a subtle owner color (from a fixed 8-color set) so "4 boxes by ana" reads at a glance.
-- Axis digits render as `?` until the draw, then flip in with a short animation. Home team across the top, away down the side, with team chip and arrow. The two axes are shuffled independently on-chain (see ARCHITECTURE.md, Randomness), so the same pair may appear on both a column and a row; the UI shows whatever the program recorded and never re-derives digits itself.
+- Axis digits render as `?` until the draw, then flip in with a short animation. Home team across the top, away down the side, each marked by its team chip (helmet and abbreviation, so "KC" over the columns and "BAL" beside the rows), upright, with no arrows: the chip's position says which way its digits read, and the score strip above the grid shows home first. The two axes are shuffled independently on-chain (see ARCHITECTURE.md, Randomness), so the same pair may appear on both a column and a row; the UI shows whatever the program recorded and never re-derives digits itself.
 - Live: the leading box gets a dotted teal border and a gold star (★, `amber`, 15px) in the top-right corner, with a soft glow and a slow pulse while the game is live. No text inside the box: at grid size a word collided with the box number. The star moves with every score update and disappears when the quarter pays. Won boxes get a solid green fill with the quarter label (Q1) and a checkmark. A box can be both (won Q1, leading Q3): the Q1 ✓ label shifts left to make room and the star keeps the corner. The payouts table carries the word: "★ Leading · box 7 · jon" on the live quarter's row, in teal with the gold star, so the star is explained on the same screen. On Q4 100% pools there is only the final prize, so the row reads "★ Leading · final" from the current score all game.
 - Tapping a box opens a small sheet: owner, digits it covers (after draw), quarters won, transaction links.
 
@@ -394,7 +394,7 @@ A creator has to sell 24 more boxes after buying their own, and most of that hap
 
 | Component | Notes |
 |---|---|
-| `TeamChip` | Real team logo on team color, 3 sizes. Abbreviation fallback only if the asset fails to load. |
+| `TeamChip` | A generic football-helmet silhouette in the team's primary color with the facemask and ear hole in the secondary color, beside the abbreviation (grid axes, tight spots, the saved image) or the team name (game cards, headers, score strip). 3 sizes. Drawn from one SVG and the team table, so there is no asset to fail to load and nothing to download. Never a logo, decal, team-specific stripe or any other club artwork. |
 | `StatusPill` | OPEN / LOCKED / LIVE / SETTLED / RETURNED / SPLIT, colors per section 4.2. |
 | `FillBar` | 25 segments, not a smooth bar, so "19/25" is countable. |
 | `ScoreStrip` | Team, score, clock; tabular numerals; pulse on change. |
@@ -456,11 +456,10 @@ Concrete rules, because "don't look AI-generated" isn't actionable.
 
 ## 9. Asset notes
 
-- Real NFL team logos are used everywhere a team appears: game cards, game header, pool header, grid axes, notifications.
-- Sourcing: the 32 team logos are fetched once, bundled in the app (in the APK on Android, served from the web app's own host on web) and never hot-linked from a third-party host during live traffic. Team logos are the property of the NFL and its clubs; see [TRADEMARKS.md](../TRADEMARKS.md).
-- The source files are PNGs. Use them at chip and grid-axis size; if the pool header needs a large logo, source higher-resolution or vector versions for those 32 teams separately.
-- `TeamChip` still takes the logo as a prop with an abbreviation-on-team-color fallback, purely for robustness: a missing or slow asset never leaves a blank chip.
-- Team colors and abbreviations come from a static table in `packages/shared`, keyed by the team IDs the scores service uses, so every surface agrees.
+- No team logos, anywhere: not in the app, the mockups, the saved and printed grids, the link previews or notifications. Teams are identified the way Kalshi and Polymarket identify them: a generic helmet shape in the team's colors, the standard abbreviation (KC, BAL, PHI, DAL, GB, NYJ, NYG, SF, LAR, LAC, LV, WSH, …) and, where there is room and it reads better, the team name in plain text. Team names appear only as text that identifies the game, never styled as a mark. Decided 2026-10-08, replacing the earlier decision to use real logos (see the ARCHITECTURE.md decisions log); the public TRADEMARKS.md says the same.
+- The helmet: one SVG silhouette (side view, shell, ear hole, two-bar facemask), filled from the team table, the same file at every size. It must stay generic: no decal on the shell, no stripe or pattern that belongs to a club, no helmet shape that is itself a club's design. The mockup's `#helmet` symbol in `mockups/screens.html` is the reference drawing.
+- Team colors (primary and secondary), abbreviations and names come from a static table in `packages/shared`, keyed by the team IDs the scores service uses, so every surface agrees. Nothing is fetched from API-Sports, ESPN or any media host for team display; the scores sources are used for scores only.
+- When the pool header or a share image wants something larger than a chip, it is the same helmet at a larger size, never a sourced image.
 - Fonts: choose open-licensed families (Google Fonts) so the Seeker build has no font licensing issue.
 
 ## 10. Build specification
@@ -603,7 +602,7 @@ Strings that appear in more than one place live in one file, `apps/app/src/copy.
 
 - Build-time config: program ID, config PDA, RPC URL(s) — the Android build and the web build each carry their own provider key, distinct from each other and from the server's, per ARCHITECTURE › Unit economics (RPC keys); the key's exposure in a bundle is accepted and bounded by the provider's per-key limits — scores API base, explorer base, FCM sender ID, and the error-reporting endpoint on the MyBarPool API (crashes and program errors only, no analytics, no third-party SDK). Two profiles: `local` (localnet, file signer for test tooling, fixture scores) and `production`. No `devnet` profile exists.
 - Feature flags read from the on-chain config where they are rules (`paused`, `preseason_enabled`, `default_preset`, ladders) and from build config where they are app-only (private pools UI, USD hint).
-- Team assets bundled: 32 logos at two sizes, colours and abbreviations from `packages/shared`.
+- Team assets bundled: one helmet SVG; colours, abbreviations and names from `packages/shared`. No logo files anywhere in the bundle.
 - Localisation: English only in v1; all strings still go through the copy file so a second language is a file, not a refactor.
 
 ### 10.12 Performance and quality bars
