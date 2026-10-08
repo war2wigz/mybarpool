@@ -36,6 +36,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { Localnet } from "../scripts/localnet.js";
 import {
   AccessType,
+  ata,
   boxesBoughtDecoder,
   buyInstruction,
   chainNow,
@@ -78,6 +79,7 @@ import {
   sponsorshipPda,
   TOKEN_2022_PROGRAM,
   TOKEN_PROGRAM,
+  tokenAmount as tokenAmountOrNull,
   updateConfigInstruction,
   vaultPda,
   withRetry,
@@ -93,7 +95,6 @@ const PRICE = INITIAL_LADDERS.SOL.minPrice;
 /** ARCHITECTURE › Buying: the ORE minimum, 0.05 ORE. */
 const PRICE_ORE = INITIAL_LADDERS.ORE.minPrice;
 const SLOT_HASHES = address("SysvarS1otHashes111111111111111111111111111");
-const ASSOCIATED_TOKEN_PROGRAM = address("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 
 /** PROGRAM §2 team table: KC hosting DAL in week 2 of 2026. */
 const KEY: GameKey = { season: 2026, week: 2, home: 15, away: 8 };
@@ -118,21 +119,11 @@ async function fetchPool(pool: Address) {
   return decodeAccount("Pool", data!, poolDecoder);
 }
 
-async function ata(owner: Address, mint: Address): Promise<Address> {
-  const [pda] = await getProgramDerivedAddress({
-    programAddress: ASSOCIATED_TOKEN_PROGRAM,
-    seeds: [enc.encode(owner), enc.encode(TOKEN_PROGRAM), enc.encode(mint)],
-  });
-  return pda;
-}
-
-/** Token account `amount` (u64 LE at byte 64 of an SPL token account). */
+/** Token account `amount`, asserting the account exists (the helper returns null otherwise). */
 async function tokenAmount(account: Address): Promise<bigint> {
-  const data = await fetchAccountData(account);
-  expect(data).not.toBeNull();
-  let v = 0n;
-  for (let i = 71; i >= 64; i--) v = (v << 8n) | BigInt(data![i]!);
-  return v;
+  const amount = await tokenAmountOrNull(account);
+  expect(amount).not.toBeNull();
+  return amount!;
 }
 
 describe("pool instructions (Surfpool, mainnet fork)", () => {
@@ -758,9 +749,9 @@ describe("pool instructions (Surfpool, mainnet fork)", () => {
   });
 
   it("11. the committed IDL carries the Step 4 surface", () => {
-    expect(IDL.instructions).toHaveLength(17); // 13 after Step 4, + the four draw instructions
+    expect(IDL.instructions).toHaveLength(19); // 13 after Step 4, + the four draw instructions, + settle, close_pool
     expect(IDL.accounts).toHaveLength(6);
-    expect(IDL.events).toHaveLength(16); // 12 after Step 4, + VarSet, VarSampled, VarReplaced, DigitsDrawn
+    expect(IDL.events).toHaveLength(18); // 12 after Step 4, + the four draw events, + QuarterSettled, PoolClosed
     expect(IDL.errors).toHaveLength(65);
     const types = IDL.types.map((t) => t.name);
     for (const t of [

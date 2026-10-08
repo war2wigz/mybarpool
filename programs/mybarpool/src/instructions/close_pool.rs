@@ -64,6 +64,7 @@ pub struct ClosePool<'info> {
     pub token_program: Option<Interface<'info, TokenInterface>>,
     /// The associated-token program, a fixed address; SPL pools only.
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
+    /// For the SOL sweep out of the vault and any ATA rent.
     pub system_program: Program<'info, System>,
 }
 

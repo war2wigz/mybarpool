@@ -650,10 +650,10 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     expect(measured["sample_var"]!).toBeLessThan(250_000n);
   });
 
-  it("10. the IDL has 17 instructions, 6 accounts, 16 events, 65 errors, the Step 5b fields with docs", () => {
-    expect(IDL.instructions).toHaveLength(17);
+  it("10. the IDL has 19 instructions, 6 accounts, 18 events, 65 errors, the Step 5b fields with docs", () => {
+    expect(IDL.instructions).toHaveLength(19); // 17 after Step 5b, + settle, close_pool
     expect(IDL.accounts).toHaveLength(6);
-    expect(IDL.events).toHaveLength(16);
+    expect(IDL.events).toHaveLength(18); // 16 after Step 5b, + QuarterSettled, PoolClosed
     expect(IDL.errors).toHaveLength(65);
     const idl = IDL as unknown as {
       instructions: {

@@ -1096,6 +1096,45 @@ export const gateKeyRotatedDecoder: Decoder<GateKeyRotated> = getStructDecoder([
 
 export const SLOT_HASHES_SYSVAR = address("SysvarS1otHashes111111111111111111111111111");
 export const TOKEN_2022_PROGRAM = address("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+export const ASSOCIATED_TOKEN_PROGRAM = address("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+
+/** The associated token account of `owner` for `mint` under `tokenProgram` (PROGRAM §5.4). */
+export async function ata(
+  owner: Address,
+  mint: Address,
+  tokenProgram: Address = TOKEN_PROGRAM,
+): Promise<Address> {
+  const e = getAddressEncoder();
+  const [pda] = await getProgramDerivedAddress({
+    programAddress: ASSOCIATED_TOKEN_PROGRAM,
+    seeds: [e.encode(owner), e.encode(tokenProgram), e.encode(mint)],
+  });
+  return pda;
+}
+
+/** Token account `amount` (u64 LE at byte 64 of an SPL token account); null if absent. */
+export async function tokenAmount(account: Address): Promise<bigint | null> {
+  const data = await fetchAccountData(account);
+  if (data === null) return null;
+  let v = 0n;
+  for (let i = 71; i >= 64; i--) v = (v << 8n) | BigInt(data[i]!);
+  return v;
+}
+
+/** The raw Token `CloseAccount` (instruction 9): `[account (w), destination (w), owner (s)]`. */
+export function closeTokenAccountInstruction(
+  owner: TransactionSigner,
+  account: Address,
+  destination: Address,
+  tokenProgram: Address = TOKEN_PROGRAM,
+): SignedInstruction {
+  const accounts: SignedMetas = [
+    { address: account, role: AccountRole.WRITABLE },
+    { address: destination, role: AccountRole.WRITABLE },
+    { address: owner.address, role: AccountRole.READONLY_SIGNER, signer: owner },
+  ];
+  return { programAddress: tokenProgram, accounts, data: Uint8Array.of(9) };
+}
 
 /** The three optional token-path accounts; absent ones are the program id (Anchor's convention). */
 export interface TokenPath {
@@ -1395,6 +1434,151 @@ export async function replaceVarInstruction(
     programAddress: PROGRAM_ID,
     accounts,
     data: withDiscriminator("replace_var", new Uint8Array(0)),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Step 6: settlement (PROGRAM §4.5)
+// ---------------------------------------------------------------------------
+
+export interface QuarterSettled {
+  time: bigint;
+  pool: Address;
+  quarter: number;
+  home: number;
+  away: number;
+  boxIndex: number;
+  winner: Address;
+  amount: bigint;
+  feesPaidNow: boolean;
+  platformFee: bigint;
+  creatorFee: bigint;
+  integratorFee: bigint;
+}
+export const quarterSettledDecoder: Decoder<QuarterSettled> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["quarter", getU8Decoder()],
+  ["home", getU16Decoder()],
+  ["away", getU16Decoder()],
+  ["boxIndex", getU8Decoder()],
+  ["winner", getAddressDecoder()],
+  ["amount", getU64Decoder()],
+  ["feesPaidNow", getBooleanDecoder()],
+  ["platformFee", getU64Decoder()],
+  ["creatorFee", getU64Decoder()],
+  ["integratorFee", getU64Decoder()],
+]);
+
+export interface PoolClosed {
+  time: bigint;
+  pool: Address;
+  destination: Address;
+  dust: bigint;
+}
+export const poolClosedDecoder: Decoder<PoolClosed> = getStructDecoder([
+  ["time", getI64Decoder()],
+  ["pool", getAddressDecoder()],
+  ["destination", getAddressDecoder()],
+  ["dust", getU64Decoder()],
+]);
+
+/** The SPL side of a settlement: the pool's mint and token program. */
+export interface SplPool {
+  mint: Address;
+  tokenProgram: Address;
+}
+
+/**
+ * `settle(quarter)`: `score_authority (s, w)`, `config`, `game`, `pool (w)`, `vault (w)`,
+ * `winner (w)`, `fee_wallet (w)`, `creator (w)`, `integrator? (w)`, `mint?`, the four token
+ * accounts? (w), `token_program?`, `associated_token_program?`, `system_program`, event CPI.
+ * Absent optionals are the program id (Anchor's convention). The four ATAs are derived with the
+ * pool's token program.
+ */
+export async function settleInstruction(
+  keeper: TransactionSigner,
+  refs: PoolRefs,
+  quarter: number,
+  winner: Address,
+  feeWallet: Address,
+  options: { integrator?: Address; spl?: SplPool } = {},
+): Promise<SignedInstruction> {
+  const { integrator, spl } = options;
+  const opt = (a: Address | undefined, writable = false): AccountMeta =>
+    a === undefined
+      ? { address: PROGRAM_ID, role: AccountRole.READONLY }
+      : { address: a, role: writable ? AccountRole.WRITABLE : AccountRole.READONLY };
+  const tokenAccounts = spl
+    ? await Promise.all(
+        [winner, feeWallet, refs.creator, integrator ?? PROGRAM_ID].map((w) =>
+          ata(w, spl.mint, spl.tokenProgram),
+        ),
+      )
+    : [undefined, undefined, undefined, undefined];
+  const accounts: SignedMetas = [
+    { address: keeper.address, role: AccountRole.WRITABLE_SIGNER, signer: keeper },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: refs.game, role: AccountRole.READONLY },
+    { address: refs.pool, role: AccountRole.WRITABLE },
+    { address: await vaultPda(refs.pool), role: AccountRole.WRITABLE },
+    { address: winner, role: AccountRole.WRITABLE },
+    { address: feeWallet, role: AccountRole.WRITABLE },
+    { address: refs.creator, role: AccountRole.WRITABLE },
+    opt(integrator, true),
+    opt(spl?.mint),
+    opt(tokenAccounts[0], true),
+    opt(tokenAccounts[1], true),
+    opt(tokenAccounts[2], true),
+    opt(integrator === undefined ? undefined : tokenAccounts[3], true),
+    opt(spl?.tokenProgram),
+    opt(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("settle", getU8Encoder().encode(quarter)),
+  };
+}
+
+/**
+ * `close_pool`: `payer (s, w)`, `config`, `pool (w)`, `vault (w)`, `fee_wallet (w)`,
+ * `creator (w)`, `mint?`, `destination_token_account? (w)`, `token_program?`,
+ * `associated_token_program?`, `system_program`, event CPI. The destination is `fee_wallet`
+ * unless the pool is abandoned (`destination` says which, for the ATA).
+ */
+export async function closePoolInstruction(
+  payer: TransactionSigner,
+  refs: PoolRefs,
+  feeWallet: Address,
+  options: { spl?: SplPool; destination?: Address } = {},
+): Promise<SignedInstruction> {
+  const { spl } = options;
+  const destination = options.destination ?? feeWallet;
+  const opt = (a: Address | undefined, writable = false): AccountMeta =>
+    a === undefined
+      ? { address: PROGRAM_ID, role: AccountRole.READONLY }
+      : { address: a, role: writable ? AccountRole.WRITABLE : AccountRole.READONLY };
+  const accounts: SignedMetas = [
+    { address: payer.address, role: AccountRole.WRITABLE_SIGNER, signer: payer },
+    { address: await configPda(), role: AccountRole.READONLY },
+    { address: refs.pool, role: AccountRole.WRITABLE },
+    { address: await vaultPda(refs.pool), role: AccountRole.WRITABLE },
+    { address: feeWallet, role: AccountRole.WRITABLE },
+    { address: refs.creator, role: AccountRole.WRITABLE },
+    opt(spl?.mint),
+    opt(spl ? await ata(destination, spl.mint, spl.tokenProgram) : undefined, true),
+    opt(spl?.tokenProgram),
+    opt(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    ...(await eventCpiAccounts()),
+  ];
+  return {
+    programAddress: PROGRAM_ID,
+    accounts,
+    data: withDiscriminator("close_pool", new Uint8Array(0)),
   };
 }
 

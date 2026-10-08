@@ -478,6 +478,9 @@
         },
         {
           "name": "system_program",
+          "docs": [
+            "For the SOL sweep out of the vault and any ATA rent."
+          ],
           "address": "11111111111111111111111111111111"
         },
         {
@@ -1991,6 +1994,9 @@
         },
         {
           "name": "system_program",
+          "docs": [
+            "For the SOL transfers out of the vault and any ATA rent."
+          ],
           "address": "11111111111111111111111111111111"
         },
         {
