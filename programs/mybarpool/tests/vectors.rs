@@ -234,7 +234,7 @@ fn fees_bulk_json_matches_for_all_200_entries() {
 
 #[test]
 fn fees_json_prize_pool_quarters_and_dust_match_for_every_entry() {
-    // PROGRAM §5.2; BUILD-PLAN "Dust ≤ divisor − 1 base units": every entry's prizePool,
+    // PROGRAM §5.2 "≤ 3 base units on any preset": every entry's prizePool,
     // quarters and dust from the shared package equal the program's functions, and dust ≤ 3.
     let entries = check_fee_file("fees.json", 24);
     for (i, e) in entries.iter().enumerate() {

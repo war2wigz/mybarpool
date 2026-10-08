@@ -213,7 +213,7 @@ fn the_fixtures_numbers_are_the_worked_examples() {
 
 #[test]
 fn settle_q1_sol_is_the_worked_example() {
-    // ARCHITECTURE › Fees worked example; PROGRAM §4.5; BUILD-PLAN acceptance line 1: the Q1
+    // ARCHITECTURE › Fees worked example; PROGRAM §4.5: the Q1
     // transaction moves 0.22 + 0.0625 + 0.0875 and the vault goes 1.25 → 0.88.
     let f = Fixture::new();
     let m = mollusk_for_settlement(T0);
@@ -280,7 +280,7 @@ fn settle_q1_sol_is_the_worked_example() {
 
 #[test]
 fn settle_q1_sponsored_variant() {
-    // BUILD-PLAN acceptance "Sponsored variant": 1 SOL sponsored → Q1 moves 0.42 + 0.0625 +
+    // ARCHITECTURE › Fees, the sponsored example: 1 SOL sponsored → Q1 moves 0.42 + 0.0625 +
     // 0.0875, vault 2.25 → 1.68; fees unchanged (§5.1: never computed on a sponsorship).
     let f = Fixture::new();
     let m = mollusk_for_settlement(T0);
@@ -452,7 +452,7 @@ fn settle_moves_the_stored_fees_not_a_recomputation_from_the_config() {
 
 #[test]
 fn final_only_q1_to_q3_record_the_box_and_move_nothing() {
-    // BUILD-PLAN acceptance "Q4 100%"; PROGRAM §4.5 "A zero-share quarter".
+    // PROGRAM §4.5 "A zero-share quarter"; ARCHITECTURE › Payouts: Q4 100 % pays the fee with the final.
     let f = Fixture::new();
     let m = mollusk_for_settlement(T0);
     let params = preset_params(PayoutPreset::FinalOnly);
@@ -615,7 +615,7 @@ fn a_pool_without_an_integrator_never_reads_the_slot() {
 
 #[test]
 fn settle_needs_a_drawn_pool() {
-    // BUILD-PLAN "Settle before draw fails"; PROGRAM §9: Open, Locked (sampled, revealed,
+    // PROGRAM §4.5 "status == Drawn"; §9: Open, Locked (sampled, revealed,
     // undrawn), Settled, Returned, Split are PoolNotDrawn.
     let f = Fixture::new();
     let m = mollusk_for_settlement(T0);
@@ -646,7 +646,7 @@ fn settle_needs_a_drawn_pool() {
 
 #[test]
 fn settle_out_of_order_is_quarter_out_of_order() {
-    // BUILD-PLAN "out of order", "twice"; PROGRAM §4.5 Idempotency.
+    // PROGRAM §4.5 "quarter == quarters_settled + 1" and Idempotency.
     let f = Fixture::new();
     let m = mollusk_for_settlement(T0);
     let fresh = standard(&f);
@@ -682,7 +682,7 @@ fn settle_out_of_order_is_quarter_out_of_order() {
 
 #[test]
 fn settle_a_quarter_whose_score_is_not_posted_is_scores_not_posted() {
-    // BUILD-PLAN "score isn't posted".
+    // PROGRAM §4.5 "game.quarters_posted ≥ quarter".
     let f = Fixture::new();
     let m = mollusk_for_settlement(T0);
     let (ix, accounts) = settle_sol(&f, &m, &standard(&f), 0, 1, &f.buyer_2, None);
@@ -1048,7 +1048,7 @@ fn token_amount_of(result: &mollusk_svm::result::InstructionResult, key: &Pubkey
 
 #[test]
 fn ore_settle_q1_with_every_ata_missing_creates_three_and_pays() {
-    // PROGRAM §5.4; BUILD-PLAN "closed ATA still gets paid": three new token accounts owned by
+    // PROGRAM §5.4; ARCHITECTURE › Payouts "a buyer may close an empty account": three new token accounts owned by
     // the Token program, the keeper down by three rents, the prize and both fees landed.
     let f = Fixture::new();
     let m = mollusk_for_settlement(T0);
@@ -1364,7 +1364,7 @@ fn close_pool_sol_sends_both_rents_to_the_fee_wallet() {
 
 #[test]
 fn close_pool_sol_sweeps_the_dust() {
-    // PROGRAM §5.3 Settled row; BUILD-PLAN "Dust … goes to the platform at close".
+    // PROGRAM §5.3 Settled row: dust goes to the platform at close.
     let f = Fixture::new();
     let m = mollusk_for_settlement(T0);
     let pool = settled_pool(
