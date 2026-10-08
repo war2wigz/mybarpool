@@ -10,7 +10,7 @@ It's the game bars have always run on a paper grid, also known as football squar
 - **Web:** [mybarpool.com](https://mybarpool.com), the same app
 - **Status:** design complete, program and app in development. Nothing is deployed to mainnet yet.
 
-This repository is the open-source part of MyBarPool: the full design today, and the Solana program that will hold the money and the client SDK as they are written. See [What is in this repo](#what-is-in-this-repo).
+This repository is the open-source part of MyBarPool: the full design, and the Solana program that will hold the money and the client SDK, published commit by commit as they are written. See [What is in this repo](#what-is-in-this-repo).
 
 ---
 
@@ -34,7 +34,7 @@ This repository is the open-source part of MyBarPool: the full design today, and
 
 1. **Create a pool.** Pick an NFL game, a token (SOL, SKR or ORE), a box price and a payout split. As the creator you earn 5% of the pot automatically, paid with the first prize; that 5% is built into the 10% fee every pool carries, so you don't have to set anything to get it. If you want more, you can add up to 5% on top (0–5%, default 0), which is shown to buyers as part of one total fee, 10–15%. You pay a creation fee of about 0.014 SOL (account rent) that is kept whether or not the pool fills, and you can buy up to 5 of your own boxes in the same transaction.
 2. **Sell out the grid.** Anyone can buy any number of boxes in one tap. The program assigns positions at random, since every box has identical odds before the draw. Funds sit in a program-owned vault. Sales close at kickoff. Until then anyone can also add to the prizes as a sponsor (the pool then shows, for example, "Sponsored by ORE · +1 ORE"): no fee is taken on it, it goes to the winners in full, and it comes back to the sponsor if the pool doesn't play.
-3. **Lock and draw.** When the 25th box sells, the pool locks and digits 0–9 are shuffled onto both axes using [Regolith Labs' Entropy](https://github.com/regolith-labs/entropy) (commit-reveal + slothash). Nobody can know the digits while boxes are on sale.
+3. **Lock and draw.** When the 25th box sells, the pool locks and digits 0–9 are shuffled onto both axes using Entropy, the commit-reveal + slothash randomness program [Regolith Labs wrote for ORE](https://github.com/regolith-labs/entropy), run as MyBarPool's own deployment (see [Randomness](#randomness)). Nobody can know the digits while boxes are on sale.
 4. **Play.** Within a couple of minutes of each quarter ending, once the two score sources agree, the keeper posts the official end-of-quarter score on-chain and the program pays that quarter's winner in the same breath; the money is in the winner's wallet while the next quarter is starting. Q4 uses the final score, so overtime replaces the end-of-regulation score and Q4 pays when the game is final.
 5. **Verify.** Every payout is recorded on-chain: the pool account keeps the quarter, winning box and amount, and the settle event carries the full detail (score, winning box, wallet, amount). The app links each one to its transaction.
 
@@ -60,7 +60,7 @@ If the grid doesn't sell out by kickoff, or the game is postponed or cancelled, 
 | Private pools | Supported by the program from v1: `link` (gate-key co-signer carried in the invite link or a printable QR) and `allowlist` (Merkle root of wallets). Same fees, draw and settlement as public pools. The first version of the app creates public pools only |
 | Links | Every pool has one URL, `mybarpool.com/pools/{address}`, that reads the pool straight from the chain and needs nothing from MyBarPool's servers; a short form `mybarpool.com/p/{code}` redirects to it. Links open the app on Seeker and the web app anywhere else, with a live grid image as the preview. No referral codes, no tracking parameters |
 | Scores | Two primary sources that must agree: API-Sports and Polymarket's public sports stream (Sportradar data). ESPN is standby: it stands in when a primary is silent, and a disagreement from it alerts the team without stopping a post. If the two sources relied on disagree, the game halts until it's resolved |
-| Randomness | Regolith Labs Entropy, one variable per pool, no re-rolls |
+| Randomness | Entropy (Regolith Labs' commit-reveal program), MyBarPool's own deployment, one variable per pool, no re-rolls |
 | Environments | Localnet and mainnet only. No devnet |
 
 The full rulebook, with the reasoning behind each rule, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -111,9 +111,10 @@ Returns and splits are executed by the platform keeper. Players and creators nev
 
 ## Randomness
 
-- One Entropy `Var` per pool, opened by the keeper at lock with an end slot about a minute later. The provider publishes a seed after the end slot; the value is `hash(seed, slothash)`. The provider can't predict the slothash and validators can't see the seed, so neither can steer the result.
+- The randomness program is Entropy, the commit-reveal + slothash program [Regolith Labs](https://github.com/regolith-labs/entropy) wrote for ORE. Regolith's own deployment no longer lets anyone else open a variable, so MyBarPool runs its own deployment of a fork, [war2wigz/entropy](https://github.com/war2wigz/entropy), at program id `ASo8r4EEFLPAMDk1w3XdKbEmq4c1GynbsHGa6RGG83fH`. The fork changes three things and nothing else: the program id, the `Open` instruction re-enabled, and the `security.txt` contact. It is built and deployed through the same verifiable-build pipeline as this program, with the same multisig as upgrade authority. The provider (the party that picks the seed and reveals it) is MyBarPool's keeper.
+- One Entropy `Var` per pool, opened by the keeper at lock with an end slot about a minute later. The keeper publishes `commit = hash(seed)` when it opens the `Var`, reveals the seed after the end slot, and the value is `hash(slothash, seed)`. The keeper can't predict the slothash and nobody else knows the seed, so neither party can steer the result on its own.
 - Two independent Fisher–Yates shuffles of 0–9 seeded with `hash(value, "home")` and `hash(value, "away")`. The digit assignment is recorded on the pool account and emitted as an event, so anyone can re-derive it.
-- No re-rolls. The pool records the `Var` address at lock and the draw instruction only accepts a value from that account. Replacing a `Var` is an admin (multisig) instruction that emits an event, never a keeper action.
+- No re-rolls. The pool records the `Var` address and its commit at lock; the draw instruction only accepts a value from that account, whose revealed seed hashes to that commit, and refuses a `Var` that fell back to a hash of its own end slot. Replacing a `Var` is an admin (multisig) instruction that emits an event, is refused once a sample is recorded, and is never a keeper action.
 
 ## How winners are decided
 
@@ -126,7 +127,7 @@ What makes that reliable, in plain terms:
 - **The money is in a program vault, not in anyone's wallet.** Only the program can move it, by the rules in the deployed program version, which is published here with verifiable builds so anyone can confirm mainnet runs this code. Not the team, not the creator, not the keeper.
 - **Scores come from two primary sources that must agree** (API-Sports and Polymarket's public sports stream, which carries Sportradar data), with ESPN as a standby. If a primary goes quiet, ESPN stands in for it and still has to agree with the other. If the two sources being relied on say different things, nothing is paid for that game until it's resolved. If ESPN alone disagrees, the team is alerted but the post goes ahead; ESPN never decides anything on its own.
 - **Quarters go in order and can't be rushed.** Scores are posted one quarter at a time, in order, and can only go up. Because a quarter is 15 minutes of game clock, the program refuses any score posted sooner than 15 minutes after kickoff (Q1) or after the previous post (later quarters) — so a whole game's scores can't be posted in seconds.
-- **The digits are drawn on-chain, after the grid is full,** from a public randomness source ([Regolith Labs' Entropy](https://github.com/regolith-labs/entropy)), and recorded on the pool. Nobody can know them while boxes are on sale, and there are no re-rolls.
+- **The digits are drawn on-chain, after the grid is full,** from a public commit-reveal randomness program (Entropy, Regolith Labs' design, run as MyBarPool's own verified deployment; see [Randomness](#randomness)), and recorded on the pool. Nobody can know them while boxes are on sale, and there are no re-rolls.
 - **Every payout is written on-chain.** The pool account keeps the quarter, the box and the amount; the settle event carries the score, the box, the wallet and the amount; and the app links each one to its transaction. Anyone can check any result against the chain's history.
 - **Nothing about a pool changes after it's created.** Price, split, fees and rules are fixed on the pool account at creation.
 - **Fee ceilings are constants in the program**, not settings: 5% platform, 15% total. Lowering them is a config change; raising them would need a new program version, which is public, verifiable and announced in advance.
@@ -165,9 +166,9 @@ The program specification, [docs/PROGRAM.md](docs/PROGRAM.md), is the contract: 
 ## What is in this repo
 
 ```
-programs/mybarpool/   Solana program (Anchor) — Apache-2.0                       (coming)
+programs/mybarpool/   Solana program (Anchor) — Apache-2.0, in development step by step
 packages/shared/      TypeScript SDK: types, instruction builders, PDAs,
-                      grid and payout math, 1–25 box labelling, team table — Apache-2.0   (coming)
+                      grid and payout math, 1–25 box labelling, team table — Apache-2.0, likewise
 docs/ARCHITECTURE.md  The full design: rules, lifecycle, fees, randomness, trust model,
                       program accounts, private pools, decisions log
 docs/PROGRAM.md       Program specification: accounts, seeds, instructions, checks, events,
@@ -199,7 +200,7 @@ All eleven frames, including the share sheet, the sponsor sheet and My Boxes, ar
 
 ## Toolchain
 
-Latest stable Solana tooling only, pinned in-repo, verifiable builds. Pinned today: Agave/Solana CLI 4.3.0, Anchor 1.2.0, platform-tools v1.57, Surfpool 1.6.0, Mollusk 0.15.1, `solana-verify` 0.5.2, `@solana/kit` 8.4.0, Node 22. The program is built as SBPFv3 (`anchor build --arch v3`; CI fails unless the ELF header says so), and the deployed program will be verified with `solana-verify` so anyone can confirm mainnet runs the code in this repo. Localnet tests run against the real Entropy program and the real SKR and ORE mints, fetched from mainnet by Surfpool on first use.
+Latest stable Solana tooling only, pinned in-repo, verifiable builds. Pinned today: Agave/Solana CLI 4.3.0, Anchor 1.2.0, platform-tools v1.57, Surfpool 1.6.0, Mollusk 0.16.0, `solana-verify` 0.5.2, `@solana/kit` 8.4.0, Node 22. The program is built as SBPFv3 (`anchor build --arch v3`; CI fails unless the ELF header says so), and the deployed program will be verified with `solana-verify` so anyone can confirm mainnet runs the code in this repo. Localnet tests run against the Entropy fork's verified bytecode (the fixture in `programs/mybarpool/tests/fixtures/`, which CI rebuilds from the fork at the pinned commit and compares by hash) placed at its program id, and against the real SKR and ORE mints, fetched from mainnet by Surfpool on first use.
 
 To build and test locally with the pins: install Rust (`rust-toolchain.toml` picks the version), the Solana CLI 4.3.0, Anchor 1.2.0 and Surfpool 1.6.0, then
 
