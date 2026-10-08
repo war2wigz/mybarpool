@@ -1274,7 +1274,7 @@ pub const REGOLITH_ENTROPY_ELF: &[u8] = include_bytes!("../fixtures/entropy-f26a
 /// (`solana-verify build --arch v3` output, byte for byte; CI rebuilds it and compares).
 /// `tests/entropy.rs` checks its SHA-256. This is what `with_entropy` loads at
 /// `ENTROPY_PROGRAM`.
-pub const ENTROPY_FORK_ELF: &[u8] = include_bytes!("../fixtures/entropy-170b7dd.so");
+pub const ENTROPY_FORK_ELF: &[u8] = include_bytes!("../fixtures/entropy-486225b.so");
 /// The live ORE `Var` `BWCaDY96Xe4WkFq1M7UiCCRcChsJ3p51L5KrGzhxgm2E`, fetched at slot 454,331,258;
 /// the one copy lives beside the shared package's decoder test. It lives under Regolith's
 /// program, not the platform's.

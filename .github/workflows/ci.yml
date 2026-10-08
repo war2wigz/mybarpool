@@ -28,7 +28,7 @@ env:
   SURFPOOL_VERSION: "1.6.0"
   # The fork commit the Entropy fixture was built from; the same value is in
   # tests/helpers/entropy.ts (ENTROPY_FORK_COMMIT) and names the fixture file.
-  ENTROPY_FORK_COMMIT: "170b7ddaee53b7a55d134d614c8ce080e72b4d4f"
+  ENTROPY_FORK_COMMIT: "486225b288e70aeda37e1179c673ab02254587d2"
   SOLANA_VERIFY_VERSION: "0.5.2"
   # The image solana-verify 0.5.2 maps to Agave 4.3.0 (see verifiable-build.yml).
   VERIFY_BASE_IMAGE: solanafoundation/solana-verifiable-build@sha256:12fd4c0a0790f0fc41ef74b0cdb6bccc167ba6137eb1adb749bac649481c86bd
