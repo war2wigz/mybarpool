@@ -270,6 +270,28 @@ function axesBulkVectors() {
   return { spec: "PROGRAM §6.2 axis shuffle, 1,000 random values", entries };
 }
 
+function winnerBulkVectors() {
+  const rng = new Prng("vectors/winner-bulk");
+  const entries = [];
+  for (let t = 0; t < 1_000; t++) {
+    // Both axes random permutations of 0–9 (the shared shuffle over PRNG bytes); scores are
+    // random u16 biased so at least a quarter are below 10, and a few are 65,535.
+    const { home: homeAxis, away: awayAxis } = drawAxes(rng.bytes(32));
+    const score = (k: number) =>
+      k === 0 ? rng.int(10) : k === 1 ? rng.int(100) : k === 2 ? rng.int(0x10000) : 0xffff;
+    const home = score(t % 4 === 3 && t % 20 === 3 ? 3 : t % 4 === 3 ? 2 : t % 4);
+    const away = score((t + 1) % 4 === 3 && t % 20 === 7 ? 3 : (t + 1) % 4 === 3 ? 2 : (t + 1) % 4);
+    entries.push({
+      homeAxis: [...homeAxis],
+      awayAxis: [...awayAxis],
+      home,
+      away,
+      box: winningBox({ home, away, homeAxis, awayAxis }),
+    });
+  }
+  return { spec: "PROGRAM §6.3 winner, 1,000 random axis pairs and scores", entries };
+}
+
 const FILES = {
   "assignment.json": assignmentVectors,
   "axes.json": axesVectors,
@@ -278,6 +300,7 @@ const FILES = {
   "assignment-bulk.json": assignmentBulkVectors,
   "fees-bulk.json": feeBulkVectors,
   "axes-bulk.json": axesBulkVectors,
+  "winner-bulk.json": winnerBulkVectors,
 } as const;
 
 describe("shared vector files (PROGRAM §6)", () => {
