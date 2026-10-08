@@ -1,12 +1,16 @@
 name: CI
 
 # Program and SDK tests on every push and pull request (build plan Step 0).
-# Three jobs, each one a gate:
+# Four jobs, each one a gate:
 #   program  — `anchor build --arch v3`, the SBPFv3 header check, Mollusk
 #              unit tests, the compute-unit table (diff shown, never a failure),
 #              and the Surfpool localnet suite forking mainnet.
 #   sdk      — packages/shared build, tests and typecheck; the lockfile must
 #              carry exactly one @solana/kit major and no @solana/web3.js.
+#   entropy-fork-hash — rebuilds the platform's Entropy deployment
+#              (war2wigz/entropy at ENTROPY_FORK_COMMIT) with solana-verify and
+#              fails unless the bytes equal the committed fixture the Mollusk
+#              and Surfpool suites run (Step 5b).
 #   lints    — OtterSec anchor-lints via cargo dylint (lints.yml).
 # Pinned versions come from rust-toolchain.toml, Anchor.toml and package.json.
 
@@ -22,6 +26,12 @@ env:
   SOLANA_VERSION: "4.3.0"
   ANCHOR_VERSION: "1.2.0"
   SURFPOOL_VERSION: "1.6.0"
+  # The fork commit the Entropy fixture was built from; the same value is in
+  # tests/helpers/entropy.ts (ENTROPY_FORK_COMMIT) and names the fixture file.
+  ENTROPY_FORK_COMMIT: "486225b288e70aeda37e1179c673ab02254587d2"
+  SOLANA_VERIFY_VERSION: "0.5.2"
+  # The image solana-verify 0.5.2 maps to Agave 4.3.0 (see verifiable-build.yml).
+  VERIFY_BASE_IMAGE: solanafoundation/solana-verifiable-build@sha256:12fd4c0a0790f0fc41ef74b0cdb6bccc167ba6137eb1adb749bac649481c86bd
 
 jobs:
   program:
@@ -204,3 +214,49 @@ jobs:
         run: npm run test:coverage --workspace packages/shared
       - run: npm run typecheck
       - run: npm run format
+
+  entropy-fork-hash:
+    name: Entropy fork rebuilt equals the fixture
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: war2wigz/entropy
+          ref: ${{ env.ENTROPY_FORK_COMMIT }}
+          path: entropy-fork
+          persist-credentials: false
+
+      - name: Install Rust (host, for solana-verify)
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Install solana-verify ${{ env.SOLANA_VERIFY_VERSION }}
+        # From this checkout, whose rust-toolchain.toml is new enough; the
+        # fork's pins the host to 1.85.0, which solana-verify's dependencies refuse.
+        run: cargo install solana-verify --version "$SOLANA_VERIFY_VERSION" --locked
+
+      - name: solana-verify build --arch v3 (the fork)
+        # The same command the fork's own CI runs; the program is built inside
+        # the Docker image, so the fork's host toolchain pin does not apply.
+        run: solana-verify build --arch v3 --library-name entropy_program --base-image "$VERIFY_BASE_IMAGE"
+        working-directory: entropy-fork
+
+      - name: The rebuilt bytes equal the committed fixture
+        # Byte equality first. If the two ever differ only by trailing zero
+        # padding, compare executable hashes instead and record it in the step
+        # notes; so far the outputs have been identical.
+        run: |
+          set -euo pipefail
+          fixture="programs/mybarpool/tests/fixtures/entropy-${ENTROPY_FORK_COMMIT:0:7}.so"
+          built="entropy-fork/target/deploy/entropy_program.so"
+          readelf -h "$built" | grep -q 'Flags:\s*0x3'
+          sha256sum "$fixture" "$built"
+          solana-verify get-executable-hash "$built"
+          cmp "$fixture" "$built"
