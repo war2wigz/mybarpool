@@ -707,6 +707,34 @@ fn draw_refuses_a_self_consistent_var_whose_seed_matches_a_different_commit() {
 }
 
 #[test]
+fn draw_refuses_a_var_whose_commit_field_matches_but_whose_seed_does_not_hash_to_it() {
+    // Step 5b audit L1: the one Var shape that tells the right check from the tempting wrong
+    // one. `commit` equals the pool's `var_commit`, `seed` is SEED2 (which does not hash to it),
+    // the slot hash is the verified one, samples 1, value recomputed consistently for SEED2 —
+    // what a bad `Reveal` in the Entropy deployment could produce. A `v.commit == var_commit`
+    // check would pass it; only `keccak(v.seed) == var_commit` (PROGRAM §4.4) refuses it.
+    let f = Fixture::new();
+    let m = draw_mollusk(false);
+    let var = f.var_key();
+    let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
+    let bad_reveal = VarFields {
+        commit: *COMMIT,
+        seed: SEED2,
+        value: mybarpool::entropy::expected_value(&END_HASH, &SEED2, 1),
+        ..f.sampled_var(END_AT, END_HASH)
+    };
+    assert_eq!(bad_reveal.commit, pool.var_commit);
+    assert_ne!(commit_of(&bad_reveal.seed), pool.var_commit);
+    let accounts = draw_accounts(&f, &m, &pool, Some((&var, &bad_reveal)));
+    let result = m.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::err(custom(err(E::VarCommitMismatch)))],
+    );
+    assert_eq!(decode_pool(account_of(&result, &pool_key(&f))), pool);
+}
+
+#[test]
 fn draw_refuses_a_var_whose_samples_was_edited_after_the_sample() {
     // PROGRAM §4.4 (Step 5b): `samples == 1` at draw, before the recomputation; a value
     // recomputed to be consistent for samples = 2 is still refused, as VarNotFresh.

@@ -471,6 +471,21 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
       await sendExpectingError(keeper, await drawInstruction(keeper, refs.pool, v.address)),
     ).toBe(errorCode("VarCommitMismatch")); // 6064
     expect((await fetchPool(refs.pool)).status).toBe(PoolStatus.Locked);
+    // Step 5b audit L1: the Var's `commit` equal to the pool's, the seed SEED4 (which does not
+    // hash to it), value consistent for SEED4 — a bad Reveal's shape; refused by
+    // keccak(seed) == var_commit and only by that check.
+    await plantVar(
+      v.address,
+      freshVar(v.id, SEED3, v.endAt, {
+        seed: SEED4,
+        slotHash: sampledHash,
+        value: entropyValue(sampledHash, SEED4, 1n),
+      }),
+    );
+    expect(Uint8Array.from((await fetchVar(v.address))!.commit)).toEqual(keccak(SEED3));
+    expect(
+      await sendExpectingError(keeper, await drawInstruction(keeper, refs.pool, v.address)),
+    ).toBe(errorCode("VarCommitMismatch")); // 6064
     // Re-plant the fields Reveal(SEED3) would have written: the draw goes through.
     await plantVar(
       v.address,
