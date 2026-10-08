@@ -11,7 +11,7 @@ mod common;
 
 use common::*;
 use mollusk_svm_bencher::MolluskComputeUnitBencher;
-use mybarpool::PoolStatus;
+use mybarpool::{CreatePoolParams, PayoutPreset, PoolStatus};
 
 fn main() {
     let f = Fixture::new();
@@ -93,7 +93,10 @@ fn main() {
 
     // Step 4: pools. One Mollusk with the token programs and a slot hash; the standard game at
     // T0 is open. The eleven rows the brief names.
-    let m = mollusk_for_pools(T0, SLOT_HASH);
+    // The ATA program is loaded too (Step 6's SPL settlement rows); the earlier rows ignore it.
+    let mut m = mollusk_for_pools(T0, SLOT_HASH);
+    mollusk_svm_programs_token::associated_token::add_program(&mut m);
+    let m = m;
     let config = f.expected_config();
     let pool_key = pool_pda(&standard_game(), &f.creator, NONCE).0;
 
@@ -249,6 +252,124 @@ fn main() {
         }),
     ));
 
+    // Step 6: settlement. The standard drawn pool (identity axes, the Step 3 scores): Q1 pays
+    // buyer_2 + two fees; Q2 the creator, prize only; Q4 the creator and settles; FinalOnly Q1
+    // moves nothing; the integrator variant adds a third fee; the ORE row creates three ATAs and
+    // moves three token transfers (the worst case the CU table is read against).
+    let config = f.expected_config();
+    let settle_pool = drawn_pool_for_settlement(&f, &config, &sol_params(0), 0);
+    let settle_q1 = settle_ix(
+        &f,
+        &f.keeper,
+        &settle_pool,
+        &standard_game(),
+        1,
+        &f.buyer_2,
+        SettleAccounts::default(),
+    );
+    let settle_q1_accounts = settlement_accounts(&f, &m, &config, &settle_pool, 4, None);
+    let after_q1 = settled_pool(&f, &config, &sol_params(0), 0, 1, true);
+    let settle_q2 = settle_ix(
+        &f,
+        &f.keeper,
+        &after_q1,
+        &standard_game(),
+        2,
+        &f.creator,
+        SettleAccounts::default(),
+    );
+    let settle_q2_accounts = settlement_accounts(&f, &m, &config, &after_q1, 4, None);
+    let after_q3 = settled_pool(&f, &config, &sol_params(0), 0, 3, true);
+    let settle_q4 = settle_ix(
+        &f,
+        &f.keeper,
+        &after_q3,
+        &standard_game(),
+        4,
+        &f.creator,
+        SettleAccounts::default(),
+    );
+    let settle_q4_accounts = settlement_accounts(&f, &m, &config, &after_q3, 4, None);
+    let final_only = drawn_pool_for_settlement(
+        &f,
+        &config,
+        &CreatePoolParams {
+            preset: PayoutPreset::FinalOnly,
+            ..sol_params(0)
+        },
+        0,
+    );
+    let settle_final_only = settle_ix(
+        &f,
+        &f.keeper,
+        &final_only,
+        &standard_game(),
+        1,
+        &f.buyer_2,
+        SettleAccounts::default(),
+    );
+    let settle_final_only_accounts = settlement_accounts(&f, &m, &config, &final_only, 4, None);
+    let with_integrator = drawn_pool_for_settlement(
+        &f,
+        &config,
+        &CreatePoolParams {
+            integrator: to_a(&f.integrator),
+            integrator_bps: 100,
+            ..sol_params(0)
+        },
+        0,
+    );
+    let settle_integrator = settle_ix(
+        &f,
+        &f.keeper,
+        &with_integrator,
+        &standard_game(),
+        1,
+        &f.buyer_2,
+        SettleAccounts {
+            integrator: Some(f.integrator),
+            spl: None,
+        },
+    );
+    let settle_integrator_accounts =
+        settlement_accounts(&f, &m, &config, &with_integrator, 4, None);
+    let ore_pool = drawn_pool_for_settlement(&f, &config, &ore_params(0), 0);
+    let ore_spl = SplSettle::derived(&f, &ore_pool, &f.buyer_2);
+    let settle_ore = settle_ix(
+        &f,
+        &f.keeper,
+        &ore_pool,
+        &standard_game(),
+        1,
+        &f.buyer_2,
+        SettleAccounts {
+            integrator: None,
+            spl: Some(ore_spl),
+        },
+    );
+    let mut settle_ore_accounts =
+        settlement_accounts(&f, &m, &config, &ore_pool, 4, Some(25 * PRICE_ORE));
+    for k in [ore_spl.winner_ata, ore_spl.fee_ata, ore_spl.creator_ata] {
+        set_account(&mut settle_ore_accounts, k, system_account(0));
+    }
+    let settled = settled_pool(&f, &config, &sol_params(0), 0, 4, true);
+    let close_sol = close_pool_ix(&f, &f.stranger, &settled, None);
+    let close_sol_accounts = settlement_accounts(&f, &m, &config, &settled, 4, None);
+    let settled_ore = settled_pool(&f, &config, &ore_params(0), 0, 4, true);
+    let dest_ata = ata(&f.fee_wallet, &f.ore_mint, &token_program_id());
+    let close_ore = close_pool_ix(
+        &f,
+        &f.stranger,
+        &settled_ore,
+        Some(SplClose {
+            mint: f.ore_mint,
+            token_program: token_program_id(),
+            destination_ata: dest_ata,
+        }),
+    );
+    let mut close_ore_accounts = settlement_accounts(&f, &m, &config, &settled_ore, 4, Some(2));
+    set_account(&mut close_ore_accounts, dest_ata, system_account(0));
+
     MolluskComputeUnitBencher::new(m)
         .bench(("initialize", &initialize, &initialize_accounts))
         .bench(("update_config_full", &update_config_full, &update_accounts))
@@ -288,6 +409,22 @@ fn main() {
         ))
         .bench(("draw", &draw, &draw_accounts_))
         .bench(("replace_var", &replace_var, &replace_var_accounts))
+        .bench(("settle_q1_sol", &settle_q1, &settle_q1_accounts))
+        .bench(("settle_q2_sol", &settle_q2, &settle_q2_accounts))
+        .bench(("settle_q4_sol", &settle_q4, &settle_q4_accounts))
+        .bench((
+            "settle_q1_final_only",
+            &settle_final_only,
+            &settle_final_only_accounts,
+        ))
+        .bench((
+            "settle_q1_sol_integrator",
+            &settle_integrator,
+            &settle_integrator_accounts,
+        ))
+        .bench(("settle_q1_ore", &settle_ore, &settle_ore_accounts))
+        .bench(("close_pool_sol", &close_sol, &close_sol_accounts))
+        .bench(("close_pool_ore", &close_ore, &close_ore_accounts))
         .must_pass(true)
         .out_dir(env!("CARGO_MANIFEST_DIR"))
         .execute();

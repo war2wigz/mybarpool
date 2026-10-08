@@ -12,7 +12,10 @@ use anchor_lang::prelude::Pubkey as APubkey;
 use common::*;
 use mollusk_svm::result::Check;
 use mybarpool::{
-    assignment::assign_boxes, money::fee_amounts, BoxesBought, CreatePoolParams, PoolStatus,
+    assignment::assign_boxes,
+    money::{dust, fee_amounts, prize_pool, quarter_prizes},
+    winner::winning_box,
+    BoxesBought, CreatePoolParams, PayoutPreset, PoolStatus,
 };
 use serde::Deserialize;
 use solana_pubkey::Pubkey;
@@ -186,6 +189,17 @@ struct FeeEntry {
     platform_fee: String,
     creator_fee: String,
     integrator_fee: String,
+    // Step 6: the §5.2 fields fees.json has carried since Step 1.
+    #[serde(default)]
+    sponsored_total: Option<String>,
+    #[serde(default)]
+    preset: Option<u8>,
+    #[serde(default)]
+    prize_pool: Option<String>,
+    #[serde(default)]
+    quarters: Option<[String; 4]>,
+    #[serde(default)]
+    dust: Option<String>,
 }
 
 fn check_fee_file(file: &str, expected_len: usize) -> Vec<FeeEntry> {
@@ -216,6 +230,84 @@ fn check_fee_file(file: &str, expected_len: usize) -> Vec<FeeEntry> {
 #[test]
 fn fees_bulk_json_matches_for_all_200_entries() {
     check_fee_file("fees-bulk.json", 200);
+}
+
+#[test]
+fn fees_json_prize_pool_quarters_and_dust_match_for_every_entry() {
+    // PROGRAM §5.2; BUILD-PLAN "Dust ≤ divisor − 1 base units": every entry's prizePool,
+    // quarters and dust from the shared package equal the program's functions, and dust ≤ 3.
+    let entries = check_fee_file("fees.json", 24);
+    for (i, e) in entries.iter().enumerate() {
+        let fees = fee_amounts(
+            u64s(&e.price),
+            e.platform_bps,
+            e.creator_bps,
+            e.creator_addon_bps,
+            e.integrator_bps,
+        )
+        .unwrap();
+        let sponsored = u64s(e.sponsored_total.as_deref().expect("sponsoredTotal"));
+        let preset = PayoutPreset::try_from(e.preset.expect("preset")).unwrap();
+        let pool = prize_pool(u64s(&e.price), &fees, sponsored)
+            .unwrap_or_else(|err| panic!("entry {i}: {err}"));
+        assert_eq!(
+            pool,
+            u64s(e.prize_pool.as_deref().expect("prizePool")),
+            "entry {i}"
+        );
+        let quarters = quarter_prizes(pool, preset).unwrap();
+        let expected = e.quarters.as_ref().expect("quarters");
+        assert_eq!(
+            quarters,
+            [
+                u64s(&expected[0]),
+                u64s(&expected[1]),
+                u64s(&expected[2]),
+                u64s(&expected[3])
+            ],
+            "entry {i}"
+        );
+        let d = dust(pool, &quarters).unwrap();
+        assert_eq!(d, u64s(e.dust.as_deref().expect("dust")), "entry {i}");
+        assert!(d <= 3, "entry {i}: dust {d}");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// winner.json (24) and winner-bulk.json (1,000)
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WinnerEntry {
+    home_axis: [u8; 10],
+    away_axis: [u8; 10],
+    home: u16,
+    away: u16,
+    r#box: u8,
+}
+
+fn check_winner_file(file: &str, expected_len: usize) {
+    // PROGRAM §6.3; Step 1 vectors.
+    let file: File<WinnerEntry> = load(file);
+    assert_eq!(file.entries.len(), expected_len);
+    for (i, e) in file.entries.iter().enumerate() {
+        assert_eq!(
+            winning_box(e.home, e.away, &e.home_axis, &e.away_axis).unwrap(),
+            e.r#box,
+            "entry {i}"
+        );
+    }
+}
+
+#[test]
+fn winner_json_matches_for_all_24_entries() {
+    check_winner_file("winner.json", 24);
+}
+
+#[test]
+fn winner_bulk_json_matches_for_all_1000_entries() {
+    check_winner_file("winner-bulk.json", 1_000);
 }
 
 #[test]

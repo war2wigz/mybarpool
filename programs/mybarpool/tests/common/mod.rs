@@ -747,6 +747,34 @@ pub fn event_payloads(result: &InstructionResult) -> Vec<&[u8]> {
         .collect()
 }
 
+/// The program ids of every inner instruction, in order (the CPIs a call made).
+pub fn inner_program_ids(result: &InstructionResult) -> Vec<Pubkey> {
+    let message = result.message.as_ref().expect("result carries its message");
+    let keys = message.account_keys();
+    result
+        .inner_instructions
+        .iter()
+        .filter_map(|inner| {
+            keys.get(usize::from(inner.instruction.program_id_index))
+                .copied()
+        })
+        .collect()
+}
+
+/// Inner instructions of `program` whose first data byte is `discriminator`.
+pub fn inner_count(result: &InstructionResult, program: &Pubkey, discriminator: u8) -> usize {
+    let message = result.message.as_ref().expect("result carries its message");
+    let keys = message.account_keys();
+    result
+        .inner_instructions
+        .iter()
+        .filter(|inner| {
+            keys.get(usize::from(inner.instruction.program_id_index)) == Some(program)
+                && inner.instruction.data.first() == Some(&discriminator)
+        })
+        .count()
+}
+
 /// Decode the `emit_cpi!` event of type `E` from the result's inner instructions.
 pub fn emitted_event<E: AnchorDeserialize + Discriminator>(
     result: &InstructionResult,
@@ -937,6 +965,14 @@ pub fn pool_with(f: &Fixture, status: PoolStatus, sold: u8, owner: &Pubkey) -> P
 
 pub fn pool_account(pool: &Pool) -> Account {
     account_for(pool, &program_id(), Pool::SIZE)
+}
+
+/// `pool_account` at exactly its rent-exempt minimum (the fixtures otherwise fund every account
+/// with 1 SOL), for the `close_pool` tests that assert what the pool's rent pays out.
+pub fn pool_account_at_rent(pool: &Pool) -> Account {
+    let mut a = pool_account(pool);
+    a.lamports = rent_for(Pool::SIZE);
+    a
 }
 
 pub fn counter_account(creator: &Pubkey, game: &Pubkey, open_count: u8) -> Account {
@@ -1255,6 +1291,10 @@ pub fn event_names(result: &InstructionResult) -> Vec<&'static str> {
                 "VarReplaced"
             } else if d == mybarpool::DigitsDrawn::DISCRIMINATOR {
                 "DigitsDrawn"
+            } else if d == mybarpool::QuarterSettled::DISCRIMINATOR {
+                "QuarterSettled"
+            } else if d == mybarpool::PoolClosed::DISCRIMINATOR {
+                "PoolClosed"
             } else {
                 "other"
             }
@@ -1672,4 +1712,298 @@ pub fn close_ix(authority: &Pubkey, var: &Pubkey) -> Instruction {
         ],
         data: vec![1u8],
     }
+}
+
+// ---------------------------------------------------------------------------
+// Settlement fixtures (Step 6)
+// ---------------------------------------------------------------------------
+
+/// `mollusk_at` plus the Token, Token-2022 and Associated Token programs (PROGRAM §5.4).
+pub fn mollusk_for_settlement(unix_timestamp: i64) -> Mollusk {
+    let mut m = mollusk_at(unix_timestamp);
+    mollusk_svm_programs_token::token::add_program(&mut m);
+    mollusk_svm_programs_token::token2022::add_program(&mut m);
+    mollusk_svm_programs_token::associated_token::add_program(&mut m);
+    m
+}
+
+pub fn associated_token_program_id() -> Pubkey {
+    mollusk_svm_programs_token::associated_token::ID
+}
+
+/// `get_associated_token_address_with_program_id`, crossed by bytes.
+pub fn ata(wallet: &Pubkey, mint: &Pubkey, token_program: &Pubkey) -> Pubkey {
+    to_m(
+        &anchor_spl::associated_token::get_associated_token_address_with_program_id(
+            &to_a(wallet),
+            &to_a(mint),
+            &to_a(token_program),
+        ),
+    )
+}
+
+/// The identity axes `[0, 1, …, 9]`: lane `l` holds digits `l` and `l + 5`, so digit `d` is in
+/// lane `d mod 5` (this brief's worked winners: 7–3 → box 17, 14–10 → 4, 17–17 → 12, 24–20 → 4).
+pub const IDENTITY_AXIS: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/// A `Drawn` pool on the standard game for `params`, as the program would have left it after
+/// Steps 4–5b: 25 boxes sold (0–4 the creator, 5–14 `buyer`, 15–24 `buyer_2`), `creator_boxes`
+/// 5, `drawn`, identity axes, the standard Var bound, sampled and drawn, `sponsored_total` as
+/// given (with `sponsor_count 1`, `sponsorships_open 1` when non-zero: a sponsorship account
+/// exists until Step 7 closes it). Prizes unset (zero / 255) until the first settlement.
+pub fn drawn_pool_for_settlement(
+    f: &Fixture,
+    config: &PlatformConfig,
+    params: &CreatePoolParams,
+    sponsored_total: u64,
+) -> Pool {
+    let mut pool = fresh_pool(f, config, params);
+    for i in 0..25usize {
+        pool.owners[i] = to_a(if i < 5 {
+            &f.creator
+        } else if i < 15 {
+            &f.buyer
+        } else {
+            &f.buyer_2
+        });
+    }
+    pool.sold = 25;
+    pool.creator_boxes = 5;
+    pool.status = PoolStatus::Drawn;
+    pool.locked_at = T0;
+    pool.sponsored_total = sponsored_total;
+    if sponsored_total > 0 {
+        pool.sponsor_count = 1;
+        pool.sponsorships_open = 1;
+    }
+    let var = f.var_key();
+    pool.var = to_a(&var);
+    pool.var_end_at = END_AT;
+    pool.var_commit = *COMMIT;
+    pool.sampled_slot = END_AT + 3;
+    pool.sampled_hash = END_HASH;
+    pool.drawn = true;
+    pool.home_axis = IDENTITY_AXIS;
+    pool.away_axis = IDENTITY_AXIS;
+    pool
+}
+
+/// `drawn_pool_for_settlement` after `quarters_settled` settlements on `record_with_quarters`,
+/// with `prize_pool`, `quarter_prize`, `unpaid_prize_pool`, `winning_box[..n]`, `fees_paid`
+/// and the status as the program would have left them — computed with the Rust functions
+/// under test (`settle.rs` asserts the worked example's literals against this).
+pub fn settled_pool(
+    f: &Fixture,
+    config: &PlatformConfig,
+    params: &CreatePoolParams,
+    sponsored_total: u64,
+    quarters_settled: u8,
+    fees_paid: bool,
+) -> Pool {
+    use mybarpool::money::{prize_pool, quarter_prizes, FeeAmounts};
+    use mybarpool::winner::winning_box;
+    let mut pool = drawn_pool_for_settlement(f, config, params, sponsored_total);
+    let fees = FeeAmounts {
+        platform_fee: pool.platform_fee,
+        creator_fee: pool.creator_fee,
+        integrator_fee: pool.integrator_fee,
+    };
+    pool.prize_pool = prize_pool(pool.price, &fees, pool.sponsored_total).unwrap();
+    pool.quarter_prize = quarter_prizes(pool.prize_pool, pool.preset).unwrap();
+    pool.unpaid_prize_pool = pool.prize_pool;
+    let record = record_with_quarters(quarters_settled);
+    for q in 0..usize::from(quarters_settled) {
+        pool.winning_box[q] = winning_box(
+            record.home_score[q],
+            record.away_score[q],
+            &pool.home_axis,
+            &pool.away_axis,
+        )
+        .unwrap();
+        pool.unpaid_prize_pool -= pool.quarter_prize[q];
+    }
+    pool.quarters_settled = quarters_settled;
+    pool.fees_paid = fees_paid;
+    if quarters_settled == 4 {
+        pool.status = PoolStatus::Settled;
+    }
+    pool
+}
+
+/// The SOL vault balance the §3.4 invariant gives a pool: `rent + 25 × price + sponsored_total`
+/// before the first settlement; after it, `rent + unpaid_prize_pool` **plus the three fees while
+/// `fees_paid` is false** (a `FinalOnly` pool's Q1–Q3 move nothing, so the fees are still in
+/// the vault — §3.4's "after the first settlement, `unpaid_prize_pool`" omits them; NOTES).
+/// Saturating, so a planted `u64::MAX / 25` price does not panic here (the overflow test
+/// replaces the vault anyway).
+pub fn vault_balance_for(pool: &Pool) -> u64 {
+    let above_rent = if pool.quarters_settled == 0 {
+        pool.price
+            .saturating_mul(25)
+            .saturating_add(pool.sponsored_total)
+    } else if pool.fees_paid {
+        pool.unpaid_prize_pool
+    } else {
+        pool.unpaid_prize_pool + pool.platform_fee + pool.creator_fee + pool.integrator_fee
+    };
+    rent_for(0).saturating_add(above_rent)
+}
+
+/// The SPL vault token account for `pool` holding `amount` through the pool's token program.
+pub fn spl_vault_account(f: &Fixture, pool: &Pool, amount: u64) -> Account {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    let mint = to_m(&pool.mint);
+    if to_m(&pool.token_program) == token_2022_program_id() {
+        token_2022_account(&mint, &pool_key, amount)
+    } else {
+        let _ = f;
+        token_account(&mint, &pool_key, amount)
+    }
+}
+
+/// The SPL side of a `settle`: the mint, the pool's token program and the four token accounts
+/// (`integrator_ata` only when the pool has an integrator).
+#[derive(Clone, Copy)]
+pub struct SplSettle {
+    pub mint: Pubkey,
+    pub token_program: Pubkey,
+    pub winner_ata: Pubkey,
+    pub fee_ata: Pubkey,
+    pub creator_ata: Pubkey,
+    pub integrator_ata: Option<Pubkey>,
+}
+
+impl SplSettle {
+    /// The derived ATAs for `pool`'s mint and program, for `winner`.
+    pub fn derived(f: &Fixture, pool: &Pool, winner: &Pubkey) -> Self {
+        let mint = to_m(&pool.mint);
+        let tp = to_m(&pool.token_program);
+        let integrator = to_m(&pool.integrator);
+        Self {
+            mint,
+            token_program: tp,
+            winner_ata: ata(winner, &mint, &tp),
+            fee_ata: ata(&f.fee_wallet, &mint, &tp),
+            creator_ata: ata(&f.creator, &mint, &tp),
+            integrator_ata: (integrator != Pubkey::default()).then(|| ata(&integrator, &mint, &tp)),
+        }
+    }
+}
+
+/// The optional accounts of a `settle`.
+#[derive(Clone, Copy, Default)]
+pub struct SettleAccounts {
+    pub integrator: Option<Pubkey>,
+    pub spl: Option<SplSettle>,
+}
+
+/// `settle(quarter)` by `signer` on `pool` (its game `game`), `winner` the box owner the test
+/// expects; `f` supplies the config's `fee_wallet` (every fixture config carries it).
+pub fn settle_ix(
+    f: &Fixture,
+    signer: &Pubkey,
+    pool: &Pool,
+    game: &Pubkey,
+    quarter: u8,
+    winner: &Pubkey,
+    extra: SettleAccounts,
+) -> Instruction {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    let spl = extra.spl;
+    instruction(
+        mybarpool::accounts::Settle {
+            score_authority: to_a(signer),
+            config: to_a(&config_pda().0),
+            game: to_a(game),
+            pool: to_a(&pool_key),
+            vault: to_a(&vault_pda(&pool_key).0),
+            winner: to_a(winner),
+            fee_wallet: to_a(&f.fee_wallet),
+            creator: pool.creator,
+            integrator: extra.integrator.map(|k| to_a(&k)),
+            mint: spl.map(|s| to_a(&s.mint)),
+            winner_token_account: spl.map(|s| to_a(&s.winner_ata)),
+            fee_token_account: spl.map(|s| to_a(&s.fee_ata)),
+            creator_token_account: spl.map(|s| to_a(&s.creator_ata)),
+            integrator_token_account: spl.and_then(|s| s.integrator_ata).map(|k| to_a(&k)),
+            token_program: spl.map(|s| to_a(&s.token_program)),
+            associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            system_program: APubkey::default(),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::Settle { quarter },
+    )
+}
+
+/// The SPL side of a `close_pool`.
+#[derive(Clone, Copy)]
+pub struct SplClose {
+    pub mint: Pubkey,
+    pub token_program: Pubkey,
+    pub destination_ata: Pubkey,
+}
+
+pub fn close_pool_ix(
+    f: &Fixture,
+    payer: &Pubkey,
+    pool: &Pool,
+    spl: Option<SplClose>,
+) -> Instruction {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    instruction(
+        mybarpool::accounts::ClosePool {
+            payer: to_a(payer),
+            config: to_a(&config_pda().0),
+            pool: to_a(&pool_key),
+            vault: to_a(&vault_pda(&pool_key).0),
+            fee_wallet: to_a(&f.fee_wallet),
+            creator: pool.creator,
+            mint: spl.map(|s| to_a(&s.mint)),
+            destination_token_account: spl.map(|s| to_a(&s.destination_ata)),
+            token_program: spl.map(|s| to_a(&s.token_program)),
+            associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            system_program: APubkey::default(),
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::ClosePool {},
+    )
+}
+
+/// `pool_accounts` for a settlement: the pool, its SOL vault at the §3.4 balance (or an SPL
+/// vault when `spl_amount` is given), the game record for `quarters`, the three token
+/// programs. Recipients' ATAs are added by the test (missing or present).
+pub fn settlement_accounts(
+    f: &Fixture,
+    m: &Mollusk,
+    config: &PlatformConfig,
+    pool: &Pool,
+    quarters: u8,
+    spl_amount: Option<u64>,
+) -> Vec<(Pubkey, Account)> {
+    let mut accounts = pool_accounts(f, m, config, pool, vault_balance_for(pool), 0);
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    if let Some(amount) = spl_amount {
+        set_account(
+            &mut accounts,
+            vault_pda(&pool_key).0,
+            spl_vault_account(f, pool, amount),
+        );
+    }
+    set_account(
+        &mut accounts,
+        standard_game(),
+        game_record_account(&record_with_quarters(quarters)),
+    );
+    // The pool at its real rent, so a close pays out exactly rent_for(Pool::SIZE).
+    set_account(&mut accounts, pool_key, pool_account_at_rent(pool));
+    accounts.push(mollusk_svm_programs_token::associated_token::keyed_account());
+    // The fee wallet is a payout destination the base fixtures never needed before Step 6.
+    set_account(
+        &mut accounts,
+        f.fee_wallet,
+        system_account(LAMPORTS_PER_SOL),
+    );
+    accounts
 }
