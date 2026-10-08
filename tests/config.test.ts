@@ -20,6 +20,7 @@ import {
 } from "@solana/kit";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { preloadEntropyFork } from "./helpers/entropy.js";
 import {
   closeWalletOverrideInstruction,
   configPda,
@@ -117,6 +118,9 @@ describe("admin instructions (Surfpool, mainnet fork)", () => {
     admin = await createKeyPairSignerFromBytes(
       Uint8Array.from(JSON.parse(readFileSync(walletPath, "utf8"))),
     );
+    // Step 5b: the platform's Entropy deployment is preloaded from the fork fixture before any
+    // suite touches it (this file runs first by path; the call is idempotent).
+    await withRetry(() => preloadEntropyFork());
     stranger = await generateKeyPairSigner();
     keeper = await generateKeyPairSigner();
     // First touch of fresh keys: Surfpool asks mainnet whether they exist (Step 3 audit M1).
@@ -252,10 +256,10 @@ describe("admin instructions (Surfpool, mainnet fork)", () => {
     expect([closed.wallet, closed.maxOpenPools, closed.maxOwnBoxes]).toEqual([wallet, 10, 5]);
   });
 
-  it("5. the committed IDL freezes 64 errors from 6000 and carries every §1 constant", () => {
+  it("5. the committed IDL freezes 65 errors from 6000 and carries every §1 constant", () => {
     // 60 after Step 2, + InvalidGameKey, InvalidGameStatus (Step 3), + SampleTooEarly,
-    // VarAlreadySampled (Step 5).
-    expect(IDL.errors).toHaveLength(64);
+    // VarAlreadySampled (Step 5), + VarCommitMismatch (Step 5b).
+    expect(IDL.errors).toHaveLength(65);
     IDL.errors.forEach((e, i) => expect(e.code).toBe(6000 + i));
     const names = IDL.constants.map((c) => c.name);
     for (const c of [

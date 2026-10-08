@@ -74,8 +74,10 @@ import {
 
 import {
   counterSeeds,
+  ENTROPY_PROGRAM,
   gameRecordSeeds,
   poolSeeds,
+  REGOLITH_ENTROPY_PROGRAM,
   sponsorshipSeeds,
   vaultSeeds,
   type GameKey,
@@ -921,6 +923,8 @@ export interface Pool {
   lockedAt: bigint;
   bump: number;
   vaultBump: number;
+  /** PROGRAM §3.3 (Step 5b): the `Var`'s commit as recorded by `set_var` / `replace_var`. */
+  varCommit: ReadonlyUint8Array;
   reserved: ReadonlyUint8Array;
 }
 
@@ -972,7 +976,8 @@ export const poolDecoder = getStructDecoder([
   ["lockedAt", getI64Decoder()],
   ["bump", getU8Decoder()],
   ["vaultBump", getU8Decoder()],
-  ["reserved", fixDecoderSize(getBytesDecoder(), 128)],
+  ["varCommit", fixDecoderSize(getBytesDecoder(), 32)],
+  ["reserved", fixDecoderSize(getBytesDecoder(), 96)],
 ]) as Decoder<Pool>;
 
 export interface CreatorCounter {
@@ -1234,7 +1239,10 @@ export async function closeCounterInstruction(
 // Step 5: the draw (PROGRAM §4.4). Four discriminator-only instructions.
 // ---------------------------------------------------------------------------
 
-export const ENTROPY_PROGRAM_ADDRESS = address("3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X");
+/** PROGRAM §1 `ENTROPY_PROGRAM`, the platform's deployment, from the shared package (Step 5b). */
+export const ENTROPY_PROGRAM_ADDRESS = address(ENTROPY_PROGRAM);
+/** Regolith's deployment: the mainnet-fork sanity read and the live ORE `Var` only. */
+export const REGOLITH_ENTROPY_PROGRAM_ADDRESS = address(REGOLITH_ENTROPY_PROGRAM);
 
 const bytes32 = () => fixDecoderSize(getBytesDecoder(), 32);
 const digits10 = () => getArrayDecoder(getU8Decoder(), { size: 10 });
@@ -1244,12 +1252,14 @@ export interface VarSet {
   pool: Address;
   var: Address;
   endAt: bigint;
+  commit: ReadonlyUint8Array;
 }
 export const varSetDecoder: Decoder<VarSet> = getStructDecoder([
   ["time", getI64Decoder()],
   ["pool", getAddressDecoder()],
   ["var", getAddressDecoder()],
   ["endAt", getU64Decoder()],
+  ["commit", bytes32()],
 ]);
 
 export interface VarSampled {
@@ -1278,6 +1288,7 @@ export interface VarReplaced {
   newVar: Address;
   endAt: bigint;
   replacements: number;
+  commit: ReadonlyUint8Array;
 }
 export const varReplacedDecoder: Decoder<VarReplaced> = getStructDecoder([
   ["time", getI64Decoder()],
@@ -1286,6 +1297,7 @@ export const varReplacedDecoder: Decoder<VarReplaced> = getStructDecoder([
   ["newVar", getAddressDecoder()],
   ["endAt", getU64Decoder()],
   ["replacements", getU8Decoder()],
+  ["commit", bytes32()],
 ]);
 
 export interface DigitsDrawn {

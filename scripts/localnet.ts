@@ -13,10 +13,16 @@
  * promise about Surfpool's behaviour.
  */
 
+import { ENTROPY_PROGRAM } from "@mybarpool/shared";
+
 export const LOCALNET_URL = process.env["ANCHOR_PROVIDER_URL"] ?? "http://127.0.0.1:8899";
 
-/** Regolith Entropy, forked from mainnet on first use (PROGRAM §1). */
-export const ENTROPY_PROGRAM = "3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X";
+/**
+ * The platform's Entropy deployment (PROGRAM §1), re-exported from the shared package. On the
+ * localnet it is not fetched from mainnet (the address holds no account there) but preloaded
+ * from the fork fixture by `tests/helpers/entropy.ts` `preloadEntropyFork` (Step 5b).
+ */
+export { ENTROPY_PROGRAM };
 
 type JsonRpcResponse<T> =
   | { jsonrpc: "2.0"; id: number; result: T }
