@@ -188,7 +188,7 @@ The app (Expo, one codebase for Seeker Android and mybarpool.com), the keeper, t
 
 ## Design and screens
 
-The app is dark, numbers-first, and calm: a neon-sign logo, condensed numerals for scores and prices, one accent per meaning (purple actions, teal "leading", green "won", amber waiting, red returned). Every screen is mocked up in [docs/mockups/screens.html](docs/mockups/screens.html); rendered frames are in [docs/mockups/png/](docs/mockups/png/).
+The app is dark, numbers-first, and calm: a helmet mark in purple and green for the logo, condensed numerals for scores and prices, one accent per meaning (purple actions, teal "leading", green "won", amber waiting, red returned). Every screen is mocked up in [docs/mockups/screens.html](docs/mockups/screens.html); rendered frames are in [docs/mockups/png/](docs/mockups/png/).
 
 <table>
 <tr><td align="center"><img src="docs/mockups/png/games.png" width="390" alt="Games"><br><sub>Games, the home screen</sub></td><td align="center"><img src="docs/mockups/png/pool-open.png" width="390" alt="Pool open"><br><sub>A pool selling boxes</sub></td></tr>
@@ -215,6 +215,6 @@ anchor test --skip-build      # Surfpool localnet suite, forking mainnet
 ## Licence, trademarks, security
 
 - Code in this repository is licensed under [Apache-2.0](LICENSE).
-- The licence covers the code, not the name or the sign. "MyBarPool", the neon-sign logo and mybarpool.com are trademarks; see [TRADEMARKS.md](TRADEMARKS.md). NFL team names and logos belong to the NFL and its clubs; MyBarPool is not affiliated with or endorsed by them, and uses no team logos (teams are shown by abbreviation and colors on a generic helmet).
+- The licence covers the code, not the name or the sign. "MyBarPool", the helmet mark in the brand colors and mybarpool.com are trademarks; see [TRADEMARKS.md](TRADEMARKS.md). NFL team names and logos belong to the NFL and its clubs; MyBarPool is not affiliated with or endorsed by them, and uses no team logos (teams are shown by abbreviation and colors on a generic helmet).
 - Found a vulnerability? See [SECURITY.md](SECURITY.md). Please don't open a public issue for it.
 - An independent audit of the program will be completed and published before the first mainnet deploy.

@@ -5,7 +5,7 @@ The code in this repository is licensed under Apache-2.0. That licence covers th
 ## What is covered
 
 - The name **MyBarPool** and **My Bar Pool**.
-- The neon-sign logo and its variants, including the concept in `docs/brand/`.
+- The helmet mark in the brand colors (purple shell, green facemask) and its variants, including the files in `docs/brand/`. The generic helmet shape itself, in a team's colors, is not claimed.
 - The domain **mybarpool.com** and any subdomain.
 
 ## What you may do

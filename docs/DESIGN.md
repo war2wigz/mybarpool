@@ -5,13 +5,13 @@ Product design for the web app and Seeker app. Everything here is mapped before 
 ## 1. Brand
 
 ### Logo
-- Direction: a neon script sign, the kind hung on a brick wall behind a bar. "My Bar Pool" in flowing cursive tube lettering, glowing in a Solana gradient from purple (`#9945FF`) through teal to green (`#14F195`), with a small 5×5 neon grid beneath as the mark.
-- Concept reference: [brand/logo-concept-neon.png](brand/logo-concept-neon.png) (generated concept; the grid in it is not 5×5 and is for direction only).
-- Production asset: build as SVG, not a raster. Script from a licensed or open script typeface, outlined and converted to paths; glow via SVG filter so it works on any background and at any size. Deliver three lockups: full sign (script + grid), script only (header), grid only (favicon, app icon, loading state).
-- The "off" state: the same sign unlit (thin grey tubes) is the loading skeleton and empty-state illustration. A pool going Live "switches the sign on".
+- The mark is the helmet: the same generic football-helmet silhouette the app draws for every team (the `TeamChip` of section 9), in the brand colors — shell `purple` (`#9945FF`), facemask and ear hole `green` (`#14F195`). The one shape that identifies a team in the product also identifies the product. Decided 2026-10-08, replacing the neon script sign (see the ARCHITECTURE.md decisions log).
+- Asset: [brand/helmet-mark.svg](brand/helmet-mark.svg) is the mark, a 24-unit viewBox with the colors baked in; it is the `TeamChip` path verbatim, so the app ships no separate logo file. [brand/helmet-mark-1024.png](brand/helmet-mark-1024.png) is the mark on `bg-0` at 1024×1024, sized for a circular crop, for profile pictures and store listings.
+- Lockups: mark alone (favicon, app icon, profile pictures, loading state, the corner of the saved image); mark beside the wordmark "My Bar Pool" set in the display face, `text-1`, for the header and link previews. No script face, no glow, no gradient: the mark is two flat colors and reads at 16 px.
+- The "off" state: the mark in `line` grey (both colors) is the loading skeleton and empty-state illustration. A pool going Live "lights the helmet".
 
 ### Palette
-Dark by default. Bars are dark, sportsbooks are dark, and neon only works on dark.
+Dark by default. Bars are dark, sportsbooks are dark, and the mark's purple and green carry on dark.
 
 | Token | Hex | Use |
 |---|---|---|
@@ -32,7 +32,7 @@ Team colors (each team's primary and secondary) are used only inside team chips 
 ### Type
 - Display and numerals: a condensed grotesk with tabular figures (scores, prices, payouts must line up). Candidates: Barlow Condensed, Oswald.
 - Body: a neutral humanist sans, 15–16px base on mobile. Candidates: Inter Tight, IBM Plex Sans.
-- Script is reserved for the logo. Never set UI text in script.
+- No script or display-decorative faces anywhere; the wordmark is the display face.
 - Numbers are the product. Scores, prices and payouts get the largest type on every screen.
 
 ### Voice
@@ -103,7 +103,7 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 
 ```
 ┌──────────────────────────────────────┐
-│ [script logo]              [◎ wallet]│
+│ [helmet] My Bar Pool       [◎ wallet]│
 │                                      │
 │ Week 4 ▾            ● 3 live         │
 │──────────────────────────────────────│
@@ -344,7 +344,7 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 ```
 
 - Active first, sorted live → open → locked. Won list is the personal ledger with tx links. Created and returned pools collapse. A wallet that has sponsored a pool gets a "Pools I sponsored" group in the same collapsed style, with the amount and whether it was paid out or returned; it only appears when there is something in it.
-- Empty state: unlit neon sign, "No boxes yet", one button to Games.
+- Empty state: the unlit helmet mark, "No boxes yet", one button to Games.
 
 ### 4.7 Notifications (Seeker)
 - "Your box hit" on each quarter you win: `Q2 · KC–BAL · You won 0.225 SOL`. Tapping opens the pool.
@@ -376,7 +376,7 @@ A creator has to sell 24 more boxes after buying their own, and most of that hap
   - Full or live pool: "Eagles–Cowboys boxes · numbers are drawn · mybarpool.com/p/7kq2Xf9a" (nothing to sell, but people screenshot the board).
 - Actions, in this order: **Share** (native sheet on Seeker with the grid image attached; Web Share API in the browser where available, else copy), **Copy link**, **Show QR**, **Save image**, **Print board**.
 - Show QR: full screen, high contrast on white, pool URL printed under it in the display face, big enough to scan from across a table. For holding the phone up or pointing a webcam at.
-- Save image: the grid graphic at 1080×1080 and 1080×1920 (feed and story), with the neon sign small in a corner and the short URL along the bottom. No prices in the image beyond what's on the grid header; the image should still make sense a week later.
+- Save image: the grid graphic at 1080×1080 and 1080×1920 (feed and story), with the helmet mark small in a corner and the short URL along the bottom. No prices in the image beyond what's on the grid header; the image should still make sense a week later.
 - Print board: one-tap PDF at US Letter and A4 of the grid with names, the QR in a corner and the URL under it, for bars that still tape a sheet to the wall. Before the draw the axes read "Numbers drawn when the grid sells out"; after it, the digits. Re-print after the draw is the expected pattern.
 - Sponsored pools: the saved image, the story image, the printed board and the link preview all carry the sponsor line with the logo ("Sponsored by ORE"), in the same small type as the URL, under the grid header. That is the sponsor's visibility: on the sheet taped to the wall and in the group chat, not a banner in the app. Never the amount in the image, for the same reason there are no prices in it.
 
@@ -410,7 +410,7 @@ A creator has to sell 24 more boxes after buying their own, and most of that hap
 | `GridImage` | The grid rendered as an image (preview, share, story, print). One renderer, run server-side for previews and on-device for the share sheet, from the same component. |
 | `SponsorLine` | "Sponsored by …" with logo from the sponsor directory or a shortened address; single or "and N others"; tap opens the sponsor sheet (name, amount, tx, "Visit …" and "Get … on the dApp Store" from the directory; links open outside the app). Used on pool cards, the pool header, the link preview, the saved image and the printed board. |
 | `SponsorSheet` | Amount in the pool's token, the three fixed lines about fee, return and commitment, confirm, result (section 4.3). |
-| `NeonSign` | The logo in on/off states for header, loading, empty. |
+| `Logo` | The helmet mark, alone or with the wordmark, lit (brand colors) or unlit (`line`), for header, loading, empty. The mark is the `TeamChip` path with the brand colors fixed. |
 | `TokenAmount` | Amount + symbol, optional USD hint. Box prices in the token's natural precision (SKR whole, SOL/ORE two decimals); prizes and fees to at most 4 decimals, rounded half-up for display, exact amount in the transaction and on tap. |
 
 ## 6. States and edge cases to design, not improvise
@@ -438,19 +438,19 @@ Study, don't copy. Screenshots for the team's reference only; no assets are reus
 - **DraftKings / FanDuel:** dark surfaces, dense game cards, huge tabular numbers, one accent for money. The way a game card shows both teams and a single call-to-action. Take the density and the numeric hierarchy.
 - **Kalshi / Polymarket:** clean market cards, price as the hero, calm typography, restrained color. Take the calm; a boxes pool has fewer moving parts than a sportsbook and should feel simpler.
 - **Physical boards in bars:** hand-written names in boxes, digits along the edges. Take the literal layout; people already know how to read it.
-- **Neon bar signage:** for the logo and the on/off metaphor only.
+- **Bar signage, lit and unlit:** for the mark's on/off metaphor only (loading, empty, going Live).
 
 ## 8. What "built by a human team" means here
 
 Concrete rules, because "don't look AI-generated" isn't actionable.
 
-- No purple-to-blue gradient backgrounds, no glassmorphism cards, no floating blob shapes. The Solana gradient lives in the logo and nowhere else.
+- No purple-to-blue gradient backgrounds, no glassmorphism cards, no floating blob shapes. No Solana gradient anywhere: the mark is two flat colors.
 - No three-column feature grid with icons. No hero section with a headline and two buttons. The home page is the games list, full stop.
 - No emoji in UI copy. No exclamation points.
-- No generic illustrations. The only illustration is the neon sign.
+- No generic illustrations. The only illustration is the helmet mark.
 - Real content in every mock: real team names, real scores, realistic wallet names. Never "Lorem ipsum" or "User 1".
 - Density over whitespace. If a screen has one card floating in empty space, it's wrong.
-- One type family for numbers, one for text. No decorative fonts besides the logo.
+- One type family for numbers, one for text. No decorative fonts; the wordmark is the numbers face.
 - Motion is functional: score pulse, digit flip, box fill. Nothing bounces, nothing floats, no parallax.
 - Every number that comes from the chain links to the chain.
 
@@ -602,7 +602,7 @@ Strings that appear in more than one place live in one file, `apps/app/src/copy.
 
 - Build-time config: program ID, config PDA, RPC URL(s) — the Android build and the web build each carry their own provider key, distinct from each other and from the server's, per ARCHITECTURE › Unit economics (RPC keys); the key's exposure in a bundle is accepted and bounded by the provider's per-key limits — scores API base, explorer base, FCM sender ID, and the error-reporting endpoint on the MyBarPool API (crashes and program errors only, no analytics, no third-party SDK). Two profiles: `local` (localnet, file signer for test tooling, fixture scores) and `production`. No `devnet` profile exists.
 - Feature flags read from the on-chain config where they are rules (`paused`, `preseason_enabled`, `default_preset`, ladders) and from build config where they are app-only (private pools UI, USD hint).
-- Team assets bundled: one helmet SVG; colours, abbreviations and names from `packages/shared`. No logo files anywhere in the bundle.
+- Team assets bundled: one helmet SVG, which is also the logo mark with the brand colors; colours, abbreviations and names from `packages/shared`. No other logo files anywhere in the bundle.
 - Localisation: English only in v1; all strings still go through the copy file so a second language is a file, not a refactor.
 
 ### 10.12 Performance and quality bars

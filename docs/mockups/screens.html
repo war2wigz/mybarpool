@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MyBarPool — screen mockups</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=Pacifico&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg0:#0B0B10; --bg1:#13131A; --bg2:#1C1C26; --line:#2A2A38;
@@ -27,7 +27,9 @@
 
   /* header */
   .top{display:flex;align-items:center;justify-content:space-between;padding:56px 16px 10px}
-  .logo{font:400 24px Pacifico,cursive;line-height:1;background:linear-gradient(90deg,#B06CFF 0%,#5FD6FF 55%,#14F195 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px rgba(153,69,255,.55)) drop-shadow(0 0 12px rgba(20,241,149,.25))}
+  /* Logo: the TeamChip helmet in the brand colors (DESIGN § 1) beside the wordmark in the display face */
+  .logo{display:flex;align-items:center;gap:8px;font:700 22px var(--num);line-height:1;letter-spacing:.01em;color:var(--t1)}
+  .logo .helm{width:30px;height:30px;--c1:#9945FF;--c2:#14F195}
   .back{color:var(--t2);font-size:14px;display:flex;align-items:center;gap:6px}
   .wallet{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:6px 10px 6px 6px;font-size:13px;font-weight:500}
   .avatar{width:22px;height:22px;border-radius:50%;background:conic-gradient(from 90deg,#9945FF,#14F195,#00C2FF,#9945FF)}
@@ -157,7 +159,6 @@
   .owner{display:flex;align-items:center;gap:8px}
   .sw{width:10px;height:10px;border-radius:3px}
   .won-total{color:var(--green);font:700 16px var(--num)}
-  .neon-off{text-align:center;color:var(--line);font:400 34px Pacifico,cursive;margin:60px 0 8px}
 
   /* sponsorship & sharing */
   .sponsor{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--t2)}
@@ -192,7 +193,7 @@
 <!-- ============ 1. GAMES ============ -->
 <div class="frame" id="games">
   <div class="label">1 · Games (home)</div>
-  <div class="top"><div class="logo">My Bar Pool</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="top"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
     <div class="row" style="margin:6px 0 12px">
       <div class="num" style="font-size:22px;font-weight:700">Week 4 <span class="t2" style="font-size:16px">▾</span></div>
@@ -469,7 +470,7 @@
 <!-- ============ 8. MY BOXES ============ -->
 <div class="frame" id="me">
   <div class="label">8 · My Boxes</div>
-  <div class="top"><div class="logo">My Bar Pool</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="top"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
     <div class="num" style="font-size:22px;font-weight:700;margin:6px 0 12px">My Boxes</div>
 
