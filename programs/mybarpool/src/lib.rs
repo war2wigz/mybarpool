@@ -4,9 +4,11 @@
 //! §1 constant, the complete §8 error enum, the four §4.1 admin
 //! instructions, `GameRecord` with the four §4.2 game instructions, `Pool`,
 //! its vault, `CreatorCounter` and `Sponsorship` with the §4.3 instructions
-//! that fill them, and the §4.4 draw over a Regolith Entropy `Var`. Money
-//! only moves in. Later steps add settlement and returns, each built and
-//! audited against `docs/PROGRAM.md`.
+//! that fill them, the §4.4 draw over an Entropy `Var` on the platform's own
+//! deployment, and (Step 6) the §4.5 settlement — `settle` and `close_pool`,
+//! the first instructions that move money out, every destination verified
+//! against the pool or the config in the same instruction. Step 7 adds the
+//! returns, each built and audited against `docs/PROGRAM.md`.
 #![allow(unexpected_cfgs)]
 
 pub mod assignment;
@@ -20,6 +22,7 @@ pub mod money;
 pub mod slot_hashes;
 pub mod state;
 pub mod vault;
+pub mod winner;
 
 use anchor_lang::prelude::*;
 
@@ -175,5 +178,20 @@ pub mod mybarpool {
     /// `VarReplaced`.
     pub fn replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
         instructions::replace_var::handle_replace_var(ctx)
+    }
+
+    /// PROGRAM §4.5 `settle(quarter)`: compute the quarter's winning box from the pool's axes
+    /// and the game's cumulative score (§6.3), verify the passed winner is that box's owner,
+    /// fix the prizes on the first call (§5.2), pay the quarter's prize, and with the first
+    /// non-zero prize pay the three fees (§5.1). Signer: the keeper. Emits `QuarterSettled`.
+    pub fn settle(ctx: Context<Settle>, quarter: u8) -> Result<()> {
+        instructions::settle::handle_settle(ctx, quarter)
+    }
+
+    /// PROGRAM §4.5 `close_pool`: close a terminal pool with no open sponsorship, sweeping the
+    /// vault's remaining balance and both accounts' rent to `fee_wallet` (the creator when
+    /// abandoned). Permissionless. Emits `PoolClosed`.
+    pub fn close_pool(ctx: Context<ClosePool>) -> Result<()> {
+        instructions::close_pool::handle_close_pool(ctx)
     }
 }

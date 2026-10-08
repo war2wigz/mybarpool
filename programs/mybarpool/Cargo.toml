@@ -25,8 +25,11 @@ custom-panic = []
 # event-cpi: events are self-CPIs (PROGRAM §7), never truncated out of the logs.
 # init-if-needed: set_wallet_override "creates or updates" (PROGRAM §4.1).
 anchor-lang = { workspace = true, features = ["event-cpi", "init-if-needed"] }
-# token_interface::Mint and the Token-2022 extension reader (PROGRAM §5.4).
-anchor-spl = { workspace = true, features = ["token", "token_2022"] }
+# token_interface::Mint and the Token-2022 extension reader (PROGRAM §5.4); associated_token
+# for the idempotent ATA create that settlement pays SPL prizes through (Step 6). The feature
+# makes `spl-associated-token-account-interface` (already in the lockfile through the Mollusk
+# token loaders) part of the compiled program's tree; nothing else new.
+anchor-spl = { workspace = true, features = ["token", "token_2022", "associated_token"] }
 # PROGRAM §6.1 `sha256` (the hashv syscall) and the SlotHashes sysvar id.
 # anchor-lang 1.2.0's `solana_program` facade re-exports neither, and both
 # crates are already in its own tree at these versions, so nothing new is

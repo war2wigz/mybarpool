@@ -186,6 +186,34 @@ impl Pool {
         Ok(())
     }
 
+    /// `status == Drawn`, else `PoolNotDrawn` (PROGRAM §4.5 `settle`; every other status,
+    /// `Settled` included).
+    pub fn require_drawn(&self) -> Result<()> {
+        require!(
+            self.status == PoolStatus::Drawn,
+            MybarpoolError::PoolNotDrawn
+        );
+        Ok(())
+    }
+
+    /// `status ∈ {Settled, Returned, Split}`, else `PoolNotTerminal` (PROGRAM §4.5
+    /// `close_pool`, §9 "Terminal").
+    pub fn require_terminal(&self) -> Result<()> {
+        require!(
+            matches!(
+                self.status,
+                PoolStatus::Settled | PoolStatus::Returned | PoolStatus::Split
+            ),
+            MybarpoolError::PoolNotTerminal
+        );
+        Ok(())
+    }
+
+    /// The pool's payout split (PROGRAM §1 preset table).
+    pub fn split(&self) -> [u8; QUARTERS as usize] {
+        self.preset.split()
+    }
+
     /// `status ∈ {Open, Locked, Drawn}`, else `PoolNotOpen` (PROGRAM §4.3 `sponsor`, §9: a full
     /// pool is usually drawn before kickoff and can still be sponsored).
     pub fn require_sponsorable(&self) -> Result<()> {

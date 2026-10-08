@@ -2,6 +2,7 @@
 
 pub mod buy;
 pub mod close_counter;
+pub mod close_pool;
 pub mod close_wallet_override;
 pub mod create_game;
 pub mod create_pool;
@@ -15,12 +16,14 @@ pub mod rotate_gate_key;
 pub mod sample_var;
 pub mod set_var;
 pub mod set_wallet_override;
+pub mod settle;
 pub mod sponsor;
 pub mod update_config;
 pub mod update_kickoff;
 
 pub use buy::*;
 pub use close_counter::*;
+pub use close_pool::*;
 pub use close_wallet_override::*;
 pub use create_game::*;
 pub use create_pool::*;
@@ -33,6 +36,7 @@ pub use rotate_gate_key::*;
 pub use sample_var::*;
 pub use set_var::*;
 pub use set_wallet_override::*;
+pub use settle::*;
 pub use sponsor::*;
 pub use update_config::*;
 pub use update_kickoff::*;

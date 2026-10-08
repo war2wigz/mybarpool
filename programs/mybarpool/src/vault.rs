@@ -1,16 +1,19 @@
-//! The vault, PROGRAM §3.4 and §5.4: its two creation paths and the two
-//! inbound transfers, shared by `create_pool`, `buy` and `sponsor` so money
-//! enters a pool through one implementation. Nothing here moves money out.
+//! The vault, PROGRAM §3.4 and §5.4: its two creation paths, the two inbound
+//! transfers shared by `create_pool`, `buy` and `sponsor`, and (Step 6) the
+//! outbound side shared by `settle` and `close_pool`, so money enters and
+//! leaves a pool through one implementation each way.
 //!
 //! SOL: a system-owned PDA with no data (`["vault", pool]`), funded with its
-//! rent-exempt minimum by the creator; `system_program::transfer` in and, in
-//! Steps 6–7, out signed with the vault seeds. SPL: a token account at the
-//! same PDA, `owner = pool`, created by `create_account` signed with the
-//! vault seeds and `initialize_account3`; `transfer_checked` in and, later,
-//! out signed with the pool seeds.
+//! rent-exempt minimum by the creator; `system_program::transfer` in, and out
+//! signed with the vault seeds. SPL: a token account at the same PDA,
+//! `owner = pool`, created by `create_account` signed with the vault seeds
+//! and `initialize_account3`; `transfer_checked` in, and out signed with the
+//! pool seeds to the recipient's associated token account, created
+//! idempotently when missing.
 
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
+use anchor_spl::associated_token;
 use anchor_spl::token_2022::spl_token_2022::extension::{
     BaseStateWithExtensions, ExtensionType, StateWithExtensions,
 };
@@ -19,7 +22,7 @@ use anchor_spl::token_2022::spl_token_2022::state::{
 };
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
-use crate::constants::VAULT_SEED;
+use crate::constants::{POOL_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
 
 /// SOL vault: the creator funds the PDA with `minimum_balance(0)` so it is rent-exempt with no
@@ -180,4 +183,123 @@ pub fn transfer_in_spl<'info>(
 /// The vault seeds with the stored bump, for `create_spl_vault`'s signer.
 pub fn vault_signer_seeds<'a>(pool: &'a Pubkey, bump: &'a [u8; 1]) -> [&'a [u8]; 3] {
     [VAULT_SEED, pool.as_ref(), bump]
+}
+
+/// The pool seeds with the stored bump, for the SPL outbound signer (PROGRAM §3.4: "signed with
+/// the pool seeds"): `[POOL_SEED, game, creator, nonce LE, [bump]]`.
+pub fn pool_signer_seeds<'a>(
+    game: &'a Pubkey,
+    creator: &'a Pubkey,
+    nonce_bytes: &'a [u8; 8],
+    bump: &'a [u8; 1],
+) -> [&'a [u8]; 5] {
+    [
+        POOL_SEED,
+        game.as_ref(),
+        creator.as_ref(),
+        nonce_bytes,
+        bump,
+    ]
+}
+
+/// SOL out: vault → `to` by `system_program::transfer` signed with the vault seeds (PROGRAM
+/// §3.4, §5.4). `to` is whatever destination the caller has already verified against the pool
+/// or the config.
+pub fn transfer_out_sol<'info>(
+    vault: &AccountInfo<'info>,
+    to: &AccountInfo<'info>,
+    system_program: &AccountInfo<'info>,
+    pool_key: &Pubkey,
+    vault_bump: u8,
+    amount: u64,
+) -> Result<()> {
+    let bump = [vault_bump];
+    let seeds = vault_signer_seeds(pool_key, &bump);
+    system_program::transfer(
+        CpiContext::new_with_signer(
+            *system_program.key,
+            system_program::Transfer {
+                from: vault.clone(),
+                to: to.clone(),
+            },
+            &[&seeds],
+        ),
+        amount,
+    )
+}
+
+/// SPL out: vault → `to_token_account` by `transfer_checked` with the mint's decimals, authority
+/// the pool PDA signed with the pool seeds, through the pool's token program (PROGRAM §3.4,
+/// §5.4). The caller has verified `to_token_account` is the recipient's ATA and created it.
+pub fn transfer_out_spl<'info>(
+    vault: &AccountInfo<'info>,
+    mint: &InterfaceAccount<'info, Mint>,
+    to_token_account: &AccountInfo<'info>,
+    pool: &AccountInfo<'info>,
+    token_program: &Interface<'info, TokenInterface>,
+    pool_seeds: &[&[u8]],
+    amount: u64,
+) -> Result<()> {
+    token_interface::transfer_checked(
+        CpiContext::new_with_signer(
+            *token_program.key,
+            token_interface::TransferChecked {
+                from: vault.clone(),
+                mint: mint.to_account_info(),
+                to: to_token_account.clone(),
+                authority: pool.clone(),
+            },
+            &[pool_seeds],
+        ),
+        amount,
+        mint.decimals,
+    )
+}
+
+/// PROGRAM §5.4: the recipient's associated token account "created idempotently in the same
+/// instruction when missing, with the transaction payer covering its rent". Anchor's
+/// `create_idempotent` through the pool's token program: a no-op when the account exists with
+/// this wallet and mint, the ATA program's own error when it exists and differs. The caller has
+/// already checked `ata` is the derived address, so a wrong account never reaches here.
+#[allow(clippy::too_many_arguments)]
+pub fn create_ata_idempotent<'info>(
+    payer: &AccountInfo<'info>,
+    ata: &AccountInfo<'info>,
+    wallet: &AccountInfo<'info>,
+    mint: &AccountInfo<'info>,
+    system_program: &AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
+    associated_token_program: &AccountInfo<'info>,
+) -> Result<()> {
+    associated_token::create_idempotent(CpiContext::new(
+        associated_token_program.key(),
+        associated_token::Create {
+            payer: payer.clone(),
+            associated_token: ata.clone(),
+            authority: wallet.clone(),
+            mint: mint.clone(),
+            system_program: system_program.clone(),
+            token_program: token_program.clone(),
+        },
+    ))
+}
+
+/// PROGRAM §4.5 `close_pool`, SPL: close the vault token account (balance already swept) with
+/// the pool PDA as authority; its lamports go to `destination`.
+pub fn close_spl_vault<'info>(
+    vault: &AccountInfo<'info>,
+    destination: &AccountInfo<'info>,
+    pool: &AccountInfo<'info>,
+    token_program: &Interface<'info, TokenInterface>,
+    pool_seeds: &[&[u8]],
+) -> Result<()> {
+    token_interface::close_account(CpiContext::new_with_signer(
+        *token_program.key,
+        token_interface::CloseAccount {
+            account: vault.clone(),
+            destination: destination.clone(),
+            authority: pool.clone(),
+        },
+        &[pool_seeds],
+    ))
 }

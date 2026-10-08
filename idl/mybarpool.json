@@ -322,6 +322,174 @@
       "args": []
     },
     {
+      "name": "close_pool",
+      "docs": [
+        "PROGRAM §4.5 `close_pool`: close a terminal pool with no open sponsorship, sweeping the",
+        "vault's remaining balance and both accounts' rent to `fee_wallet` (the creator when",
+        "abandoned). Permissionless. Emits `PoolClosed`."
+      ],
+      "discriminator": [
+        140,
+        189,
+        209,
+        23,
+        239,
+        62,
+        239,
+        11
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Anyone; pays the rent of the destination's associated token account when it is missing",
+            "and the vault holds tokens. Signs nothing else."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; read for `fee_wallet`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields; closed by the handler to the",
+            "destination (`pool.close(...)`, since the destination depends on `abandoned`)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PROGRAM §3.4 vault; SOL: its whole balance moves out and the runtime reaps it; SPL: the",
+            "token balance is swept, then the account is closed with the pool PDA as authority."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fee_wallet",
+          "docs": [
+            "The platform's destination (PROGRAM §3.1); always passed so the account list is static."
+          ],
+          "writable": true
+        },
+        {
+          "name": "creator",
+          "docs": [
+            "The creator; the destination when the pool was abandoned (ARCHITECTURE › Pool creation)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's mint (`address = pool.mint`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "destination_token_account",
+          "docs": [
+            "The destination's associated token account; SPL pools only; created idempotently only",
+            "when the vault holds tokens to sweep."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The pool's token program (checked against `pool.token_program`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "docs": [
+            "The associated-token program, a fixed address; SPL pools only."
+          ],
+          "optional": true,
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "close_wallet_override",
       "docs": [
         "PROGRAM §4.1 `close_wallet_override`: close it, rent to admin. Signer: admin.",
@@ -1611,6 +1779,235 @@
       ]
     },
     {
+      "name": "settle",
+      "docs": [
+        "PROGRAM §4.5 `settle(quarter)`: compute the quarter's winning box from the pool's axes",
+        "and the game's cumulative score (§6.3), verify the passed winner is that box's owner,",
+        "fix the prizes on the first call (§5.2), pay the quarter's prize, and with the first",
+        "non-zero prize pay the three fees (§5.1). Signer: the keeper. Emits `QuarterSettled`."
+      ],
+      "discriminator": [
+        175,
+        42,
+        185,
+        87,
+        144,
+        131,
+        102,
+        212
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "docs": [
+            "The keeper, `config.score_authority`; pays the rent of any associated token account this",
+            "call creates (PROGRAM §4.5 \"The keeper is the payer for any ATA creation\")."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; `has_one = score_authority`, read for `fee_wallet`. The",
+            "fee amounts moved are the pool's stored ones, never the config's bps."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for `quarters_posted` and",
+            "the cumulative scores."
+          ],
+          "relations": [
+            "pool"
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PROGRAM §3.4 vault at `[\"vault\", pool]`; SOL: system-owned, pays by `transfer` signed",
+            "with the vault seeds; SPL: the pool's token account, pays by `transfer_checked` with the",
+            "pool PDA as authority."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "winner",
+          "docs": [
+            "The winning box's owner: a payout destination, never typed `SystemAccount` (PROGRAM §10",
+            "Account types). Computed in the program; this account is only verified against it."
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_wallet",
+          "docs": [
+            "The platform's fee destination (PROGRAM §3.1); SOL directly, SPL to its ATA."
+          ],
+          "writable": true
+        },
+        {
+          "name": "creator",
+          "docs": [
+            "The creator, paid `creator_fee` with the first prize (PROGRAM §5.1)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "integrator",
+          "docs": [
+            "The integrator wallet; required and verified when `pool.integrator != default`, never",
+            "read otherwise."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's mint (`address = pool.mint`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "winner_token_account",
+          "docs": [
+            "The winner's associated token account; SPL pools only; created idempotently when the",
+            "prize is non-zero."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "fee_token_account",
+          "docs": [
+            "`fee_wallet`'s associated token account; SPL pools only; created on the fee-paying call."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "creator_token_account",
+          "docs": [
+            "The creator's associated token account; SPL pools only; created on the fee-paying call."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "integrator_token_account",
+          "docs": [
+            "The integrator's associated token account; SPL pools with an integrator only."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The pool's token program (checked against `pool.token_program`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "docs": [
+            "The associated-token program, a fixed address; SPL pools only."
+          ],
+          "optional": true,
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "quarter",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "sponsor",
       "docs": [
         "PROGRAM §4.3 `sponsor`: add `amount` (≥ one box price, within the token's cap) to the",
@@ -2154,6 +2551,19 @@
       ]
     },
     {
+      "name": "PoolClosed",
+      "discriminator": [
+        106,
+        46,
+        29,
+        231,
+        42,
+        44,
+        73,
+        119
+      ]
+    },
+    {
       "name": "PoolCreated",
       "discriminator": [
         202,
@@ -2177,6 +2587,19 @@
         73,
         79,
         149
+      ]
+    },
+    {
+      "name": "QuarterSettled",
+      "discriminator": [
+        102,
+        157,
+        102,
+        86,
+        117,
+        38,
+        183,
+        107
       ]
     },
     {
@@ -4104,6 +4527,47 @@
       }
     },
     {
+      "name": "PoolClosed",
+      "docs": [
+        "PROGRAM §7 `PoolClosed`: a terminal pool's vault and account closed to `destination`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address (now closed)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "destination",
+            "docs": [
+              "`fee_wallet`, or the creator on an abandoned pool."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "dust",
+            "docs": [
+              "The amount swept: the SPL vault's token balance; for SOL, the lamports above the vault's",
+              "own rent-exempt minimum (that minimum and the pool's rent go to the same destination but",
+              "are rent, not dust)."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "PoolCreated",
       "docs": [
         "PROGRAM §7 `PoolCreated`: `create_pool` wrote a `Pool`. Exactly the §7 fields: `nonce` and",
@@ -4290,6 +4754,105 @@
           },
           {
             "name": "Split"
+          }
+        ]
+      }
+    },
+    {
+      "name": "QuarterSettled",
+      "docs": [
+        "PROGRAM §7 `QuarterSettled`: one quarter paid (or recorded, on a zero share). The three fee",
+        "fields are the amounts moved in **this** call — the pool's stored fees when `fees_paid_now`,",
+        "zero otherwise (the stored amounts are in `PoolCreated`). Clients show a box as won only on",
+        "this event."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "quarter",
+            "docs": [
+              "1–4."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "home",
+            "docs": [
+              "Cumulative home score at the end of the quarter (PROGRAM §3.2)."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "away",
+            "docs": [
+              "Cumulative away score."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "box_index",
+            "docs": [
+              "The winning box, 0-based (PROGRAM §6.3). Named `box_index` here because `box` is a Rust",
+              "keyword and Anchor would carry the raw identifier `r#box` into the IDL; §7's `box`."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "winner",
+            "docs": [
+              "The box's owner at settlement, who was paid `amount`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "`quarter_prize[quarter − 1]`; 0 on a zero-share quarter."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "fees_paid_now",
+            "docs": [
+              "True on the call that moved the fees (the first non-zero prize)."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "platform_fee",
+            "docs": [
+              "`platform_fee` moved in this call, else 0."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "creator_fee",
+            "docs": [
+              "`creator_fee` moved in this call, else 0."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "integrator_fee",
+            "docs": [
+              "`integrator_fee` moved in this call, else 0."
+            ],
+            "type": "u64"
           }
         ]
       }

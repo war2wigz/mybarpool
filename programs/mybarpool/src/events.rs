@@ -286,6 +286,54 @@ pub struct VarReplaced {
     pub commit: [u8; 32],
 }
 
+/// PROGRAM §7 `QuarterSettled`: one quarter paid (or recorded, on a zero share). The three fee
+/// fields are the amounts moved in **this** call — the pool's stored fees when `fees_paid_now`,
+/// zero otherwise (the stored amounts are in `PoolCreated`). Clients show a box as won only on
+/// this event.
+#[event]
+pub struct QuarterSettled {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// 1–4.
+    pub quarter: u8,
+    /// Cumulative home score at the end of the quarter (PROGRAM §3.2).
+    pub home: u16,
+    /// Cumulative away score.
+    pub away: u16,
+    /// The winning box, 0-based (PROGRAM §6.3). Named `box_index` here because `box` is a Rust
+    /// keyword and Anchor would carry the raw identifier `r#box` into the IDL; §7's `box`.
+    pub box_index: u8,
+    /// The box's owner at settlement, who was paid `amount`.
+    pub winner: Pubkey,
+    /// `quarter_prize[quarter − 1]`; 0 on a zero-share quarter.
+    pub amount: u64,
+    /// True on the call that moved the fees (the first non-zero prize).
+    pub fees_paid_now: bool,
+    /// `platform_fee` moved in this call, else 0.
+    pub platform_fee: u64,
+    /// `creator_fee` moved in this call, else 0.
+    pub creator_fee: u64,
+    /// `integrator_fee` moved in this call, else 0.
+    pub integrator_fee: u64,
+}
+
+/// PROGRAM §7 `PoolClosed`: a terminal pool's vault and account closed to `destination`.
+#[event]
+pub struct PoolClosed {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address (now closed).
+    pub pool: Pubkey,
+    /// `fee_wallet`, or the creator on an abandoned pool.
+    pub destination: Pubkey,
+    /// The amount swept: the SPL vault's token balance; for SOL, the lamports above the vault's
+    /// own rent-exempt minimum (that minimum and the pool's rent go to the same destination but
+    /// are rent, not dust).
+    pub dust: u64,
+}
+
 /// PROGRAM §7 `DigitsDrawn`: `draw` derived both axes from the `Var`'s value.
 #[event]
 pub struct DigitsDrawn {

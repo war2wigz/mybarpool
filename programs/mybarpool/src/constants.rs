@@ -139,6 +139,13 @@ impl TryFrom<u8> for PayoutPreset {
     }
 }
 
+impl PayoutPreset {
+    /// The preset's split in percent (PROGRAM §1 preset table), the row of `PRESET_SPLITS`.
+    pub fn split(self) -> [u8; QUARTERS as usize] {
+        PRESET_SPLITS[self as usize]
+    }
+}
+
 /// PROGRAM §1 preset table in percent, indexed by `PayoutPreset as usize`.
 #[constant]
 pub const PRESET_SPLITS: [[u8; 4]; 3] = [[20, 20, 20, 40], [25, 25, 25, 25], [0, 0, 0, 100]];
