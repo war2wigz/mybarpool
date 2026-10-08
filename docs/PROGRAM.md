@@ -181,7 +181,7 @@ Approximate size: 8 (discriminator) + 800 (owners) + ~465 (the other fields: 8 p
 - SOL pools: a system-program-owned account at the PDA, holding lamports. Transfers out are `system_program::transfer` signed with the vault seeds. It must hold its own rent-exempt minimum at all times; that minimum is paid by the creator at creation and is part of the creation fee, and it is what closes to the rent destination at `close_pool`.
 - SPL pools: a token account at the PDA for the pool's mint, `owner = pool` PDA. Transfers out are `transfer_checked` signed with the pool seeds. The mint's own token program (Token or Token-2022, from `TokenRule.token_program`) is used throughout.
 
-Vault balance invariants, checked in tests, not enforced by the program: while `Open`/`Locked`/`Drawn` before the first settlement, `sold × price + sponsored_total`; after the first settlement, `unpaid_prize_pool + dust` where `dust = prize_pool − Σ quarter_prize`.
+Vault balance invariants, checked in tests, not enforced by the program (SOL: the balance above the vault's own rent-exempt minimum): while `Open`/`Locked`/`Drawn` before the first settlement, `sold × price + sponsored_total`; after the first settlement, `unpaid_prize_pool`. The dust `prize_pool − Σ quarter_prize` is inside `unpaid_prize_pool` (§4.5 only ever subtracts prizes paid from it), so a `Settled` pool's `unpaid_prize_pool` equals the dust, and that is what `close_pool` sweeps.
 
 ### 3.5 `CreatorCounter` — seeds `["counter", creator, game_record]`
 
@@ -299,12 +299,12 @@ Effects, in one transaction:
 2. `winning_box[quarter − 1] = box`.
 3. If `quarter_prize[quarter − 1] > 0`: transfer it to the winner; `unpaid_prize_pool −= it`. If additionally `!fees_paid`: transfer `platform_fee` to `fee_wallet`, `creator_fee` to `creator`, `integrator_fee` to `integrator` (skipped when zero), and set `fees_paid = true`.
 4. `quarters_settled += 1`; if it reaches 4, `status = Settled`.
-Emits `QuarterSettled { quarter, home, away, box, winner, amount, fees_paid_now: bool, platform_fee, creator_fee, integrator_fee }`. A zero-share quarter (Q1–Q3 on `FinalOnly`) still records the winning box and emits the event with `amount = 0`; it moves no funds and does not pay fees.
+Emits `QuarterSettled { quarter, home, away, box, winner, amount, fees_paid_now: bool, platform_fee, creator_fee, integrator_fee }`, the three fee fields being the amounts moved in this call (the pool's stored fees when `fees_paid_now`, zero otherwise; the stored amounts themselves are in `PoolCreated`). A zero-share quarter (Q1–Q3 on `FinalOnly`) still records the winning box and emits the event with `amount = 0`; it moves no funds and does not pay fees.
 
 Idempotency: a repeated `settle` for the same quarter fails on the ordering check, so the keeper can retry blindly after a timeout.
 
-**`close_pool()`** — permissionless. Accounts: pool, vault, game, counter (if it exists), `fee_wallet`, creator, config.
-Checks: `status ∈ {Settled, Returned, Split}`; `sponsorships_open == 0`; if `Returned` or `Split`, every sold box has its `returned` bit set. Effects: transfers the vault's remaining balance (dust, and for SOL the vault's rent) and the pool account's rent to the destination: `creator` if `abandoned`, else `fee_wallet`. Closes the vault (SPL: `close_account` after the token balance is swept) and the pool. Emits `PoolClosed { destination, dust }`.
+**`close_pool()`** — permissionless; the caller signs only as the payer for a missing destination token account. Accounts: payer, config, pool, vault, `fee_wallet` and creator (both always passed so the account list is static; the destination is one of them), and for SPL pools the mint, the destination's associated token account, the token program and the associated-token program; system program. Neither `game` nor the counter is read (`close_counter` is its own instruction).
+Checks: `status ∈ {Settled, Returned, Split}` (`PoolNotTerminal`); `sponsorships_open == 0` (`SponsorshipsStillOpen`); if `Returned` or `Split`, every sold box has its `returned` bit set (`BoxesStillOutstanding`); `fee_wallet == config.fee_wallet` and `creator == pool.creator` (`FeeAccountMismatch`). Effects: transfers the vault's remaining balance (dust, and for SOL the vault's rent) and the pool account's rent to the destination: `creator` if `abandoned`, else `fee_wallet`. Closes the vault (SPL: `close_account` after the token balance is swept to the destination's associated token account, created idempotently if missing) and the pool. Emits `PoolClosed { destination, dust }`, where `dust` is the token amount swept: the vault's token balance for SPL; for SOL, the vault's lamports above its own rent-exempt minimum (that minimum, and the pool's rent, go to the same destination but are rent, not dust).
 
 **`close_counter()`** — permissionless (no signer). Accounts: counter, config (`has_one = fee_wallet`), `fee_wallet`. Checks `open_count == 0` (`CounterNotEmpty`). Rent to `fee_wallet`. No event. Built in Step 4, because that step's acceptance needs the counter to close at zero.
 
@@ -471,7 +471,7 @@ Numbered from 6000 (Anchor custom errors). Names are the contract; numbers follo
 
 `SampleTooEarly` (6062) is `sample_var` before `var.end_at`, and `VarAlreadySampled` (6063) is a second `sample_var` on a pool with a sample recorded, or `replace_var` on one (§4.4). Both added in Step 5. `VarCommitMismatch` (6064) is `draw` on a `Var` whose revealed `seed` does not hash to the commit `set_var` recorded on the pool; added in Step 5b with the `var_commit` field.
 
-`OverrideRequired` (6023) is reserved and never raised: the override slot is a required account of `create_pool` and `buy` (§3.6), so there is no way to omit it. The number stays because the list is frozen in declaration order. Client-side account mistakes on the §4.3 instructions fail with Anchor's own constraint errors, not with a code from this list (see the end of §4.3).
+`OverrideRequired` (6023) is reserved and never raised: the override slot is a required account of `create_pool` and `buy` (§3.6), so there is no way to omit it. `FeesAlreadyPaid` (6047) is reserved the same way: `settle` moves the fees exactly when `!fees_paid` and the quarter's prize is non-zero (§4.5), and there is no separate fee instruction that could be repeated. Both numbers stay because the list is frozen in declaration order. Client-side account mistakes on the §4.3 instructions fail with Anchor's own constraint errors, not with a code from this list (see the end of §4.3).
 
 ## 9. State machines
 
