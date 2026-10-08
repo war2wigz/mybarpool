@@ -29,6 +29,7 @@ pub struct CloseSponsorship<'info> {
     )]
     pub sponsorship: Account<'info, Sponsorship>,
     /// CHECK: `address = sponsorship.wallet`, the rent's only destination.
+    /// The sponsor's wallet; receives the account's rent.
     #[account(mut, address = sponsorship.wallet)]
     pub sponsor: UncheckedAccount<'info>,
 }

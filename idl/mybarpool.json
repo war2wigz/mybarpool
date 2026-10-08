@@ -713,6 +713,9 @@
         },
         {
           "name": "sponsor",
+          "docs": [
+            "The sponsor's wallet; receives the account's rent."
+          ],
           "writable": true
         },
         {
@@ -2386,6 +2389,9 @@
         },
         {
           "name": "sponsor",
+          "docs": [
+            "The sponsor's wallet; receives the sponsorship (SOL) and the account's rent."
+          ],
           "writable": true
         },
         {

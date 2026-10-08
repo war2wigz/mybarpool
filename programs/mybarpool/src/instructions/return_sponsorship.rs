@@ -50,6 +50,7 @@ pub struct ReturnSponsorship<'info> {
     )]
     pub sponsorship: Account<'info, Sponsorship>,
     /// CHECK: `address = sponsorship.wallet`, the only destination a return can use.
+    /// The sponsor's wallet; receives the sponsorship (SOL) and the account's rent.
     #[account(mut, address = sponsorship.wallet)]
     pub sponsor: UncheckedAccount<'info>,
     /// The pool's mint (`address = pool.mint`); SPL pools only.
