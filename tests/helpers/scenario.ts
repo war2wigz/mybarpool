@@ -32,6 +32,7 @@ import {
   setComputeUnitLimit,
   setVarInstruction,
   withRetry,
+  type BuyGate,
   type CreatePoolParams,
   type Pool,
   type PoolRefs,
@@ -69,15 +70,20 @@ export interface Scenario {
 
 const seedOf = (byte: number) => new Uint8Array(32).fill(byte);
 
+/** `Var` openings that do not reach `set_var` in time are abandoned and re-opened (see below). */
+export const OPEN_ATTEMPTS = 3;
+
 /**
- * A pool with 25 boxes sold (creator 5, each buyer 10) and drawn with nothing planted:
- * `Open` → `set_var` → wait → `sample_var` → `Reveal` → `draw`. ORE pools take `spl` and the
- * buyers' ATAs must already hold the price (`setTokenAccount` in the suite's `beforeAll`).
+ * Create a pool and sell every box: `creator` takes `initialBoxes` (5 by default), then each
+ * `[buyer, count]` buys in turn, `gate` applying to every buy (PROGRAM §4.3). The pool must end
+ * `Locked`. ORE pools take `spl` and every ATA must already hold its price.
  */
-export async function drawnPool(
-  s: Scenario,
+export async function fill(
+  s: Pick<Scenario, "creator" | "game" | "nextNonce">,
   params: Partial<CreatePoolParams>,
+  buys: readonly (readonly [KeyPairSigner, number])[],
   spl?: SplPool,
+  gate: BuyGate | ((buyer: KeyPairSigner) => BuyGate) = {},
 ): Promise<PoolRefs> {
   const nonce = s.nextNonce();
   const tokenPath = spl ? { mint: spl.mint, tokenProgram: spl.tokenProgram } : undefined;
@@ -103,45 +109,107 @@ export async function drawnPool(
     game: s.game,
     creator: s.creator.address,
   };
-  for (const buyer of s.buyers) {
+  for (const [buyer, count] of buys) {
     await send(
       buyer,
       await buyInstruction(
         buyer,
         refs,
-        10,
+        count,
         tokenPath
           ? { ...tokenPath, tokenAccount: await ata(buyer.address, spl!.mint, spl!.tokenProgram) }
           : {},
+        typeof gate === "function" ? gate(buyer) : gate,
       ),
     );
   }
   expect((await fetchPool(refs.pool)).status).toBe(PoolStatus.Locked);
+  return refs;
+}
 
-  const id = s.nextVarId();
-  const seed = seedOf(Number(id % 200n) + 1);
-  const varAddress = await entropyVarPda(s.keeper.address, id);
-  // First touch of the new PDA: Surfpool asks mainnet whether it exists (Step 3 audit M1), and
-  // a slow answer must not eat the window between Open and set_var.
-  await withRetry(() => rpc.getAccountInfo(varAddress, { encoding: "base64" }).send());
-  const endAt = (await currentSlot()) + WINDOW_AHEAD;
-  await send(
-    s.keeper,
-    await openInstruction(s.keeper, s.keeper, id, s.keeper.address, keccak(seed), false, 1n, endAt),
-  );
-  await send(s.keeper, await setVarInstruction(s.keeper, refs.pool, varAddress));
+/**
+ * Draw a `Locked` pool with nothing planted: `Open` → `set_var` → wait → `sample_var` →
+ * `Reveal` → `draw`. `Open` and `set_var` both have to land inside the `WINDOW_AHEAD` slots
+ * before `end_at`; when the box is slow and the window is about to close (or `set_var` reports
+ * `VarNotFresh`, the Step 7 flake), the opening is abandoned and a fresh `Var` is opened.
+ */
+export async function drawLockedPool(
+  s: Pick<Scenario, "keeper" | "sampler" | "nextVarId">,
+  refs: PoolRefs,
+): Promise<{ varAddress: Address; value: Uint8Array }> {
+  let varAddress: Address | undefined;
+  let seed: Uint8Array | undefined;
+  let endAt = 0n;
+  for (let attempt = 1; attempt <= OPEN_ATTEMPTS; attempt++) {
+    const id = s.nextVarId();
+    seed = seedOf(Number(id % 200n) + 1);
+    varAddress = await entropyVarPda(s.keeper.address, id);
+    // First touch of the new PDA: Surfpool asks mainnet whether it exists (Step 3 audit M1),
+    // and a slow answer must not eat the window between Open and set_var.
+    await withRetry(() => rpc.getAccountInfo(varAddress!, { encoding: "base64" }).send());
+    endAt = (await currentSlot()) + WINDOW_AHEAD;
+    await send(
+      s.keeper,
+      await openInstruction(
+        s.keeper,
+        s.keeper,
+        id,
+        s.keeper.address,
+        keccak(seed),
+        false,
+        1n,
+        endAt,
+      ),
+    );
+    if ((await currentSlot()) + 4n >= endAt) {
+      console.log(
+        `drawLockedPool: Open landed too close to end_at (attempt ${attempt}); re-opening`,
+      );
+      continue;
+    }
+    try {
+      await send(s.keeper, await setVarInstruction(s.keeper, refs.pool, varAddress));
+      break;
+    } catch (error) {
+      if (attempt < OPEN_ATTEMPTS && /VarNotFresh|6036/.test(String(error))) {
+        console.log(`drawLockedPool: set_var VarNotFresh (attempt ${attempt}); re-opening`);
+        continue;
+      }
+      throw error;
+    }
+  }
   await waitForSlot(endAt + 1n);
   await send(s.sampler, [
     setComputeUnitLimit(CU_LIMIT),
-    await sampleVarInstruction(s.sampler, refs.pool, varAddress),
+    await sampleVarInstruction(s.sampler, refs.pool, varAddress!),
   ]);
-  await send(s.keeper, revealInstruction(s.keeper, varAddress, seed));
-  const revealed = (await fetchVar(varAddress))!;
-  expect(revealed.value).toEqual(entropyValue(revealed.slotHash, seed, 1n));
-  await send(s.keeper, await drawInstruction(s.keeper, refs.pool, varAddress));
+  await send(s.keeper, revealInstruction(s.keeper, varAddress!, seed!));
+  const revealed = (await fetchVar(varAddress!))!;
+  expect(revealed.value).toEqual(entropyValue(revealed.slotHash, seed!, 1n));
+  await send(s.keeper, await drawInstruction(s.keeper, refs.pool, varAddress!));
   const pool = await fetchPool(refs.pool);
   expect(pool.status).toBe(PoolStatus.Drawn);
   const axes = drawAxes(revealed.value);
   expect(pool.homeAxis).toEqual(Array.from(axes.home));
+  return { varAddress: varAddress!, value: revealed.value };
+}
+
+/**
+ * A pool with 25 boxes sold (creator 5, each buyer 10) and drawn with nothing planted. ORE
+ * pools take `spl` and the buyers' ATAs must already hold the price (`setTokenAccount` in the
+ * suite's `beforeAll`).
+ */
+export async function drawnPool(
+  s: Scenario,
+  params: Partial<CreatePoolParams>,
+  spl?: SplPool,
+): Promise<PoolRefs> {
+  const refs = await fill(
+    s,
+    params,
+    s.buyers.map((b) => [b, 10] as const),
+    spl,
+  );
+  await drawLockedPool(s, refs);
   return refs;
 }

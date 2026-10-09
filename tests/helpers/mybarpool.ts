@@ -1187,12 +1187,31 @@ export async function createPoolInstruction(
   };
 }
 
+/**
+ * PROGRAM §4.3 gating inputs: `gateKey` co-signs on a `Link` pool (the slot is the program id
+ * when absent, Anchor's convention for an optional account); `proof` is the §6.4 proof for the
+ * buyer on an `Allowlist` pool. Both are ignored on pools of the other access types, so one
+ * client code path serves every pool.
+ */
+export interface BuyGate {
+  gateKey?: TransactionSigner;
+  proof?: readonly Uint8Array[];
+}
+
+/** `allowlist_proof` as Borsh encodes a `Vec<[u8; 32]>`: a u32 length, then the entries. */
+const allowlistProofEncoder = getArrayEncoder(fixEncoderSize(getBytesEncoder(), 32));
+
 export async function buyInstruction(
   buyer: TransactionSigner,
   refs: PoolRefs,
   count: number,
   token: TokenPath = {},
+  gate: BuyGate = {},
 ): Promise<SignedInstruction> {
+  const gateSlot: SignedMetas[number] =
+    gate.gateKey === undefined
+      ? optional(undefined)
+      : { address: gate.gateKey.address, role: AccountRole.READONLY_SIGNER, signer: gate.gateKey };
   const accounts: SignedMetas = [
     { address: buyer.address, role: AccountRole.WRITABLE_SIGNER, signer: buyer },
     { address: await configPda(), role: AccountRole.READONLY },
@@ -1206,12 +1225,17 @@ export async function buyInstruction(
     optional(token.tokenProgram),
     { address: SLOT_HASHES_SYSVAR, role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
+    gateSlot,
     ...(await eventCpiAccounts()),
   ];
+  const data = new Uint8Array([
+    ...getU8Encoder().encode(count),
+    ...allowlistProofEncoder.encode([...(gate.proof ?? [])]),
+  ]);
   return {
     programAddress: PROGRAM_ID,
     accounts,
-    data: withDiscriminator("buy", getU8Encoder().encode(count)),
+    data: withDiscriminator("buy", data),
   };
 }
 
@@ -2063,6 +2087,14 @@ export async function fetchLamports(addr: Address): Promise<bigint> {
 export const COMPUTE_BUDGET_PROGRAM = address("ComputeBudget111111111111111111111111111111");
 
 /** `ComputeBudgetInstruction::SetComputeUnitLimit(units)`: `[2] ‖ u32 LE`. */
+/** The SPL Memo program; a memo with no signer accounts only logs its text. */
+export const MEMO_PROGRAM = address("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+
+/** A memo instruction, the unrelated neighbour of the §10 composability checks. */
+export function memoInstruction(text: string): Instruction {
+  return { programAddress: MEMO_PROGRAM, accounts: [], data: new TextEncoder().encode(text) };
+}
+
 export function setComputeUnitLimit(units: number): Instruction {
   const data = new Uint8Array(5);
   data[0] = 2;
