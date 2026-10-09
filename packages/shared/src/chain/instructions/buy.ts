@@ -24,6 +24,7 @@ export interface BuyResult {
   game: Address;
   vault: Address;
   counter: Address;
+  /** The creator's override slot, as PROGRAM §4.3 seeds it. */
   walletOverride: Address;
   /** The buyer's ATA on an SPL pool (checked to exist); `undefined` on SOL. */
   buyerTokenAccount: Address | undefined;
@@ -31,9 +32,10 @@ export interface BuyResult {
 }
 
 /**
- * `buy` (PROGRAM §4.3). Reads the pool once; derives `game`, `vault`, `counter`, the buyer's
- * `walletOverride` and ATA (which must exist: `SdkError("TokenAccountMissing")` otherwise, so
- * the wallet never opens). `gateKey` is passed only on a `Link` pool and the proof is built
+ * `buy` (PROGRAM §4.3). Reads the pool once; derives `game`, `vault`, `counter`, the
+ * **creator's** `walletOverride` (the program's seeds are `["override", pool.creator]`: the
+ * slot is read only when the buyer is the creator) and the buyer's ATA (which must exist:
+ * `SdkError("TokenAccountMissing")` otherwise, so the wallet never opens). `gateKey` is passed only on a `Link` pool and the proof is built
  * only on an `Allowlist` pool; a buyer not in the list is `SdkError("NotAllowlisted")` before
  * any RPC.
  */
@@ -44,7 +46,7 @@ export async function buyInstruction(client: MyBarPoolClient, input: BuyInput): 
 
   const pool = await requirePool(client, input.pool);
   const { vault, counter } = await poolPdas(client, pool);
-  const walletOverride = await walletOverridePda(client, buyer);
+  const walletOverride = await walletOverridePda(client, pool.data.creator);
   const spl = splOf(pool.data);
   const buyerTokenAccount = await existingTokenAccount(client, buyer, spl);
   const gateKey =

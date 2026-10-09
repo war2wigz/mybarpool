@@ -28,6 +28,7 @@ import {
   signAndSendTransactionMessageWithSigners,
   signTransactionMessageWithSigners,
   SOLANA_ERROR__BLOCK_HEIGHT_EXCEEDED,
+  SOLANA_ERROR__TRANSACTION_ERROR__BLOCKHASH_NOT_FOUND,
   SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE,
   type Blockhash,
   type Instruction,
@@ -76,6 +77,11 @@ export interface PrepareOptions {
   priorityFee?: bigint;
   /** Bytes of accounts the instruction may create (the instruction helpers know; see each). */
   createdAccountBytes?: number;
+  /**
+   * Commitment of the blockhash fetched last (DESIGN §10.4: `confirmed`). A keeper that would
+   * rather never see "Blockhash not found" from a node behind the tip passes `finalized`.
+   */
+  blockhashCommitment?: "confirmed" | "finalized";
 }
 
 /** A transaction ready for the wallet: the message with its lifetime and the numbers set on it. */
@@ -98,6 +104,8 @@ export interface PreparedTransaction {
   readonly sizeBytes: number;
   readonly blockhash: Blockhash;
   readonly lastValidBlockHeight: bigint;
+  /** The commitment the blockhash was fetched at; `refreshBlockhash` reuses it. */
+  readonly blockhashCommitment: "confirmed" | "finalized";
 }
 
 type Message = TransactionMessage & TransactionMessageWithFeePayerSigner;
@@ -190,7 +198,8 @@ export async function prepareTransaction(
   }
 
   // 6. Blockhash last.
-  const { value } = await client.rpc.getLatestBlockhash({ commitment: "confirmed" }).send();
+  const blockhashCommitment = options.blockhashCommitment ?? "confirmed";
+  const { value } = await client.rpc.getLatestBlockhash({ commitment: blockhashCommitment }).send();
   const withLifetime = setTransactionMessageLifetimeUsingBlockhash(value, message);
   const signatureCount = signerCount(withLifetime);
   return {
@@ -205,6 +214,7 @@ export async function prepareTransaction(
     sizeBytes,
     blockhash: value.blockhash,
     lastValidBlockHeight: value.lastValidBlockHeight,
+    blockhashCommitment,
   };
 }
 
@@ -213,7 +223,9 @@ export async function refreshBlockhash(
   client: MyBarPoolClient,
   prepared: PreparedTransaction,
 ): Promise<PreparedTransaction> {
-  const { value } = await client.rpc.getLatestBlockhash({ commitment: "confirmed" }).send();
+  const { value } = await client.rpc
+    .getLatestBlockhash({ commitment: prepared.blockhashCommitment })
+    .send();
   return {
     ...prepared,
     message: setTransactionMessageLifetimeUsingBlockhash(value, prepared.message),
@@ -298,9 +310,20 @@ async function confirmByPolling(
   }
 }
 
+/** Preflight's "Blockhash not found": the transaction was never sent; a refresh and one retry. */
+function isBlockhashNotFoundAtPreflight(cause: unknown): boolean {
+  return (
+    isSolanaError(cause, SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE) &&
+    isSolanaError(cause.cause, SOLANA_ERROR__TRANSACTION_ERROR__BLOCKHASH_NOT_FOUND)
+  );
+}
+
 function classify(cause: unknown, lastValidBlockHeight: bigint): unknown {
   if (cause instanceof SdkError) return cause;
-  if (isSolanaError(cause, SOLANA_ERROR__BLOCK_HEIGHT_EXCEEDED)) {
+  if (
+    isSolanaError(cause, SOLANA_ERROR__BLOCK_HEIGHT_EXCEEDED) ||
+    isBlockhashNotFoundAtPreflight(cause)
+  ) {
     return new SdkError("BlockhashExpired", { lastValidBlockHeight }, { cause });
   }
   const code = customErrorCode(cause);

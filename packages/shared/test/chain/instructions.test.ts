@@ -303,7 +303,7 @@ describe("buyInstruction", () => {
         pool: POOL,
         vault: await vaultPda(client, POOL),
         counter: await counterPda(client, CREATOR, GAME),
-        walletOverride: await walletOverridePda(client, buyer.address),
+        walletOverride: await walletOverridePda(client, CREATOR), // the creator's, not the buyer's
         count: 3,
         allowlistProof: proof,
         ...extra,

@@ -7,6 +7,10 @@
 import {
   address,
   generateKeyPairSigner,
+  SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE,
+  SOLANA_ERROR__TRANSACTION_ERROR__ACCOUNT_NOT_FOUND,
+  SOLANA_ERROR__TRANSACTION_ERROR__BLOCKHASH_NOT_FOUND,
+  SolanaError,
   type Address,
   type Instruction,
   type KeyPairSigner,
@@ -273,6 +277,37 @@ describe("prepareTransaction (DESIGN §10.4, in order)", () => {
     expect(ok.sizeBytes).toBeLessThanOrEqual(4096);
   });
 
+  it("the blockhash commitment is confirmed by default, finalized on request, and kept by refreshBlockhash", async () => {
+    const { rpc, calls } = rpcFor({});
+    const client = createMyBarPoolClient({ rpc, programAddress: PROGRAM });
+    const p = await prepareTransaction(client, {
+      feePayer: payer,
+      instructions: [memo("x")],
+      format: "v1",
+    });
+    expect(p.blockhashCommitment).toBe("confirmed");
+    expect(calls.at(-1)).toMatchObject({
+      method: "getLatestBlockhash",
+      params: [{ commitment: "confirmed" }],
+    });
+    const f = await prepareTransaction(client, {
+      feePayer: payer,
+      instructions: [memo("x")],
+      format: "v1",
+      blockhashCommitment: "finalized",
+    });
+    expect(f.blockhashCommitment).toBe("finalized");
+    expect(calls.at(-1)).toMatchObject({
+      method: "getLatestBlockhash",
+      params: [{ commitment: "finalized" }],
+    });
+    await refreshBlockhash(client, f);
+    expect(calls.at(-1)).toMatchObject({
+      method: "getLatestBlockhash",
+      params: [{ commitment: "finalized" }],
+    });
+  });
+
   it("refreshBlockhash re-stamps and changes nothing else", async () => {
     let n = 0;
     const { rpc } = rpcFor(
@@ -417,6 +452,59 @@ describe("signAndSend", () => {
     const e = await signAndSend(client, p, { pollIntervalMs: 1 }).catch((x) => x);
     expect(isSdkError(e, "ProgramError")).toBe(true);
     expect((e as SdkError).details.programError).toBe("GateKeyNotSigner");
+  });
+
+  it("a wallet fee payer: preflight's Blockhash not found is BlockhashExpired (never sent, safe to re-stamp)", async () => {
+    const { rpc } = rpcFor({});
+    const preflight = new SolanaError(
+      SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE,
+      {
+        __serverMessage: "Transaction simulation failed",
+        accounts: null,
+        innerInstructions: null,
+        loadedAccountsDataSize: null,
+        logs: [],
+        replacementBlockhash: null,
+        returnData: null,
+        unitsConsumed: 0n,
+        cause: new SolanaError(SOLANA_ERROR__TRANSACTION_ERROR__BLOCKHASH_NOT_FOUND),
+      } as never,
+    );
+    const wallet = {
+      address: payer.address,
+      signAndSendTransactions: async () => {
+        throw preflight;
+      },
+    } as unknown as TransactionSendingSigner;
+    const { client, p } = await prepared(rpc, wallet);
+    const e = await signAndSend(client, p).catch((x) => x);
+    expect(isSdkError(e, "BlockhashExpired")).toBe(true);
+    expect((e as SdkError).cause).toBe(preflight);
+    // Any other preflight failure stays SimulationFailed.
+    const other = new SolanaError(
+      SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE,
+      {
+        __serverMessage: "x",
+        accounts: null,
+        innerInstructions: null,
+        loadedAccountsDataSize: null,
+        logs: [],
+        replacementBlockhash: null,
+        returnData: null,
+        unitsConsumed: 0n,
+        cause: new SolanaError(SOLANA_ERROR__TRANSACTION_ERROR__ACCOUNT_NOT_FOUND),
+      } as never,
+    );
+    const w2 = {
+      address: payer.address,
+      signAndSendTransactions: async () => {
+        throw other;
+      },
+    } as unknown as TransactionSendingSigner;
+    const r2 = await prepared(rpc, w2);
+    expect(isSdkError(await signAndSend(r2.client, r2.p).catch((x) => x), "SimulationFailed")).toBe(
+      true,
+    );
   });
 
   it("a keypair fee payer needs rpcSubscriptions", async () => {
