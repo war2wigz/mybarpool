@@ -249,11 +249,11 @@ Checks: `status == Scheduled` (`GameNotScheduled` for a `Final` record, `GameAlr
 ### 4.3 Pool creation and buying
 
 **`create_pool(nonce, token, price, preset, access_type, gate_key, allowlist_root, creator_addon_bps, integrator, integrator_bps, initial_boxes)`** — signer: creator; payer: creator. Accounts: config, game, pool (init), vault (funded for SOL, created and initialised as a token account for SPL), counter (init if needed), the creator's override slot (§3.6, required, read when initialised), the SlotHashes sysvar (required; read when `initial_boxes > 0`), system program; for an SPL token also the rule's mint, the token program, and the creator's token account when `initial_boxes > 0`.
-Checks: `!config.paused`; `game.status == Scheduled`; `now < game.recorded_kickoff`; `tokens[token].enabled`; `price == min_price + k × step` for some integer `k` and `price ≤ max_price`; `preset` is a valid discriminant; `access_type` valid, with `gate_key != default` iff `Link` and `allowlist_root != 0` iff `Allowlist` (until Step 8 lands gating in `buy`, `access_type` must also be `Public`, else `InvalidAccessType`); `creator_addon_bps + integrator_bps ≤ config.addon_budget_bps`; `integrator_bps == 0` iff `integrator == default`; `counter.open_count < limit.max_open_pools`; `initial_boxes ≤ limit.max_own_boxes`.
-Effects: computes and stores fee amounts (§5.1); writes every field; `status = Open`; `winning_box = [255; 4]`; increments `counter.open_count`; if `initial_boxes > 0`, runs the `buy` logic (below) for the creator in the same instruction. Emits `PoolCreated`, then `BoxesBought` if boxes were bought, then `PoolLocked` if those boxes were the 25th.
+Checks: `!config.paused`; `game.status == Scheduled`; `now < game.recorded_kickoff`; `tokens[token].enabled`; `price == min_price + k × step` for some integer `k` and `price ≤ max_price`; `preset` is a valid discriminant; `access_type` valid, with `gate_key != default` iff `Link` and `allowlist_root != 0` iff `Allowlist` (`InvalidAccessType` otherwise); `creator_addon_bps + integrator_bps ≤ config.addon_budget_bps`; `integrator_bps == 0` iff `integrator == default`; `counter.open_count < limit.max_open_pools`; `initial_boxes ≤ limit.max_own_boxes`.
+Effects: computes and stores fee amounts (§5.1); writes every field; `status = Open`; `winning_box = [255; 4]`; increments `counter.open_count`; if `initial_boxes > 0`, runs the `buy` logic (below) for the creator in the same instruction, without the gating step: the creator is setting the gate in this very instruction, and need not be on their own allowlist. Emits `PoolCreated`, then `BoxesBought` if boxes were bought, then `PoolLocked` if those boxes were the 25th.
 
-**`buy(count)`** — signer: buyer; payer: buyer. Accounts: config, game, pool, vault, the creator's counter (decremented on lock), the creator's override slot (§3.6, required; read only when the buyer is the creator), the SlotHashes sysvar, system program; for an SPL pool also the pool's mint, the token program and the buyer's token account; plus `gate_key` as a co-signer when `access_type == Link`, plus a Merkle proof argument when `Allowlist` (Step 8).
-Checks: `!config.paused`; `status == Open`; `now < game.recorded_kickoff`; `game.status == Scheduled`; `1 ≤ count ≤ 25 − sold`; if buyer is creator, `creator_boxes + count ≤ limit.max_own_boxes`; gating satisfied.
+**`buy(count, allowlist_proof)`** — signer: buyer; payer: buyer. Accounts: config, game, pool, vault, the creator's counter (decremented on lock), the creator's override slot (§3.6, required; read only when the buyer is the creator), the SlotHashes sysvar, system program; for an SPL pool also the pool's mint, the token program and the buyer's token account; plus the optional `gate_key` account, which must be present and signing when `access_type == Link`. `allowlist_proof` is a `Vec<[u8; 32]>`, the §6.4 proof for the buyer when `access_type == Allowlist`, empty otherwise.
+Checks: `!config.paused`; `status == Open`; `now < game.recorded_kickoff`; `game.status == Scheduled`; `1 ≤ count ≤ 25 − sold`; if buyer is creator, `creator_boxes + count ≤ limit.max_own_boxes`; gating: on a `Link` pool the `gate_key` account is present, its key equals `pool.gate_key` and it signed (`GateKeyNotSigner` for all three); on an `Allowlist` pool `allowlist_proof` has at most 32 entries and folds from the buyer's leaf to `pool.allowlist_root` per §6.4 (`AllowlistProofInvalid` for both); on a `Public` pool nothing. The gate-key slot is ignored on pools that are not `Link` and the proof is ignored on pools that are not `Allowlist`, so one client code path serves every pool. The creator buying in their own gated pool through `buy` is gated like anyone else.
 Effects: transfers `count × price` from buyer to vault; assigns boxes (§6.1); `sold += count`; if buyer is creator, `creator_boxes += count`; if `sold == 25`: `status = Locked`, `locked_at = now`, counter decremented. Emits `BoxesBought { buyer, boxes[], count, sold_after }` and, on lock, `PoolLocked`.
 
 **`sponsor(amount)`** — signer: sponsor; payer: sponsor. Accounts: config, game, pool, vault, sponsorship (init if needed), system program; for an SPL pool also the pool's mint, the token program and the sponsor's token account.
@@ -434,6 +434,22 @@ box = row × 5 + col          // 0–24; label = box + 1
 
 Columns are the home team (across the top), rows the away team (down the side). Exactly one box matches for any pair of scores.
 
+### 6.4 Allowlist root and proof
+
+Inputs: the allowed wallets (32-byte keys), deduplicated and sorted bytewise ascending before anything is hashed, so the same set always gives the same root and a client can recompute a pool's root from a list it is shown.
+
+```
+leaf(w)      = sha256([0x00] || w)
+node(a, b)   = sha256([0x01] || min(a, b) || max(a, b))      // bytewise order; a proof carries no direction bits
+level 0      = [leaf(w) for w in wallets]
+level k + 1  = [node(l[2i], l[2i+1]) for pairs in level k]; an unpaired last element is carried up unchanged
+root         = the single element of the top level; one wallet → root = leaf(w)
+proof(w)     = the sibling of w's node at each level, bottom up (no entry for a level where it was carried up)
+verify(root, w, proof) = fold(leaf(w), proof, node) == root, with len(proof) ≤ 32
+```
+
+The leading byte separates leaves from nodes so no interior node can be presented as a wallet. `buy` on an `Allowlist` pool runs `verify` for the buyer (`AllowlistProofInvalid` on a false result or a proof longer than 32); `packages/shared` builds roots and proofs and both are cross-tested through `allowlist.json`.
+
 ## 7. Events
 
 All events are additive: fields are appended, never removed or reordered. Every event carries `pool` (or `game` for game events) and the Unix time.
@@ -481,6 +497,8 @@ Numbered from 6000 (Anchor custom errors). Names are the contract; numbers follo
 
 The §4.6 block, by instruction: `NotReturnable` (6046) is `return_boxes` with no precondition holding (a `Settled` or `Split` pool included), `cancel_pool` outside `Open`/`Locked`/`Drawn`, `reclaim` or `reclaim_sponsorship` on a `Settled` pool, and `return_sponsorship` on a pool that is not `Returned`; `NotSuspended` (6048) is `split` on a game not marked suspended; `NotSplittable` (6049) is `split` before any payout or outside `Drawn`/`Split`; `ReclaimTooEarly` (6050) is `reclaim` or `reclaim_sponsorship` before `scheduled_kickoff + RECLAIM_DELAY`; `NotOwner` (6051) is `reclaim` by a wallet that owns no box in the pool; `NothingToReturn` (6052) is a `return_boxes`, `split` or `reclaim` that would change nothing (the retry of a finished batch; a second reclaim); `PoolNotTerminal` (6055) is also `close_sponsorship` outside `Settled`/`Split`.
 
+The gating block (§4.3 `buy`, from Step 8): `GateKeyMissing` (6016) is `create_pool` with `access_type == Link` and a default `gate_key`, or `rotate_gate_key` to the default key; `GateKeyNotSigner` (6017) is `buy` on a `Link` pool whose `gate_key` account is absent, is another key, or did not sign; `AllowlistProofInvalid` (6018) is `buy` on an `Allowlist` pool whose proof is longer than 32 entries or does not fold to `allowlist_root` (§6.4).
+
 Client-side account mistakes on the §4.3 and §4.6 instructions fail with Anchor's own constraint errors, not with a code from this list (see the end of §4.3 and the §4.6 preamble: a substituted sponsor wallet is `ConstraintAddress`, a token account that is not the derived ATA is `RequireKeysEqViolated`, a missing counter on the call that needs it is `ConstraintAccountIsNone`).
 
 ## 9. State machines
@@ -521,6 +539,6 @@ Terminal: `Settled`, `Returned`, `Split`. `sponsor` is allowed in `Open`, `Locke
 - Limits: price ladder, presets, add-on budget, open-pool and own-box caps with override precedence, sponsorship minimum and cap.
 - Fees: independent of `sponsored_total`; paid exactly once; never paid on a returned pool; `FinalOnly` pays them with the final.
 - Rent: every closable account closes to the specified destination; nothing is left un-closable in any terminal state.
-- Layout: a snapshot test freezes account byte offsets and event schemas after Step 8; changes are additive only.
+- Layout: a snapshot test freezes account byte offsets and event schemas after Step 8; changes are additive only. The snapshot is `programs/mybarpool/tests/fixtures/schema-snapshot.json` (every account's fields in order with its size, every event's fields in order, every instruction's discriminator, arguments and account list, every error's name and code) and `tests/schema.rs` compares the committed IDL to it, allowing only: a new instruction, a new event, a new field at the end of an event, a new error with the next code, and a new account field placed immediately before `reserved` with `reserved` shrinking by exactly its size.
 - Composability: no instruction reads the instructions sysvar or depends on its position in the transaction or on its neighbours. Wallets add instructions of their own — Seed Vault Wallet appends Lighthouse assertion instructions after the dApp's — so the test suite runs every user-facing instruction with unrelated instructions before and after it (a memo, a compute-budget change, a Lighthouse-style assertion against the signer's balance) and expects identical results.
 - Account types, so that nothing locks funds by over-checking: a wallet that is only a PDA seed or a payout destination (`creator`, `integrator`, `fee_wallet`, a box owner, `sponsorship.wallet`) is `UncheckedAccount` with an `address`/`has_one` constraint in every instruction after the one that creates the account it seeds, never `SystemAccount` — if that wallet's owner ever changes (it becomes a token account, say), `close_pool` and the return paths must still work (OtterSec's `overconstrained_seed_account` lint). Every CPI target (`system_program`, the token programs, `ENTROPY_PROGRAM`) is a fixed address, never a caller-supplied program (`arbitrary_cpi_call`). Every account whose data is read after a CPI is reloaded first (`missing_account_reload`). The full `anchor-lints` set runs in CI and must be clean.
