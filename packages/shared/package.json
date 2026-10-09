@@ -15,12 +15,17 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./generated": {
+      "types": "./dist/generated/index.d.ts",
+      "import": "./dist/generated/index.js"
     }
   },
   "files": [
     "dist",
     "src/vectors",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=22"
@@ -32,14 +37,20 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "vectors": "UPDATE_VECTORS=1 vitest run test/vectors.test.ts"
+    "vectors": "UPDATE_VECTORS=1 vitest run test/vectors.test.ts",
+    "generate": "node codama.mjs && prettier --write src/generated",
+    "docs": "typedoc"
   },
   "peerDependencies": {
     "@solana/kit": "^8.4.0"
   },
   "devDependencies": {
+    "@codama/nodes-from-anchor": "1.5.6",
+    "@codama/renderers-js": "2.5.0",
     "@solana/kit": "8.4.0",
     "@vitest/coverage-v8": "5.0.3",
+    "codama": "1.11.0",
+    "typedoc": "0.28.20",
     "typescript": "5.9.3",
     "vitest": "5.0.3"
   },

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs-api",
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "validation": { "notExported": true, "invalidLink": true, "notDocumented": true },
+  "treatWarningsAsErrors": true,
+  "readme": "README.md",
+  "name": "@mybarpool/shared"
+}

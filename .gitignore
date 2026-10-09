@@ -18,3 +18,6 @@ wallets/
 .idea/
 .vscode/
 .surfpool/
+
+# Typedoc output (`npm run docs --workspace packages/shared`); CI builds it, nothing commits it.
+packages/shared/docs-api/
