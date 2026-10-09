@@ -289,6 +289,14 @@ jobs:
           echo "@solana/kit majors: $majors"
           test "$(echo "$majors" | wc -w)" = "1"
 
+      - name: Generated client regenerated from the committed IDL, diff must be empty
+        # `src/generated/` is rendered from idl/mybarpool.json by codama.mjs and committed; a
+        # hand edit, a stale render or a renderer drift shows here.
+        run: |
+          set -euo pipefail
+          npm run generate --workspace packages/shared
+          git diff --exit-code -- packages/shared/src/generated
+
       - run: npm run build
       - name: Tests with coverage thresholds (100% branches on fees and winner)
         run: npm run test:coverage --workspace packages/shared

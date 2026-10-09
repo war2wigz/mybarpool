@@ -57,9 +57,12 @@ codama.update(
   ]),
 );
 
-const out = new URL("./src/generated/", import.meta.url).pathname;
-codama.accept(
-  renderVisitor(out, {
+// The renderer takes the package folder and writes under its `src/generated/` (deleting it
+// first); it returns a promise, awaited so the extra file below lands after the rewrite.
+const pkg = new URL(".", import.meta.url).pathname;
+const out = `${pkg}src/generated/`;
+await codama.accept(
+  renderVisitor(pkg, {
     kitImportStrategy: "rootOnly",
     importExtension: "js",
     syncPackageJson: false,
