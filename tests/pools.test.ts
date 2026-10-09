@@ -11,6 +11,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import {
+  allowlistProof,
+  allowlistRoot,
   assignBoxes,
   counterSeeds,
   feeAmounts,
@@ -67,6 +69,9 @@ import {
   PoolStatus,
   PROGRAM_ID,
   rotateGateKeyInstruction,
+  memoInstruction,
+  setComputeUnitLimit,
+  computeUnitsConsumed,
   rpc,
   rpcSubscriptions,
   send,
@@ -155,6 +160,8 @@ describe("pool instructions (Surfpool, mainnet fork)", () => {
   let pool1: PoolRefs;
   let pool2: PoolRefs;
   let orePool: PoolRefs;
+  let linkPool: PoolRefs;
+  let linkGate: KeyPairSigner;
 
   beforeAll(async () => {
     const walletPath = process.env["ANCHOR_WALLET"] ?? join(homedir(), ".config/solana/id.json");
@@ -320,15 +327,29 @@ describe("pool instructions (Surfpool, mainnet fork)", () => {
       error === 102 || (error instanceof Error && /102|Deserialize/i.test(String(error))),
     ).toBe(true);
 
+    // PROGRAM §4.3: gate_key != default iff Link; allowlist_root != 0 iff Allowlist. (Until
+    // Step 8 a consistent Link pool was refused here too; it is created now — item 12.)
     const gate = (await generateKeyPairSigner()).address;
     expect(
       await sendExpectingError(
         creator,
-        await ix({ nonce: n, price: PRICE, accessType: AccessType.Link, gateKey: gate }),
+        await ix({ nonce: n, price: PRICE, accessType: AccessType.Link }),
       ),
     ).toBe(errorCode("InvalidAccessType"));
     expect(
       await sendExpectingError(creator, await ix({ nonce: n, price: PRICE, gateKey: gate })),
+    ).toBe(errorCode("InvalidAccessType"));
+    expect(
+      await sendExpectingError(
+        creator,
+        await ix({ nonce: n, price: PRICE, accessType: AccessType.Allowlist }),
+      ),
+    ).toBe(errorCode("InvalidAccessType"));
+    expect(
+      await sendExpectingError(
+        creator,
+        await ix({ nonce: n, price: PRICE, allowlistRoot: new Uint8Array(32).fill(1) }),
+      ),
     ).toBe(errorCode("InvalidAccessType"));
     expect(errorCode("InvalidAccessType")).toBe(6015);
     const integrator = (await generateKeyPairSigner()).address;
@@ -746,6 +767,159 @@ describe("pool instructions (Surfpool, mainnet fork)", () => {
       ),
     ).toBe(errorCode("CounterNotEmpty"));
     expect(errorCode("CounterNotEmpty")).toBe(6056);
+  });
+
+  // Step 8 (the brief's items 10–12, numbered on from this file's 11).
+  it("12. Link pool: the gate key co-signs; without it 6017; after rotate_gate_key only the new key", async () => {
+    // PROGRAM §4.3 buy gating on a Link pool; §8 GateKeyNotSigner 6017; ARCHITECTURE › Private
+    // pools: the throwaway keypair's public key is on the pool, only signatures from it matter.
+    const gameOre = orePool.game; // still selling
+    const gate = await generateKeyPairSigner();
+    const gate2 = await generateKeyPairSigner();
+    const nonce = 40n;
+    const sig0 = await send(
+      creator,
+      await createPoolInstruction(
+        creator,
+        gameOre,
+        poolParams({
+          nonce,
+          price: PRICE,
+          accessType: AccessType.Link,
+          gateKey: gate.address,
+          initialBoxes: 2,
+        }),
+      ),
+    );
+    const refs: PoolRefs = {
+      pool: await poolPda(gameOre, creator.address, nonce),
+      game: gameOre,
+      creator: creator.address,
+    };
+    const created = await fetchPool(refs.pool);
+    expect(created.accessType).toBe(AccessType.Link);
+    expect(created.gateKey).toBe(gate.address);
+    expect((await emittedEvents(sig0)).map(eventName)).toEqual(["PoolCreated", "BoxesBought"]);
+
+    const sig = await send(buyerA, await buyInstruction(buyerA, refs, 2, {}, { gateKey: gate }));
+    const events = await emittedEvents(sig);
+    expect(events.map(eventName)).toEqual(["BoxesBought"]);
+    const bought = decodeEvent("BoxesBought", events[0]!, boxesBoughtDecoder);
+    expect(bought.buyer).toBe(buyerA.address);
+    expect(bought.boxes).toHaveLength(2);
+    expect(bought.soldAfter).toBe(4);
+    console.log(`buy (Link, gate key co-signing): ${await computeUnitsConsumed(sig)} CU`);
+
+    expect(await sendExpectingError(buyerB, await buyInstruction(buyerB, refs, 1))).toBe(
+      errorCode("GateKeyNotSigner"),
+    );
+    expect(errorCode("GateKeyNotSigner")).toBe(6017);
+    // The creator's later buys are gated too (§4.3).
+    expect(await sendExpectingError(creator, await buyInstruction(creator, refs, 1))).toBe(
+      errorCode("GateKeyNotSigner"),
+    );
+
+    await send(creator, await rotateGateKeyInstruction(creator, refs.pool, gate2.address));
+    expect((await fetchPool(refs.pool)).gateKey).toBe(gate2.address);
+    expect(
+      await sendExpectingError(
+        buyerB,
+        await buyInstruction(buyerB, refs, 1, {}, { gateKey: gate }),
+      ),
+    ).toBe(errorCode("GateKeyNotSigner"));
+    await send(buyerB, await buyInstruction(buyerB, refs, 1, {}, { gateKey: gate2 }));
+    expect((await fetchPool(refs.pool)).sold).toBe(5);
+    linkPool = refs;
+    linkGate = gate2;
+  });
+
+  it("13. Allowlist pool from a 5-wallet list: members buy with proofs, a stranger is 6018, the creator's initial boxes were not gated", async () => {
+    // PROGRAM §6.4 root and proof from the shared package; §8 AllowlistProofInvalid 6018;
+    // §4.3 create_pool's initial_boxes are not gated (the creator is not on the list).
+    const gameOre = orePool.game;
+    const listed = await Promise.all(Array.from({ length: 5 }, () => generateKeyPairSigner()));
+    const airdrop = airdropFactory({ rpc, rpcSubscriptions });
+    for (const who of listed) {
+      await withRetry(() =>
+        airdrop({
+          recipientAddress: who.address,
+          lamports: lamports(5n * SOL),
+          commitment: "confirmed",
+        }),
+      );
+    }
+    const wallets = listed.map((w) => Uint8Array.from(enc.encode(w.address)));
+    const root = allowlistRoot(wallets);
+    expect(
+      wallets.some((w) => Buffer.compare(w, Uint8Array.from(enc.encode(creator.address))) === 0),
+    ).toBe(false);
+
+    const nonce = 41n;
+    await send(
+      creator,
+      await createPoolInstruction(
+        creator,
+        gameOre,
+        poolParams({
+          nonce,
+          price: PRICE,
+          accessType: AccessType.Allowlist,
+          allowlistRoot: root,
+          initialBoxes: 3,
+        }),
+      ),
+    );
+    const refs: PoolRefs = {
+      pool: await poolPda(gameOre, creator.address, nonce),
+      game: gameOre,
+      creator: creator.address,
+    };
+    const created = await fetchPool(refs.pool);
+    expect(created.accessType).toBe(AccessType.Allowlist);
+    expect([...created.allowlistRoot]).toEqual([...root]);
+    expect(created.sold).toBe(3);
+    expect(created.creatorBoxes).toBe(3);
+
+    for (const [i, who] of listed.entries()) {
+      const proof = allowlistProof(wallets, wallets[i]!);
+      const sig = await send(who, await buyInstruction(who, refs, 1, {}, { proof }));
+      if (i === 0)
+        console.log(
+          `buy (Allowlist, ${proof.length}-entry proof): ${await computeUnitsConsumed(sig)} CU`,
+        );
+    }
+    expect((await fetchPool(refs.pool)).sold).toBe(8);
+
+    const strangerProof = allowlistProof(wallets, wallets[2]!);
+    expect(
+      await sendExpectingError(
+        buyerA,
+        await buyInstruction(buyerA, refs, 1, {}, { proof: strangerProof }),
+      ),
+    ).toBe(errorCode("AllowlistProofInvalid"));
+    expect(errorCode("AllowlistProofInvalid")).toBe(6018);
+    // The creator through buy is gated like anyone else (§4.3): not on the list.
+    expect(
+      await sendExpectingError(
+        creator,
+        await buyInstruction(creator, refs, 1, {}, { proof: strangerProof }),
+      ),
+    ).toBe(errorCode("AllowlistProofInvalid"));
+  });
+
+  it("14. a Link buy with a memo before and a compute-budget instruction after is unaffected", async () => {
+    // PROGRAM §10 Composability on a gated path.
+    const before = await fetchPool(linkPool.pool);
+    const sig = await send(buyerC, [
+      memoInstruction("mybarpool composability"),
+      await buyInstruction(buyerC, linkPool, 1, {}, { gateKey: linkGate }),
+      setComputeUnitLimit(200_000),
+    ]);
+    const after = await fetchPool(linkPool.pool);
+    expect(after.sold).toBe(before.sold + 1);
+    expect(after.owners.filter((o) => o === buyerC.address)).toHaveLength(1);
+    const events = await emittedEvents(sig);
+    expect(events.map(eventName)).toEqual(["BoxesBought"]);
   });
 
   it("11. the committed IDL carries the Step 4 surface", () => {
