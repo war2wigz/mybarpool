@@ -1,0 +1,9 @@
+/**
+ * The chain layer of `@mybarpool/shared`: a client object that takes a connection and a program
+ * address, PDAs, reads, event decoding, subscriptions, the transaction helper, one helper per
+ * user-facing instruction, and the derived views (ARCHITECTURE › Clients; DESIGN §10).
+ */
+export * from "./client.js";
+export * from "./pdas.js";
+export * from "./accounts.js";
+export * from "./errors.js";

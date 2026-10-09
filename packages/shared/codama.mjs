@@ -90,4 +90,8 @@ ${names}
 });
 `,
 );
+// The renderer writes the index; the extra file is re-exported from it so the subpath carries
+// everything.
+const index = `${out}index.ts`;
+writeFileSync(index, readFileSync(index, "utf8") + 'export * from "./errorNames.js";\n');
 console.log(`rendered ${out} from idl/mybarpool.json (${idl.instructions.length} instructions)`);

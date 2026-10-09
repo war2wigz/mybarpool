@@ -24,6 +24,7 @@ export * from "./sources.js";
 export * from "./sponsors.js";
 export * from "./allowlist.js";
 export { assertU64, U64_MAX, toHex, fromHex } from "./bytes.js";
+export * from "./chain/index.js";
 
 /** Package version, read by clients that want to log what they shipped with. */
 export const SDK_VERSION = "0.0.0";

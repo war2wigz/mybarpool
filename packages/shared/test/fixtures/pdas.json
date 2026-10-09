@@ -1,0 +1,26 @@
+{
+  "programAddress": "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw",
+  "key": {
+    "season": 2026,
+    "week": 2,
+    "home": 15,
+    "away": 8
+  },
+  "scheduledKickoff": "1800000000",
+  "creator": "TJWdV8jWMDDmbx7McMTVQsRGQ87pG8MVFXd4bfhM7dm",
+  "buyer": "Fq3rxgkHE5hjaoKWWZqWQo8hjEP9TGjd4qPXa7VpkRbw",
+  "nonce": "7",
+  "game": "5hhyQJ2SpeEvC4q5rDDuu1bFLdzZfJGXkN61PL2EK7a3",
+  "pool": "CNKBgcCvxy5WRuScuzJBeg2dMPw7dn5tBtA2bd2g4K2N",
+  "vault": "5s5xfrJrMXCMAKFcKf6FWiVb1SgUtnjTwxPnxakGHtM5",
+  "counter": "ELYx3R1x18T1Sp1p1D1FBkxk3DMUHxTpuY1mciNPctXd",
+  "walletOverride": "BznSYup22WP5NZtjiv5ZUwzeEsU4wHkQXdQsaBhU1AMZ",
+  "sponsorship": "5mhHbjCc8chp1Suj3EMTgfy3dLmF1hezwfRz4n6k1ewA",
+  "config": "FvzYvTNMUZty8tZ3WLRW4yibizzR2HE3ff11fT3BoXvX",
+  "ata": {
+    "owner": "TJWdV8jWMDDmbx7McMTVQsRGQ87pG8MVFXd4bfhM7dm",
+    "mint": "oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp",
+    "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    "address": "E9Vmosqg6AtuvviST4YdX3RchMuQerLyb4URW3rNfPU5"
+  }
+}
