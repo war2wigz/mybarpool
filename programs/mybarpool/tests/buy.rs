@@ -890,12 +890,19 @@ fn buy_allowlist_proof_of_33_entries_is_invalid() {
     assert_eq!(allowlist::MAX_PROOF_LEN, 32);
     let f = Fixture::new();
     let m = mollusk_for_pools(T0, SLOT_HASH);
-    let (mut proof, root) = planted_chain(&f.buyer, 32);
+    // The root is the fold of all 33 entries, so only the length bound can refuse this proof
+    // (a 33rd entry that breaks the hash would be refused by the fold alone and would not
+    // tell the bound apart from it).
+    let (proof, root) = planted_chain(&f.buyer, 33);
     let mut pool = fresh_pool(&f, &f.expected_config(), &sol_params(0));
     pool.access_type = AccessType::Allowlist;
     pool.allowlist_root = root;
-    // The first 32 entries fold to the root; a 33rd makes the whole proof invalid.
-    proof.push([0x51; 32]);
+    assert_eq!(
+        proof
+            .iter()
+            .fold(allowlist::leaf(&to_a(&f.buyer)), |acc, s| allowlist::node(&acc, s)),
+        root
+    );
     assert!(!allowlist::verify(&root, &to_a(&f.buyer), &proof));
     let r = gated_buy(&f, &m, &pool, &f.buyer, 1, None, proof, &[]);
     assert_eq!(custom_error(&r), Some(err(E::AllowlistProofInvalid)));

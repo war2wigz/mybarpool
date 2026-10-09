@@ -95,13 +95,16 @@ describe("allowlist (PROGRAM §6.4)", () => {
     }
   });
 
-  it("a proof of more than 32 entries is invalid even when a prefix would verify", () => {
+  it("a proof of more than 32 entries is invalid even when it folds to the root", () => {
     const w = new Uint8Array(32).fill(9);
     const siblings = Array.from({ length: 33 }, (_, i) => new Uint8Array(32).fill(0x50 + i));
     let acc = allowlistLeaf(w);
     for (const s of siblings.slice(0, ALLOWLIST_MAX_PROOF)) acc = allowlistNode(acc, s);
     expect(verifyAllowlistProof(acc, w, siblings.slice(0, 32))).toBe(true);
-    expect(verifyAllowlistProof(acc, w, siblings)).toBe(false);
+    // The root of all 33: only the length bound can refuse this one (a proof whose 33rd
+    // entry breaks the hash is refused by the fold alone and does not test the bound).
+    const root33 = allowlistNode(acc, siblings[32]!);
+    expect(verifyAllowlistProof(root33, w, siblings)).toBe(false);
     expect(ALLOWLIST_MAX_PROOF).toBe(32);
   });
 
