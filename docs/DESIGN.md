@@ -472,7 +472,7 @@ Two kinds, never mixed:
 
 | Kind | Source | Used for | Freshness |
 |---|---|---|---|
-| Chain state | Pool, game, config and sponsorship accounts via the SDK; program events via log subscription | Everything with money in it: ownership, status, prizes, fees, results, activity | Account subscription per open pool page; SDK poll every 30 s elsewhere |
+| Chain state | Pool, game, config and sponsorship accounts via the SDK; program events via the SDK's event subscription (a log subscription on the pool for the signatures, the event bodies read from each transaction's inner instructions, since the program emits with `emit_cpi!`, PROGRAM §7) | Everything with money in it: ownership, status, prizes, fees, results, activity | Account subscription per open pool page; SDK poll every 30 s elsewhere |
 | Live state | Scores WebSocket (`game`, `leading`, `pool`, `event` messages) | Scores, clocks, "Leading", fill counts before the account subscription catches up | Push |
 
 The app also reads a public REST listing (schedule, pools per game, wallet views) as a convenience. If it is unavailable the same lists are built from `getProgramAccounts` through the SDK, slower; no screen depends on the REST layer to function, only to be fast.
