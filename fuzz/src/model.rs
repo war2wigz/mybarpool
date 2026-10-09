@@ -1,5 +1,11 @@
 //! A plain picture of one instruction's inputs and effects, independent of Mollusk's types so
 //! the mutations and the oracle can be built and tested without it.
+//!
+//! `missing_mut_constraint` (anchor-lints `d8116dd`) reads every access to a field of an Anchor
+//! `#[account]` struct as a write to an account of the instruction being analysed; this
+//! crate has no instructions and no accounts, it decodes the program's state to judge it, so
+//! the lint is allowed for the module (listed in `AUDIT-READINESS.md`).
+#![cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 
 /// A 32-byte key.
 pub type Key = [u8; 32];
@@ -36,11 +42,6 @@ pub struct Context {
 
 impl Context {
     /// The account at `key`, if the context carries it.
-    ///
-    /// `missing_mut_constraint` keys on the field name `accounts` and reads the iterator here
-    /// as a write to an Anchor account; this crate has no Anchor accounts (anchor-lints
-    /// `d8116dd`, listed in `AUDIT-READINESS.md`).
-    #[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
     pub fn account(&self, key: &Key) -> Option<&Account> {
         self.accounts.iter().find(|a| a.key == *key)
     }
@@ -68,9 +69,7 @@ pub struct Outcome {
 }
 
 impl Outcome {
-    /// The resulting account at `key`. (The same `missing_mut_constraint` false positive as
-    /// `Context::account`.)
-    #[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
+    /// The resulting account at `key`.
     pub fn account(&self, key: &Key) -> Option<&Account> {
         self.accounts.iter().find(|a| a.key == *key)
     }

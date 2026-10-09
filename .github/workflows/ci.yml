@@ -11,7 +11,11 @@ name: CI
 #              (war2wigz/entropy at ENTROPY_FORK_COMMIT) with solana-verify and
 #              fails unless the bytes equal the committed fixture the Mollusk
 #              and Surfpool suites run (Step 5b).
-#   lints    — OtterSec anchor-lints via cargo dylint (lints.yml).
+#   fuzz     — ejects a Mollusk fixture from every unit-test instruction and
+#              replays and mutates them for a fixed budget under the PROGRAM
+#              §10 Money oracle (fuzz/, build plan Step 8); `protoc` is this
+#              job's only extra tool (the fixture crate's build script).
+#   lints    — OtterSec anchor-lints via cargo dylint, cargo audit (lints.yml).
 # Pinned versions come from rust-toolchain.toml, Anchor.toml and package.json.
 
 on:
@@ -182,6 +186,82 @@ jobs:
       - name: Surfpool logs on failure
         if: failure()
         run: tail -n 200 .surfpool/logs/*.log || true
+
+  fuzz:
+    name: Fuzz (Mollusk fixtures, proptest, §10 oracle)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Install Rust (rust-toolchain.toml)
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.cargo/bin/rustup" show active-toolchain
+
+      - name: Install Solana ${{ env.SOLANA_VERSION }}, Anchor ${{ env.ANCHOR_VERSION }}, Surfpool ${{ env.SURFPOOL_VERSION }}
+        # Every download is checked against the sha256 recorded here (the
+        # digests of the release assets on 2026-10-03). A replaced asset fails
+        # the build instead of silently changing the toolchain.
+        env:
+          AGAVE_INSTALL_INIT_SHA256: 1c2ca01cd33204453fa97762b6fca40772e17e749d58266ea0847d7bc01756e1
+          ANCHOR_SHA256: 0c9c41a3292c281cc6eadb78d6e1c8224d8324a34b0736a89d640fd314db05b7
+          SURFPOOL_SHA256: cb471b00aa3b7d603338eb74ebfec1d23959ecba005b5f1be42ba8d174107fc2
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/toolchain && cd /tmp/toolchain
+          curl -sSfL -o agave-install-init \
+            "https://github.com/anza-xyz/agave/releases/download/v${SOLANA_VERSION}/agave-install-init-x86_64-unknown-linux-gnu"
+          curl -sSfL -o anchor \
+            "https://github.com/coral-xyz/anchor/releases/download/v${ANCHOR_VERSION}/anchor-${ANCHOR_VERSION}-x86_64-unknown-linux-gnu"
+          curl -sSfL -o surfpool.tar.gz \
+            "https://github.com/solana-foundation/surfpool/releases/download/v${SURFPOOL_VERSION}/surfpool-linux-x64.tar.gz"
+          printf '%s  agave-install-init\n%s  anchor\n%s  surfpool.tar.gz\n' \
+            "$AGAVE_INSTALL_INIT_SHA256" "$ANCHOR_SHA256" "$SURFPOOL_SHA256" | sha256sum -c -
+          chmod +x agave-install-init && ./agave-install-init "v${SOLANA_VERSION}"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+          install -m 755 anchor "$HOME/.cargo/bin/anchor"
+          tar -xzf surfpool.tar.gz
+          install -m 755 "$(find . -name surfpool -type f | head -1)" "$HOME/.cargo/bin/surfpool"
+
+      - name: protoc (the fixture crate's build script; this job's only extra tool)
+        run: sudo apt-get install -y protobuf-compiler && protoc --version
+
+      - name: Local wallet for the test provider
+        run: solana-keygen new --no-bip39-passphrase --silent -o "$HOME/.config/solana/id.json"
+
+      - name: Program keypair and declared id
+        # The program keypair is never committed. CI generates one and syncs
+        # declare_id!/Anchor.toml to it so the deployed id matches the binary.
+        run: |
+          set -euo pipefail
+          mkdir -p target/deploy
+          solana-keygen new --no-bip39-passphrase --silent -o target/deploy/mybarpool-keypair.json
+          anchor keys sync
+          grep -n 'mybarpool = ' Anchor.toml
+
+      - name: anchor build --arch v3
+        run: anchor build --arch v3
+
+      - name: Eject a fixture from every unit-test instruction
+        # One file per `process_instruction` call (about 770); a relative path would resolve
+        # against the package directory, so the absolute one is passed.
+        run: |
+          set -euo pipefail
+          EJECT_FUZZ_FIXTURES="$PWD/target/fuzz-fixtures" cargo test -p mybarpool --locked --features fuzz-fixtures
+          ls target/fuzz-fixtures | wc -l
+
+      - name: Replay every seed, then fuzz for 600 seconds
+        # Prints the proptest seed it used; `--seed <n>` reproduces a run. A violation is a
+        # bug or a harness bug; both are red.
+        run: |
+          set -euo pipefail
+          RUST_LOG=error cargo run -p mybarpool-fuzz --release --locked --features runner -- \
+            --fixtures target/fuzz-fixtures --filter all --seconds 600
 
   sdk:
     name: SDK (packages/shared)
