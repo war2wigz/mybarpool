@@ -1,0 +1,3149 @@
+{
+  "spec": "PROGRAM §10 Layout: account fields and sizes, event fields, instruction discriminators, arguments and accounts, error names and codes; additive changes only",
+  "accounts": [
+    {
+      "name": "CreatorCounter",
+      "size": 74,
+      "fields": [
+        {
+          "name": "creator",
+          "type": "pubkey"
+        },
+        {
+          "name": "game",
+          "type": "pubkey"
+        },
+        {
+          "name": "open_count",
+          "type": "u8"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "GameRecord",
+      "size": 153,
+      "fields": [
+        {
+          "name": "key",
+          "type": {
+            "defined": {
+              "name": "GameKey"
+            }
+          }
+        },
+        {
+          "name": "scheduled_kickoff",
+          "type": "i64"
+        },
+        {
+          "name": "recorded_kickoff",
+          "type": "i64"
+        },
+        {
+          "name": "status",
+          "type": {
+            "defined": {
+              "name": "GameStatus"
+            }
+          }
+        },
+        {
+          "name": "quarters_posted",
+          "type": "u8"
+        },
+        {
+          "name": "home_score",
+          "type": {
+            "array": [
+              "u16",
+              4
+            ]
+          }
+        },
+        {
+          "name": "away_score",
+          "type": {
+            "array": [
+              "u16",
+              4
+            ]
+          }
+        },
+        {
+          "name": "posted_at",
+          "type": {
+            "array": [
+              "i64",
+              4
+            ]
+          }
+        },
+        {
+          "name": "final_had_overtime",
+          "type": "bool"
+        },
+        {
+          "name": "marked_at",
+          "type": "i64"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        },
+        {
+          "name": "reserved",
+          "type": {
+            "array": [
+              "u8",
+              64
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "PlatformConfig",
+      "size": 698,
+      "fields": [
+        {
+          "name": "admin",
+          "type": "pubkey"
+        },
+        {
+          "name": "score_authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "entropy_provider",
+          "type": "pubkey"
+        },
+        {
+          "name": "fee_wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "platform_bps",
+          "type": "u16"
+        },
+        {
+          "name": "creator_bps",
+          "type": "u16"
+        },
+        {
+          "name": "addon_budget_bps",
+          "type": "u16"
+        },
+        {
+          "name": "default_preset",
+          "type": "u8"
+        },
+        {
+          "name": "max_open_pools",
+          "type": "u8"
+        },
+        {
+          "name": "max_own_boxes",
+          "type": "u8"
+        },
+        {
+          "name": "preseason_enabled",
+          "type": "bool"
+        },
+        {
+          "name": "paused",
+          "type": "bool"
+        },
+        {
+          "name": "tokens",
+          "type": {
+            "array": [
+              {
+                "defined": {
+                  "name": "TokenRule"
+                }
+              },
+              3
+            ]
+          }
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        },
+        {
+          "name": "reserved",
+          "type": {
+            "array": [
+              "u8",
+              256
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pool",
+      "size": 1442,
+      "fields": [
+        {
+          "name": "game",
+          "type": "pubkey"
+        },
+        {
+          "name": "creator",
+          "type": "pubkey"
+        },
+        {
+          "name": "nonce",
+          "type": "u64"
+        },
+        {
+          "name": "token",
+          "type": "u8"
+        },
+        {
+          "name": "mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "token_program",
+          "type": "pubkey"
+        },
+        {
+          "name": "vault",
+          "type": "pubkey"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "preset",
+          "type": {
+            "defined": {
+              "name": "PayoutPreset"
+            }
+          }
+        },
+        {
+          "name": "access_type",
+          "type": {
+            "defined": {
+              "name": "AccessType"
+            }
+          }
+        },
+        {
+          "name": "gate_key",
+          "type": "pubkey"
+        },
+        {
+          "name": "allowlist_root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "creator_addon_bps",
+          "type": "u16"
+        },
+        {
+          "name": "integrator",
+          "type": "pubkey"
+        },
+        {
+          "name": "integrator_bps",
+          "type": "u16"
+        },
+        {
+          "name": "platform_fee",
+          "type": "u64"
+        },
+        {
+          "name": "creator_fee",
+          "type": "u64"
+        },
+        {
+          "name": "integrator_fee",
+          "type": "u64"
+        },
+        {
+          "name": "status",
+          "type": {
+            "defined": {
+              "name": "PoolStatus"
+            }
+          }
+        },
+        {
+          "name": "sold",
+          "type": "u8"
+        },
+        {
+          "name": "owners",
+          "type": {
+            "array": [
+              "pubkey",
+              25
+            ]
+          }
+        },
+        {
+          "name": "creator_boxes",
+          "type": "u8"
+        },
+        {
+          "name": "sponsored_total",
+          "type": "u64"
+        },
+        {
+          "name": "sponsor_count",
+          "type": "u16"
+        },
+        {
+          "name": "sponsorships_open",
+          "type": "u16"
+        },
+        {
+          "name": "var",
+          "type": "pubkey"
+        },
+        {
+          "name": "var_end_at",
+          "type": "u64"
+        },
+        {
+          "name": "sampled_slot",
+          "type": "u64"
+        },
+        {
+          "name": "sampled_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "var_replacements",
+          "type": "u8"
+        },
+        {
+          "name": "drawn",
+          "type": "bool"
+        },
+        {
+          "name": "home_axis",
+          "type": {
+            "array": [
+              "u8",
+              10
+            ]
+          }
+        },
+        {
+          "name": "away_axis",
+          "type": {
+            "array": [
+              "u8",
+              10
+            ]
+          }
+        },
+        {
+          "name": "prize_pool",
+          "type": "u64"
+        },
+        {
+          "name": "quarter_prize",
+          "type": {
+            "array": [
+              "u64",
+              4
+            ]
+          }
+        },
+        {
+          "name": "quarters_settled",
+          "type": "u8"
+        },
+        {
+          "name": "winning_box",
+          "type": {
+            "array": [
+              "u8",
+              4
+            ]
+          }
+        },
+        {
+          "name": "fees_paid",
+          "type": "bool"
+        },
+        {
+          "name": "unpaid_prize_pool",
+          "type": "u64"
+        },
+        {
+          "name": "returned",
+          "type": "u32"
+        },
+        {
+          "name": "split_amount",
+          "type": "u64"
+        },
+        {
+          "name": "cancelled_by_admin",
+          "type": "bool"
+        },
+        {
+          "name": "abandoned",
+          "type": "bool"
+        },
+        {
+          "name": "created_at",
+          "type": "i64"
+        },
+        {
+          "name": "locked_at",
+          "type": "i64"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        },
+        {
+          "name": "vault_bump",
+          "type": "u8"
+        },
+        {
+          "name": "var_commit",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "reserved",
+          "type": {
+            "array": [
+              "u8",
+              96
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sponsorship",
+      "size": 81,
+      "fields": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "WalletOverride",
+      "size": 43,
+      "fields": [
+        {
+          "name": "wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "max_open_pools",
+          "type": "u8"
+        },
+        {
+          "name": "max_own_boxes",
+          "type": "u8"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BoxesBought",
+      "discriminator": "e83a67d9ca56abb8",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "buyer",
+          "type": "pubkey"
+        },
+        {
+          "name": "boxes",
+          "type": "bytes"
+        },
+        {
+          "name": "count",
+          "type": "u8"
+        },
+        {
+          "name": "sold_after",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "BoxesReclaimed",
+      "discriminator": "435b54b53a782851",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "owner",
+          "type": "pubkey"
+        },
+        {
+          "name": "boxes",
+          "type": "bytes"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "BoxesReturned",
+      "discriminator": "247b601bd76d816c",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "owner",
+          "type": "pubkey"
+        },
+        {
+          "name": "boxes",
+          "type": "bytes"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "BoxesSplit",
+      "discriminator": "1edd54ea7fd37971",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "owner",
+          "type": "pubkey"
+        },
+        {
+          "name": "boxes",
+          "type": "bytes"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "ConfigUpdated",
+      "discriminator": "28f1e67a0b13c6c2",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "admin",
+          "type": "pubkey"
+        },
+        {
+          "name": "score_authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "entropy_provider",
+          "type": "pubkey"
+        },
+        {
+          "name": "fee_wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "platform_bps",
+          "type": "u16"
+        },
+        {
+          "name": "creator_bps",
+          "type": "u16"
+        },
+        {
+          "name": "addon_budget_bps",
+          "type": "u16"
+        },
+        {
+          "name": "default_preset",
+          "type": "u8"
+        },
+        {
+          "name": "max_open_pools",
+          "type": "u8"
+        },
+        {
+          "name": "max_own_boxes",
+          "type": "u8"
+        },
+        {
+          "name": "preseason_enabled",
+          "type": "bool"
+        },
+        {
+          "name": "paused",
+          "type": "bool"
+        },
+        {
+          "name": "tokens",
+          "type": {
+            "array": [
+              {
+                "defined": {
+                  "name": "TokenRule"
+                }
+              },
+              3
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "DigitsDrawn",
+      "discriminator": "413f724703407137",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "var",
+          "type": "pubkey"
+        },
+        {
+          "name": "value",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "home_axis",
+          "type": {
+            "array": [
+              "u8",
+              10
+            ]
+          }
+        },
+        {
+          "name": "away_axis",
+          "type": {
+            "array": [
+              "u8",
+              10
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GameCreated",
+      "discriminator": "da19965eb1706002",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "game",
+          "type": "pubkey"
+        },
+        {
+          "name": "key",
+          "type": {
+            "defined": {
+              "name": "GameKey"
+            }
+          }
+        },
+        {
+          "name": "scheduled_kickoff",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "GameMarked",
+      "discriminator": "711fc13dc29bba3c",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "game",
+          "type": "pubkey"
+        },
+        {
+          "name": "status",
+          "type": {
+            "defined": {
+              "name": "GameStatus"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "GateKeyRotated",
+      "discriminator": "43bea8659de2d781",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "KickoffUpdated",
+      "discriminator": "9a691295db4e49ba",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "game",
+          "type": "pubkey"
+        },
+        {
+          "name": "old",
+          "type": "i64"
+        },
+        {
+          "name": "new",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "OverrideClosed",
+      "discriminator": "88e57235eeaf381e",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "max_open_pools",
+          "type": "u8"
+        },
+        {
+          "name": "max_own_boxes",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "OverrideSet",
+      "discriminator": "2090fd288827e94f",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "max_open_pools",
+          "type": "u8"
+        },
+        {
+          "name": "max_own_boxes",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "PoolCancelled",
+      "discriminator": "cc0f56047c61aaad",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "PoolClosed",
+      "discriminator": "6a2e1de72a2c4977",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "destination",
+          "type": "pubkey"
+        },
+        {
+          "name": "dust",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "PoolCreated",
+      "discriminator": "ca2c295868dc9d52",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "game",
+          "type": "pubkey"
+        },
+        {
+          "name": "creator",
+          "type": "pubkey"
+        },
+        {
+          "name": "token",
+          "type": "u8"
+        },
+        {
+          "name": "mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "preset",
+          "type": {
+            "defined": {
+              "name": "PayoutPreset"
+            }
+          }
+        },
+        {
+          "name": "access_type",
+          "type": {
+            "defined": {
+              "name": "AccessType"
+            }
+          }
+        },
+        {
+          "name": "creator_addon_bps",
+          "type": "u16"
+        },
+        {
+          "name": "integrator",
+          "type": "pubkey"
+        },
+        {
+          "name": "integrator_bps",
+          "type": "u16"
+        },
+        {
+          "name": "platform_fee",
+          "type": "u64"
+        },
+        {
+          "name": "creator_fee",
+          "type": "u64"
+        },
+        {
+          "name": "integrator_fee",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "PoolLocked",
+      "discriminator": "dea168b140494f95",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "locked_at",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "QuarterSettled",
+      "discriminator": "669d66567526b76b",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "quarter",
+          "type": "u8"
+        },
+        {
+          "name": "home",
+          "type": "u16"
+        },
+        {
+          "name": "away",
+          "type": "u16"
+        },
+        {
+          "name": "box_index",
+          "type": "u8"
+        },
+        {
+          "name": "winner",
+          "type": "pubkey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "fees_paid_now",
+          "type": "bool"
+        },
+        {
+          "name": "platform_fee",
+          "type": "u64"
+        },
+        {
+          "name": "creator_fee",
+          "type": "u64"
+        },
+        {
+          "name": "integrator_fee",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "ScoresPosted",
+      "discriminator": "582024735bd0d078",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "game",
+          "type": "pubkey"
+        },
+        {
+          "name": "quarter",
+          "type": "u8"
+        },
+        {
+          "name": "home",
+          "type": "u16"
+        },
+        {
+          "name": "away",
+          "type": "u16"
+        },
+        {
+          "name": "is_final",
+          "type": "bool"
+        },
+        {
+          "name": "had_overtime",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "Sponsored",
+      "discriminator": "0d35280da5505583",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "sponsor",
+          "type": "pubkey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "sponsored_total",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "SponsorshipClosed",
+      "discriminator": "1fd4879fa7452f23",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "sponsor",
+          "type": "pubkey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "SponsorshipReturned",
+      "discriminator": "6328657c42e11635",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "sponsor",
+          "type": "pubkey"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "VarReplaced",
+      "discriminator": "29d46f0f06da76ec",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "old_var",
+          "type": "pubkey"
+        },
+        {
+          "name": "new_var",
+          "type": "pubkey"
+        },
+        {
+          "name": "end_at",
+          "type": "u64"
+        },
+        {
+          "name": "replacements",
+          "type": "u8"
+        },
+        {
+          "name": "commit",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "VarSampled",
+      "discriminator": "1295e958233185f8",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "var",
+          "type": "pubkey"
+        },
+        {
+          "name": "sampler",
+          "type": "pubkey"
+        },
+        {
+          "name": "slot",
+          "type": "u64"
+        },
+        {
+          "name": "end_at",
+          "type": "u64"
+        },
+        {
+          "name": "slot_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "VarSet",
+      "discriminator": "eb19838a3bb1f9ac",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "var",
+          "type": "pubkey"
+        },
+        {
+          "name": "end_at",
+          "type": "u64"
+        },
+        {
+          "name": "commit",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "instructions": [
+    {
+      "name": "buy",
+      "discriminator": "66063d1201daebea",
+      "args": [
+        {
+          "name": "count",
+          "type": "u8"
+        },
+        {
+          "name": "allowlist_proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "accounts": [
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "counter",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "wallet_override",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "buyer_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "slot_hashes",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "gate_key",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "cancel_pool",
+      "discriminator": "d30b1b64fc73394d",
+      "args": [],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": false,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "counter",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "close_counter",
+      "discriminator": "04ec34f86b92bb31",
+      "args": [],
+      "accounts": [
+        {
+          "name": "counter",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "fee_wallet",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "close_pool",
+      "discriminator": "8cbdd117ef3eef0b",
+      "args": [],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "fee_wallet",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "destination_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "close_sponsorship",
+      "discriminator": "3031258b02afffa1",
+      "args": [],
+      "accounts": [
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "sponsorship",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "sponsor",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "close_wallet_override",
+      "discriminator": "9671172e8dd20364",
+      "args": [
+        {
+          "name": "wallet",
+          "type": "pubkey"
+        }
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "wallet_override",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "create_game",
+      "discriminator": "7c454b42b8dc48ce",
+      "args": [
+        {
+          "name": "key",
+          "type": {
+            "defined": {
+              "name": "GameKey"
+            }
+          }
+        },
+        {
+          "name": "scheduled_kickoff",
+          "type": "i64"
+        }
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "create_pool",
+      "discriminator": "e992d18ecf6840bc",
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "CreatePoolParams"
+            }
+          }
+        }
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "counter",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "wallet_override",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "creator_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "slot_hashes",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "draw",
+      "discriminator": "3d283eb81fb01882",
+      "args": [],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "writable": false,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "var",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "discriminator": "afaf6d1f0d989bed",
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "InitializeParams"
+            }
+          }
+        }
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program_data",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "mint_1",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint_2",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "mark_game",
+      "discriminator": "0265a096dd6f413d",
+      "args": [
+        {
+          "name": "new_status",
+          "type": {
+            "defined": {
+              "name": "GameStatus"
+            }
+          }
+        }
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": false,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "post_scores",
+      "discriminator": "29f18b054c0e0d08",
+      "args": [
+        {
+          "name": "quarter",
+          "type": "u8"
+        },
+        {
+          "name": "home",
+          "type": "u16"
+        },
+        {
+          "name": "away",
+          "type": "u16"
+        },
+        {
+          "name": "is_final",
+          "type": "bool"
+        },
+        {
+          "name": "had_overtime",
+          "type": "bool"
+        }
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "writable": false,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "reclaim",
+      "discriminator": "2cb1ecf9916da3ba",
+      "args": [],
+      "accounts": [
+        {
+          "name": "box_owner",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "counter",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "box_owner_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "reclaim_sponsorship",
+      "discriminator": "0cbf2e3cc664d1c6",
+      "args": [],
+      "accounts": [
+        {
+          "name": "sponsor",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "sponsorship",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "counter",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "sponsor_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "replace_var",
+      "discriminator": "2a63837065a7347d",
+      "args": [],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": false,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "new_var",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "return_boxes",
+      "discriminator": "2ae989a88b7cdbd3",
+      "args": [],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "counter",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "return_sponsorship",
+      "discriminator": "19e3912cec0ad7da",
+      "args": [],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "sponsorship",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "sponsor",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "sponsor_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "rotate_gate_key",
+      "discriminator": "ddec6f798b2985c4",
+      "args": [
+        {
+          "name": "new_key",
+          "type": "pubkey"
+        }
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": false,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "sample_var",
+      "discriminator": "2532a93da8e42bbd",
+      "args": [],
+      "accounts": [
+        {
+          "name": "sampler",
+          "writable": false,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "var",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "slot_hashes",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "entropy_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "set_var",
+      "discriminator": "b587ab22b9dd9e71",
+      "args": [],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "writable": false,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "var",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "set_wallet_override",
+      "discriminator": "32419cc91424cbd6",
+      "args": [
+        {
+          "name": "wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "max_open_pools",
+          "type": "u8"
+        },
+        {
+          "name": "max_own_boxes",
+          "type": "u8"
+        }
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "wallet_override",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "settle",
+      "discriminator": "af2ab957908366d4",
+      "args": [
+        {
+          "name": "quarter",
+          "type": "u8"
+        }
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "winner",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "fee_wallet",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "integrator",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "winner_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "fee_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "creator_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "integrator_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "split",
+      "discriminator": "7cbd1b2bd8289342",
+      "args": [],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "associated_token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "sponsor",
+      "discriminator": "b26cb1a5efda0d7f",
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ],
+      "accounts": [
+        {
+          "name": "sponsor",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "sponsorship",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "sponsor_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "update_config",
+      "discriminator": "1d9efcbf0a53db63",
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "UpdateConfigParams"
+            }
+          }
+        }
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": false,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "mint_1",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint_2",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "update_kickoff",
+      "discriminator": "eb6388956cfccbbe",
+      "args": [
+        {
+          "name": "new_time",
+          "type": "i64"
+        }
+      ],
+      "accounts": [
+        {
+          "name": "score_authority",
+          "writable": false,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "name": "Unauthorized",
+      "code": 6000
+    },
+    {
+      "name": "Paused",
+      "code": 6001
+    },
+    {
+      "name": "GameNotScheduled",
+      "code": 6002
+    },
+    {
+      "name": "GameAlreadyMarked",
+      "code": 6003
+    },
+    {
+      "name": "SalesClosed",
+      "code": 6004
+    },
+    {
+      "name": "KickoffInPast",
+      "code": 6005
+    },
+    {
+      "name": "KickoffOutOfBounds",
+      "code": 6006
+    },
+    {
+      "name": "KickoffUpdateTooLate",
+      "code": 6007
+    },
+    {
+      "name": "QuarterOutOfOrder",
+      "code": 6008
+    },
+    {
+      "name": "QuarterTooSoon",
+      "code": 6009
+    },
+    {
+      "name": "ScoreDecreased",
+      "code": 6010
+    },
+    {
+      "name": "FinalFlagMismatch",
+      "code": 6011
+    },
+    {
+      "name": "TokenDisabled",
+      "code": 6012
+    },
+    {
+      "name": "PriceOffLadder",
+      "code": 6013
+    },
+    {
+      "name": "InvalidPreset",
+      "code": 6014
+    },
+    {
+      "name": "InvalidAccessType",
+      "code": 6015
+    },
+    {
+      "name": "GateKeyMissing",
+      "code": 6016
+    },
+    {
+      "name": "GateKeyNotSigner",
+      "code": 6017
+    },
+    {
+      "name": "AllowlistProofInvalid",
+      "code": 6018
+    },
+    {
+      "name": "AddonBudgetExceeded",
+      "code": 6019
+    },
+    {
+      "name": "IntegratorMismatch",
+      "code": 6020
+    },
+    {
+      "name": "OpenPoolLimit",
+      "code": 6021
+    },
+    {
+      "name": "OwnBoxLimit",
+      "code": 6022
+    },
+    {
+      "name": "OverrideRequired",
+      "code": 6023
+    },
+    {
+      "name": "NothingToBuy",
+      "code": 6024
+    },
+    {
+      "name": "TooManyBoxes",
+      "code": 6025
+    },
+    {
+      "name": "PoolNotOpen",
+      "code": 6026
+    },
+    {
+      "name": "PoolNotLocked",
+      "code": 6027
+    },
+    {
+      "name": "PoolNotDrawn",
+      "code": 6028
+    },
+    {
+      "name": "SponsorshipTooSmall",
+      "code": 6029
+    },
+    {
+      "name": "SponsorshipCapExceeded",
+      "code": 6030
+    },
+    {
+      "name": "VarAlreadySet",
+      "code": 6031
+    },
+    {
+      "name": "VarNotSet",
+      "code": 6032
+    },
+    {
+      "name": "VarMismatch",
+      "code": 6033
+    },
+    {
+      "name": "VarNotEntropy",
+      "code": 6034
+    },
+    {
+      "name": "VarProviderMismatch",
+      "code": 6035
+    },
+    {
+      "name": "VarNotFresh",
+      "code": 6036
+    },
+    {
+      "name": "VarNotRevealed",
+      "code": 6037
+    },
+    {
+      "name": "VarNotSampledHere",
+      "code": 6038
+    },
+    {
+      "name": "SampleWindowMissed",
+      "code": 6039
+    },
+    {
+      "name": "VarFallbackHash",
+      "code": 6040
+    },
+    {
+      "name": "TooManyVarReplacements",
+      "code": 6041
+    },
+    {
+      "name": "AlreadyDrawn",
+      "code": 6042
+    },
+    {
+      "name": "ScoresNotPosted",
+      "code": 6043
+    },
+    {
+      "name": "WinnerMismatch",
+      "code": 6044
+    },
+    {
+      "name": "FeeAccountMismatch",
+      "code": 6045
+    },
+    {
+      "name": "NotReturnable",
+      "code": 6046
+    },
+    {
+      "name": "FeesAlreadyPaid",
+      "code": 6047
+    },
+    {
+      "name": "NotSuspended",
+      "code": 6048
+    },
+    {
+      "name": "NotSplittable",
+      "code": 6049
+    },
+    {
+      "name": "ReclaimTooEarly",
+      "code": 6050
+    },
+    {
+      "name": "NotOwner",
+      "code": 6051
+    },
+    {
+      "name": "NothingToReturn",
+      "code": 6052
+    },
+    {
+      "name": "SponsorshipsStillOpen",
+      "code": 6053
+    },
+    {
+      "name": "BoxesStillOutstanding",
+      "code": 6054
+    },
+    {
+      "name": "PoolNotTerminal",
+      "code": 6055
+    },
+    {
+      "name": "CounterNotEmpty",
+      "code": 6056
+    },
+    {
+      "name": "UnsupportedMintExtension",
+      "code": 6057
+    },
+    {
+      "name": "MathOverflow",
+      "code": 6058
+    },
+    {
+      "name": "InvalidConfig",
+      "code": 6059
+    },
+    {
+      "name": "InvalidGameKey",
+      "code": 6060
+    },
+    {
+      "name": "InvalidGameStatus",
+      "code": 6061
+    },
+    {
+      "name": "SampleTooEarly",
+      "code": 6062
+    },
+    {
+      "name": "VarAlreadySampled",
+      "code": 6063
+    },
+    {
+      "name": "VarCommitMismatch",
+      "code": 6064
+    }
+  ]
+}
