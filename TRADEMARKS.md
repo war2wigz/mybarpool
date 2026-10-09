@@ -28,4 +28,4 @@ Solana, Seeker, ORE, SKR and Squads are trademarks of their respective owners.
 
 ## Questions
 
-Open an issue in this repository or write to hello@mybarpool.com.
+Open an issue in this repository or write to security@mybarpool.com.
