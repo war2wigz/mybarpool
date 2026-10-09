@@ -217,4 +217,4 @@ anchor test --skip-build      # Surfpool localnet suite, forking mainnet
 - Code in this repository is licensed under [Apache-2.0](LICENSE).
 - The licence covers the code, not the name or the sign. "MyBarPool", the helmet mark in the brand colors and mybarpool.com are trademarks; see [TRADEMARKS.md](TRADEMARKS.md). NFL team names and logos belong to the NFL and its clubs; MyBarPool is not affiliated with or endorsed by them, and uses no team logos (teams are shown by abbreviation and colors on a generic helmet).
 - Found a vulnerability? See [SECURITY.md](SECURITY.md). Please don't open a public issue for it.
-- An independent audit of the program will be completed and published before the first mainnet deploy.
+- An independent audit of the program will be completed and published before the first mainnet deploy. Reviewers start at [`programs/mybarpool/AUDIT-READINESS.md`](programs/mybarpool/AUDIT-READINESS.md): scope and build, the trust model, every PROGRAM §10 invariant with its named tests, every unchecked account with the constraint that makes it safe, the lints, the dependency tree, the compute table.
