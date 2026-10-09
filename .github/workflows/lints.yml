@@ -6,6 +6,11 @@ name: Lints
 # audit), so a warning here fails the build. The three rules PROGRAM §10
 # writes out (missing_account_reload, arbitrary_cpi_call,
 # overconstrained_seed_account) are among them.
+#
+# cargo-audit (build plan Step 8): `cargo audit --deny warnings` against the
+# RustSec database, with `.cargo/audit.toml` ignoring exactly the recorded
+# transitive `unmaintained` advisories (each with its path and owner). A fifth
+# warning, or any vulnerability, fails the build; the database moves daily.
 
 on:
   push:
@@ -17,6 +22,7 @@ permissions:
 
 env:
   DYLINT_NIGHTLY: nightly-2025-09-18
+  CARGO_AUDIT_VERSION: "0.22.2"
 
 jobs:
   anchor-lints:
@@ -44,3 +50,26 @@ jobs:
         run: cargo dylint --all --workspace -- --lib
         env:
           DYLINT_RUSTFLAGS: -D warnings
+
+  cargo-audit:
+    name: cargo audit --deny warnings
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Install Rust (rust-toolchain.toml)
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.cargo/bin/rustup" show active-toolchain
+
+      - name: Install cargo-audit ${{ env.CARGO_AUDIT_VERSION }}
+        run: cargo install cargo-audit --locked --version "$CARGO_AUDIT_VERSION"
+
+      - name: cargo audit --deny warnings
+        # The ignore list and its reasons live in .cargo/audit.toml.
+        run: cargo audit --deny warnings

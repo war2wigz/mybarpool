@@ -1,0 +1,17 @@
+# `cargo audit --deny warnings` in the Lints workflow (build plan Step 8). Every id below is
+# an `unmaintained` advisory on a transitive dependency none of this repository's crates
+# names directly; each is the upstream owner's to replace. A fifth warning, or any
+# vulnerability, fails the build. Re-check the list whenever a pin moves.
+[advisories]
+ignore = [
+    # bincode 1.3.3 (RUSTSEC-2025-0141, unmaintained): anchor-lang 1.2.0 → bincode. Anchor's.
+    "RUSTSEC-2025-0141",
+    # derivative 2.2.0 (RUSTSEC-2024-0388, unmaintained): solana-syscalls 4.3.0 → solana-poseidon
+    # → light-poseidon → ark-bn254 → ark-ec → derivative. Agave's (dev-side here, via Mollusk).
+    "RUSTSEC-2024-0388",
+    # paste 1.0.15 (RUSTSEC-2024-0436, unmaintained): the same ark-* path, through ark-ff.
+    "RUSTSEC-2024-0436",
+    # libsecp256k1 0.7.2 (RUSTSEC-2025-0161, unmaintained): solana-syscalls 4.3.0 →
+    # libsecp256k1. Agave's (dev-side here, via Mollusk).
+    "RUSTSEC-2025-0161",
+]
