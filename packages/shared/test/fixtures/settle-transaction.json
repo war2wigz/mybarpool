@@ -1,0 +1,202 @@
+{
+  "note": "Captured from localnet (Surfpool 1.6.0) with getTransaction(maxSupportedTransactionVersion: 1, encoding: base64): a settle (QuarterSettled) and the locking buy (BoxesBought, PoolLocked) on the same pool. bigints are decimal strings.",
+  "programAddress": "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw",
+  "pool": "DpD9pT8kdtenu4GJTB1jLJUsof5UYCnpAkh9FtqoKoLx",
+  "settle": {
+    "slot": "455087125",
+    "transaction": [
+      "Acxkbxp82vh46ydPCGqVqQ8CfOvhbi03ndwD8ejHgFYVHqrhR4fEOlKU9LoyGCOBQ49Qxj+HuHp9/UXMOzHSPQqAAQAGDGolR3jfUsKgqnX1WGMh8/9fVodycfDWLNhS2RJQjY5gSBZwuWGO4ptn8n4NbpwQPsSCBuxDNiwO+2QUYznmn+y+ZEgQAFsOr9SisHaTn2ACJsZ1OQ2CMC16lyJ+bWtsbcgrGGBDzUXxq/LjahaI1zTkWSKwW6YuYvT9GTiRPQ0+3lN2k77SPRqvySA+jj8aNAjW7mwNO7LX1BuzMVu9QoQGTWQGnBFQKakn5cPKUrVkhqKWR1mwouEITYuORkdATgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKKp1BSlh0CDfdUpB7T94MNFspU8mB9WgOCw2aWRd34qNxsMbca5buf+oIbIYdNoLVAhRCo1DyMIPQfUK9g1YpAMGRm/lIRcy/+ytunLDm+e8jOW7xfcSayxDmzpAAAAAt9MVU/G9fBkMCcjEAURVXbHHWWxNOtbnV5p00sqMaOzd2HjmTD3PzvfbN1tyoBH+VKt3xfvY+1iBaTw9MFrw6AaGhZ04yAqXIUgYQWkX4L+PyhV+Rk+YzP0P+p34R9AzAgkABQKAGgYABxMACwoCBQQDAQcHBwcHBwcHBggHCa8quVeQg2bUAQA=",
+      "base64"
+    ],
+    "meta": {
+      "err": null,
+      "status": {
+        "Ok": null
+      },
+      "fee": "5000",
+      "preBalances": [
+        "99995452960",
+        "99736771000",
+        "10927200",
+        "0",
+        "99799995000",
+        "1250890880",
+        "1",
+        "1141440",
+        "0",
+        "1",
+        "1955760",
+        "5748960"
+      ],
+      "postBalances": [
+        "99995447960",
+        "99824271000",
+        "10927200",
+        "62500000",
+        "100019995000",
+        "880890880",
+        "1",
+        "1141440",
+        "0",
+        "1",
+        "1955760",
+        "5748960"
+      ],
+      "innerInstructions": [
+        {
+          "index": 1,
+          "instructions": [
+            {
+              "programIdIndex": 6,
+              "accounts": [5, 4],
+              "data": "3Bxs411ioHkBkz8o",
+              "stackHeight": 2
+            },
+            {
+              "programIdIndex": 6,
+              "accounts": [5, 3],
+              "data": "3Bxs4TjQWUyuAo8B",
+              "stackHeight": 2
+            },
+            {
+              "programIdIndex": 6,
+              "accounts": [5, 1],
+              "data": "3Bxs4eM7XHoZNo3D",
+              "stackHeight": 2
+            },
+            {
+              "programIdIndex": 7,
+              "accounts": [8],
+              "data": "6HxLgtaetwkQDjBVnhFDPEUEQ1kcuy8LCTBBn5U4gqWaSvLY5a1ge26wrefoXidEeMEZEArjFe5b9Jdc1neoWUZmtkbXdLsQHsqff3eRGNsSLnztpGNEEB5usA5hwGfbwttCnrCMR92SgWeiMwt8dcEmAsyE4xqLfyhkYjMEaDKifq",
+              "stackHeight": 2
+            }
+          ]
+        }
+      ],
+      "logMessages": [
+        "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+        "Program ComputeBudget111111111111111111111111111111 success",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw invoke [1]",
+        "Program log: Instruction: Settle",
+        "Program 11111111111111111111111111111111 invoke [2]",
+        "Program 11111111111111111111111111111111 success",
+        "Program 11111111111111111111111111111111 invoke [2]",
+        "Program 11111111111111111111111111111111 success",
+        "Program 11111111111111111111111111111111 invoke [2]",
+        "Program 11111111111111111111111111111111 success",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw invoke [2]",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw consumed 423 of 377647 compute units",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw success",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw consumed 26518 of 399850 compute units",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw success"
+      ],
+      "preTokenBalances": [],
+      "postTokenBalances": [],
+      "rewards": [],
+      "loadedAddresses": {
+        "writable": [],
+        "readonly": []
+      },
+      "returnData": {
+        "programId": "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw",
+        "data": ["", "base64"]
+      },
+      "computeUnitsConsumed": "26668"
+    },
+    "version": 0,
+    "blockTime": "1791597548"
+  },
+  "buy": {
+    "slot": "455028322",
+    "transaction": [
+      "Aey+TkzYaLTxAA5mAwASGDOGazKuD4HTl0nMjdyT4AibDxphHlGeXPOPLixV7kz84mBccGQBCj8HbrNhzkRmJwyAAQAHC7da34HPTpiZzdK7j7wIyjKn0VAwaftsyTn/COKpUtg9HPHkDamuceQyg++Y1bzKAFuAqcjQugv2ttbS4wrrE3u+ZEgQAFsOr9SisHaTn2ACJsZ1OQ2CMC16lyJ+bWtsbQZNZAacEVApqSflw8pStWSGopZHWbCi4QhNi45GR0BOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoqnUFKWHQIN91SkHtP3gw0WylTyYH1aA4LDZpZF3filzFAaG7dvD0kVlTIvOkDxXccNl+2sOUoOHzZR1Lv2tejcbDG3GuW7n/qCGyGHTaC1QIUQqNQ8jCD0H1CvYNWKS30xVT8b18GQwJyMQBRFVdscdZbE061udXmnTSyoxo7N3YeOZMPc/O99s3W3KgEf5Uq3fF+9j7WIFpPD0wWvDoBqfVFxkvCq/G8mXj+3fMetqCxSnQvjsTbi0AVSAAAAAGhoWdOMgKlyFIGEFpF+C/j8oVfkZPmMz9D/qd+EfPogEFDwAJCAIDAQYFBQUKBAUHBQ1mBj0SAdrr6gQAAAAAAA==",
+      "base64"
+    ],
+    "meta": {
+      "err": null,
+      "status": {
+        "Ok": null
+      },
+      "fee": "5000",
+      "preBalances": [
+        "100000000000",
+        "1405920",
+        "10927200",
+        "1050890880",
+        "1",
+        "1141440",
+        "0",
+        "0",
+        "1955760",
+        "5748960",
+        "1"
+      ],
+      "postBalances": [
+        "99799995000",
+        "1405920",
+        "10927200",
+        "1250890880",
+        "1",
+        "1141440",
+        "0",
+        "0",
+        "1955760",
+        "5748960",
+        "1"
+      ],
+      "innerInstructions": [
+        {
+          "index": 0,
+          "instructions": [
+            {
+              "programIdIndex": 4,
+              "accounts": [0, 3],
+              "data": "3Bxs3zz3fjzUYuEP",
+              "stackHeight": 2
+            },
+            {
+              "programIdIndex": 5,
+              "accounts": [7],
+              "data": "TQuypfz2BE6ZbudriPxxX3JU9Z87Nbm7ffxMp3He9iQQuGFt8hMDu7zsURB6jPaV6HW1LVZHqbYC1xt8D4YeV6zrjp54yoYfqxk2snSc6yAGmw8yGcwYw8r1R3STANDR21nXdJ",
+              "stackHeight": 2
+            },
+            {
+              "programIdIndex": 5,
+              "accounts": [7],
+              "data": "5Zhvbp3LpSwib6QYTyw1iNifojDWsTPrirbApZH7Apcq2ZESUQ6VnP35iyuxT7WNWhcZJCmR13tWpkTWbMwkXKnf",
+              "stackHeight": 2
+            }
+          ]
+        }
+      ],
+      "logMessages": [
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw invoke [1]",
+        "Program log: Instruction: Buy",
+        "Program 11111111111111111111111111111111 invoke [2]",
+        "Program 11111111111111111111111111111111 success",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw invoke [2]",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw consumed 423 of 174812 compute units",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw success",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw invoke [2]",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw consumed 423 of 172533 compute units",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw success",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw consumed 31995 of 200000 compute units",
+        "Program 3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw success"
+      ],
+      "preTokenBalances": [],
+      "postTokenBalances": [],
+      "rewards": [],
+      "loadedAddresses": {
+        "writable": [],
+        "readonly": []
+      },
+      "returnData": {
+        "programId": "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw",
+        "data": ["", "base64"]
+      },
+      "computeUnitsConsumed": "31995"
+    },
+    "version": 0,
+    "blockTime": "1791585787"
+  }
+}

@@ -7,3 +7,5 @@ export * from "./client.js";
 export * from "./pdas.js";
 export * from "./accounts.js";
 export * from "./errors.js";
+export * from "./events.js";
+export * from "./watch.js";
