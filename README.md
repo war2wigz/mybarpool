@@ -150,7 +150,7 @@ Anyone may build a frontend, bot or integration on the program. Everything that 
 
 - The platform fee, creator fee, add-on and integrator fee are paid inside `settle`.
 - Price steps and creator limits are checked on `create_pool` and `buy`.
-- Private-pool gating is checked on `buy`.
+- Private-pool gating is checked on `buy`: a `link` pool needs its gate key co-signing, an `allowlist` pool a Merkle proof for the buyer. The SDK builds allowlist roots and proofs (`allowlistRoot`, `allowlistProof`; PROGRAM §6.4) and the program only verifies, so a client can recompute any pool's root from the list it is shown.
 - The keeper serves every pool on the program, whichever client created it, at the platform's cost.
 
 What a client chooses: token, price, split, add-on, integrator fee, public or private, which of the allowed tokens its UI offers, and whether to expose sponsoring. What the platform sets: the list of allowed tokens and mints, price steps, fee ceilings, sponsorship caps, creator limits. Sponsorship is program-level, so a pool sponsored through one client shows as sponsored in every client that reads the chain.

@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { allowlistProof, allowlistRoot, canonicalAllowlist } from "../src/allowlist.js";
 import { assignBoxes, type Owner } from "../src/assignment.js";
 import { drawAxes } from "../src/axes.js";
 import { BOXES } from "../src/boxes.js";
@@ -292,6 +293,36 @@ function winnerBulkVectors() {
   return { spec: "PROGRAM §6.3 winner, 1,000 random axis pairs and scores", entries };
 }
 
+/**
+ * Step 8: PROGRAM §6.4 roots and proofs. Lists of 1, 2, 3, 4, 5, 8, 25, 100 and 1,000 wallets
+ * (hex), each with its root, a proof for every member of the lists up to 25 and for ten sampled
+ * members of the larger ones, and three non-members per list. The program's `tests/vectors.rs`
+ * verifies every proof in Rust and refuses every non-member.
+ */
+function allowlistVectors() {
+  const rng = new Prng("vectors/allowlist");
+  const entries = [];
+  for (const n of [1, 2, 3, 4, 5, 8, 25, 100, 1_000]) {
+    const wallets = Array.from({ length: n }, () => rng.pubkey());
+    const root = allowlistRoot(wallets);
+    const canonical = canonicalAllowlist(wallets);
+    const sampled =
+      n <= 25
+        ? canonical
+        : Array.from({ length: 10 }, (_, i) => canonical[Math.floor((i * n) / 10)]!);
+    entries.push({
+      wallets: wallets.map(toHex),
+      root: toHex(root),
+      proofs: sampled.map((w) => ({
+        wallet: toHex(w),
+        proof: allowlistProof(wallets, w).map(toHex),
+      })),
+      nonMembers: Array.from({ length: 3 }, () => toHex(rng.pubkey())),
+    });
+  }
+  return { spec: "PROGRAM §6.4 allowlist root and proof", entries };
+}
+
 const FILES = {
   "assignment.json": assignmentVectors,
   "axes.json": axesVectors,
@@ -301,6 +332,7 @@ const FILES = {
   "fees-bulk.json": feeBulkVectors,
   "axes-bulk.json": axesBulkVectors,
   "winner-bulk.json": winnerBulkVectors,
+  "allowlist.json": allowlistVectors,
 } as const;
 
 describe("shared vector files (PROGRAM §6)", () => {
@@ -314,7 +346,9 @@ describe("shared vector files (PROGRAM §6)", () => {
       }
       expect(existsSync(path), `${file} is missing; run npm run vectors`).toBe(true);
       expect(readFileSync(path, "utf8")).toBe(generated);
-      expect(JSON.parse(generated).entries.length).toBeGreaterThanOrEqual(20);
+      expect(JSON.parse(generated).entries.length).toBeGreaterThanOrEqual(
+        file === "allowlist.json" ? 9 : 20,
+      );
     });
   }
 });

@@ -22,6 +22,7 @@ export * from "./fees.js";
 export * from "./format.js";
 export * from "./sources.js";
 export * from "./sponsors.js";
+export * from "./allowlist.js";
 export { assertU64, U64_MAX, toHex, fromHex } from "./bytes.js";
 
 /** Package version, read by clients that want to log what they shipped with. */
