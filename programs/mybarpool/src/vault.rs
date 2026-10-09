@@ -205,6 +205,14 @@ pub fn pool_signer_seeds<'a>(
 /// SOL out: vault → `to` by `system_program::transfer` signed with the vault seeds (PROGRAM
 /// §3.4, §5.4). `to` is whatever destination the caller has already verified against the pool
 /// or the config.
+/// `arbitrary_cpi_call` names this CPI: its program id is `system_program`, a parameter, and the
+/// lint cannot see that every caller derives it from a `Program<'info, System>`
+/// account, a fixed address by type.
+/// The lint began to see `Pubkey` at all only once a module named
+/// `anchor_lang::prelude::Pubkey` in a signature (its type match is on the printed path, and
+/// `Pubkey` is an alias of `solana_address::Address` in the 3.x crates); the reproduction is in
+/// `AUDIT-READINESS.md`.
+#[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
 pub fn transfer_out_sol<'info>(
     vault: &AccountInfo<'info>,
     to: &AccountInfo<'info>,
@@ -231,6 +239,14 @@ pub fn transfer_out_sol<'info>(
 /// SPL out: vault → `to_token_account` by `transfer_checked` with the mint's decimals, authority
 /// the pool PDA signed with the pool seeds, through the pool's token program (PROGRAM §3.4,
 /// §5.4). The caller has verified `to_token_account` is the recipient's ATA and created it.
+/// `arbitrary_cpi_call` names this CPI: its program id is `token_program`, a parameter, and the
+/// lint cannot see that every caller derives it from an
+/// `Interface<'info, TokenInterface>` the handler has checked against `pool.token_program`.
+/// The lint began to see `Pubkey` at all only once a module named
+/// `anchor_lang::prelude::Pubkey` in a signature (its type match is on the printed path, and
+/// `Pubkey` is an alias of `solana_address::Address` in the 3.x crates); the reproduction is in
+/// `AUDIT-READINESS.md`.
+#[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
 pub fn transfer_out_spl<'info>(
     vault: &AccountInfo<'info>,
     mint: &InterfaceAccount<'info, Mint>,
@@ -261,7 +277,15 @@ pub fn transfer_out_spl<'info>(
 /// `create_idempotent` through the pool's token program: a no-op when the account exists with
 /// this wallet and mint, the ATA program's own error when it exists and differs. The caller has
 /// already checked `ata` is the derived address, so a wrong account never reaches here.
+/// `arbitrary_cpi_call` names this CPI: its program id is `associated_token_program`, a
+/// parameter, and the lint cannot see that every caller derives it from a
+/// `Program<'info, AssociatedToken>` account, a fixed address by type.
+/// The lint began to see `Pubkey` at all only once a module named
+/// `anchor_lang::prelude::Pubkey` in a signature (its type match is on the printed path, and
+/// `Pubkey` is an alias of `solana_address::Address` in the 3.x crates); the reproduction is in
+/// `AUDIT-READINESS.md`.
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
 pub fn create_ata_idempotent<'info>(
     payer: &AccountInfo<'info>,
     ata: &AccountInfo<'info>,

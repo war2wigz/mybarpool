@@ -1,16 +1,20 @@
 //! `buy`, PROGRAM §4.3, and the purchase step it shares with `create_pool`
 //! (so the creator's initial boxes run the identical code path: cap, pot,
-//! assignment, lock, counter).
+//! assignment, lock, counter). The gating step (§4.3, §6.4) is `buy`'s alone:
+//! `create_pool`'s own purchase sets the gate and is not behind it.
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use solana_sdk_ids::sysvar;
 
+use crate::allowlist;
 use crate::constants::{BOXES, CONFIG_SEED, COUNTER_SEED, OVERRIDE_SEED, POOL_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
 use crate::events::{BoxesBought, PoolLocked};
 use crate::slot_hashes::most_recent_slot_hash;
-use crate::state::{CreatorCounter, GameRecord, PlatformConfig, Pool, PoolStatus, WalletOverride};
+use crate::state::{
+    AccessType, CreatorCounter, GameRecord, PlatformConfig, Pool, PoolStatus, WalletOverride,
+};
 use crate::vault::{transfer_in_sol, transfer_in_spl};
 
 /// The two creator limits in force for one wallet: the `WalletOverride` when the slot at
@@ -159,6 +163,45 @@ pub struct Buy<'info> {
     #[account(address = sysvar::slot_hashes::ID)]
     pub slot_hashes: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
+    /// CHECK: read for its key and `is_signer` only, inside the handler, against `pool.gate_key`; never written, never a CPI target.
+    /// PROGRAM §4.3: on a `Link` pool this must be present, equal to `pool.gate_key` and
+    /// signing (`GateKeyNotSigner` for all three); ignored on `Public` and `Allowlist` pools.
+    /// Typed `UncheckedAccount` rather than `Signer` so an absent or non-signing key is §8's
+    /// 6017 and not Anchor's own error.
+    pub gate_key: Option<UncheckedAccount<'info>>,
+}
+
+/// PROGRAM §4.3 gating, after the count and cap checks and before the transfer. `Public`:
+/// nothing. `Link`: the gate key is present, is `pool.gate_key` and signed. `Allowlist`: the
+/// proof has at most 32 entries and folds from the buyer's leaf to `pool.allowlist_root`
+/// (§6.4). The slot is not read on `Public`/`Allowlist`; the proof is not read on
+/// `Public`/`Link`.
+/// `missing_mut_constraint` names `pool.gate_key` here: the field is only read (the MIR
+/// temporary of `require_keys_eq!` is reported as a write, the Step 2 false positive that also
+/// covers `PlatformConfig::validate`).
+#[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
+pub fn gate(
+    pool: &Pool,
+    gate_key: Option<&UncheckedAccount>,
+    buyer: &Pubkey,
+    allowlist_proof: &[[u8; 32]],
+) -> Result<()> {
+    match pool.access_type {
+        AccessType::Public => Ok(()),
+        AccessType::Link => {
+            let g = gate_key.ok_or(MybarpoolError::GateKeyNotSigner)?;
+            require_keys_eq!(g.key(), pool.gate_key, MybarpoolError::GateKeyNotSigner);
+            require!(g.is_signer, MybarpoolError::GateKeyNotSigner);
+            Ok(())
+        }
+        AccessType::Allowlist => {
+            require!(
+                allowlist::verify(&pool.allowlist_root, buyer, allowlist_proof),
+                MybarpoolError::AllowlistProofInvalid
+            );
+            Ok(())
+        }
+    }
 }
 
 /// `missing_mut_constraint` names `config` and `game` here: both are read-only and the lint
@@ -166,7 +209,7 @@ pub struct Buy<'info> {
 /// Shown by `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace -- --lib` without
 /// this line.
 #[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
-pub fn handle_buy(ctx: Context<Buy>, count: u8) -> Result<()> {
+pub fn handle_buy(ctx: Context<Buy>, count: u8, allowlist_proof: Vec<[u8; 32]>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let Buy {
         buyer,
@@ -181,6 +224,7 @@ pub fn handle_buy(ctx: Context<Buy>, count: u8) -> Result<()> {
         token_program,
         slot_hashes,
         system_program,
+        gate_key,
         ..
     } = ctx.accounts;
 
@@ -213,6 +257,12 @@ pub fn handle_buy(ctx: Context<Buy>, count: u8) -> Result<()> {
 
     let vault_info = vault.to_account_info();
     let system_info = system_program.to_account_info();
+    // The gate's verdict is computed here (it reads accounts and hashes, nothing more) and
+    // raised inside the transfer closure: by then `purchase` has checked `count` and the
+    // own-box cap and nothing has moved, which is §4.3's order (a stranger buying zero boxes
+    // on a `Link` pool is `NothingToBuy`, not `GateKeyNotSigner`). `purchase` itself stays
+    // ungated for `create_pool`.
+    let verdict = gate(pool, gate_key.as_ref(), &buyer_key, &allowlist_proof);
     let result = purchase(
         pool,
         counter,
@@ -221,10 +271,13 @@ pub fn handle_buy(ctx: Context<Buy>, count: u8) -> Result<()> {
         &slothash,
         now,
         limits,
-        |amount| match spl {
-            None => transfer_in_sol(buyer, &vault_info, &system_info, amount),
-            Some((mint, from, token_program)) => {
-                transfer_in_spl(from, mint, &vault_info, buyer, token_program, amount)
+        |amount| {
+            verdict?;
+            match spl {
+                None => transfer_in_sol(buyer, &vault_info, &system_info, amount),
+                Some((mint, from, token_program)) => {
+                    transfer_in_spl(from, mint, &vault_info, buyer, token_program, amount)
+                }
             }
         },
     )?;

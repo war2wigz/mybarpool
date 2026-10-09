@@ -69,13 +69,16 @@ pub enum MybarpoolError {
     /// 6015: not one of the three access types, or its key/root is missing.
     #[msg("Invalid access type")]
     InvalidAccessType,
-    /// 6016: a link pool needs its gate key.
+    /// 6016: `create_pool` with `access_type == Link` and a default `gate_key`, or
+    /// `rotate_gate_key` to the default key (§4.3, §8).
     #[msg("Gate key missing")]
     GateKeyMissing,
-    /// 6017: the gate key did not sign.
+    /// 6017: `buy` on a `Link` pool whose `gate_key` account is absent, is not `pool.gate_key`,
+    /// or did not sign (§4.3, §8).
     #[msg("Gate key is not a signer")]
     GateKeyNotSigner,
-    /// 6018: the Merkle proof does not match the allowlist root.
+    /// 6018: `buy` on an `Allowlist` pool whose proof has more than 32 entries or does not fold
+    /// from the buyer's leaf to `pool.allowlist_root` (§4.3, §6.4, §8).
     #[msg("Allowlist proof is invalid")]
     AllowlistProofInvalid,
     /// 6019: creator add-on plus integrator fee exceed the add-on budget.

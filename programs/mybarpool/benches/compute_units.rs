@@ -190,6 +190,59 @@ fn main() {
     );
     let link_accounts = pool_accounts(&f, &m, &config, &link, rent_for(0), 1);
 
+    // Step 8: gating in `buy` (PROGRAM §4.3, §6.4). The gate key signs read-only; the
+    // allowlist rows plant a root at three depths. Depth 32 folds 32 planted siblings (a 2^32
+    // tree is not built); the proof is 1,024 bytes of instruction data.
+    let gate_key = solana_pubkey::Pubkey::new_from_array([10; 32]);
+    let buy_link = buy_ix_gated(
+        &f.buyer,
+        &link,
+        1,
+        TokenPath::default(),
+        Some((gate_key, true)),
+        vec![],
+    );
+    let mut buy_link_accounts = link_accounts.clone();
+    buy_link_accounts.push((gate_key, system_account(0)));
+
+    let two = allowlist_wallets(2);
+    let allow_1 = allowlist_pool(&f, &two);
+    let buy_allow_1 = buy_ix_gated(
+        &two[0],
+        &allow_1,
+        1,
+        TokenPath::default(),
+        None,
+        tree::proof(&two, &two[0]),
+    );
+    let allow_1_accounts = pool_accounts_with_wallets(&f, &m, &allow_1, rent_for(0), 1, &two);
+
+    let many = allowlist_wallets(1_024);
+    let allow_10 = allowlist_pool(&f, &many);
+    let proof_10 = tree::proof(&many, &many[0]);
+    assert_eq!(proof_10.len(), 10);
+    let buy_allow_10 = buy_ix_gated(&many[0], &allow_10, 1, TokenPath::default(), None, proof_10);
+    let allow_10_accounts =
+        pool_accounts_with_wallets(&f, &m, &allow_10, rent_for(0), 1, &many[..1]);
+
+    let proof_32: Vec<[u8; 32]> = (0..32u8)
+        .map(|i| {
+            let mut s = [0x50u8; 32];
+            s[31] = i;
+            s
+        })
+        .collect();
+    let root_32 = proof_32
+        .iter()
+        .fold(mybarpool::allowlist::leaf(&to_a(&f.buyer)), |acc, s| {
+            mybarpool::allowlist::node(&acc, s)
+        });
+    let mut allow_32 = fresh_pool(&f, &config, &sol_params(0));
+    allow_32.access_type = mybarpool::AccessType::Allowlist;
+    allow_32.allowlist_root = root_32;
+    let buy_allow_32 = buy_ix_gated(&f.buyer, &allow_32, 1, TokenPath::default(), None, proof_32);
+    let allow_32_accounts = pool_accounts(&f, &m, &config, &allow_32, rent_for(0), 1);
+
     let close_counter = close_counter_ix(&f.creator, &standard_game(), &f.fee_wallet);
     let mut close_counter_accounts = base_accounts(&f, Some(&config));
     close_counter_accounts.push((
@@ -731,6 +784,18 @@ fn main() {
         .bench(("sponsor_new", &sponsor_new, &open_accounts))
         .bench(("sponsor_top_up", &sponsor_top_up, &top_up_accounts))
         .bench(("rotate_gate_key", &rotate, &link_accounts))
+        .bench(("buy_link_sol", &buy_link, &buy_link_accounts))
+        .bench(("buy_allowlist_sol_depth_1", &buy_allow_1, &allow_1_accounts))
+        .bench((
+            "buy_allowlist_sol_depth_10",
+            &buy_allow_10,
+            &allow_10_accounts,
+        ))
+        .bench((
+            "buy_allowlist_sol_depth_32",
+            &buy_allow_32,
+            &allow_32_accounts,
+        ))
         .bench(("close_counter", &close_counter, &close_counter_accounts))
         .bench(("set_var", &set_var, &set_var_accounts))
         .bench(("sample_var", &sample_var, &sample_var_accounts))

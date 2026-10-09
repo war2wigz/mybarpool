@@ -184,11 +184,6 @@ pub fn handle_create_pool(ctx: Context<CreatePool>, params: CreatePoolParams) ->
         (params.allowlist_root != [0u8; 32]) == (params.access_type == AccessType::Allowlist),
         MybarpoolError::InvalidAccessType
     );
-    // Step 4: Public only; gating in `buy` lands in Step 8, which removes this line.
-    require!(
-        params.access_type == AccessType::Public,
-        MybarpoolError::InvalidAccessType
-    );
     let addon_total = params
         .creator_addon_bps
         .checked_add(params.integrator_bps)

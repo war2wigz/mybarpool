@@ -300,25 +300,20 @@ fn an_unknown_preset_or_access_type_byte_does_not_deserialise() {
 }
 
 #[test]
-fn gate_key_and_allowlist_root_must_match_the_access_type_and_only_public_is_created() {
-    // PROGRAM §4.3: gate_key != default iff Link; allowlist_root != 0 iff Allowlist.
-    // Step 4: Link and Allowlist creation is refused until Step 8 (this brief).
+fn gate_key_and_allowlist_root_must_match_the_access_type() {
+    // PROGRAM §4.3: gate_key != default iff Link; allowlist_root != 0 iff Allowlist
+    // (InvalidAccessType otherwise). Since Step 8 the two consistent gated shapes are created.
     let f = Fixture::new();
     let m = mollusk_for_pools(T0, SLOT_HASH);
     let c = f.expected_config();
-    let key = to_a(&Pubkey::new_unique());
-    let cases = [
+    let key = to_a(&Pubkey::new_from_array([0x61; 32]));
+    let refused = [
         CreatePoolParams {
             gate_key: key,
             ..sol_params(0)
         },
         CreatePoolParams {
             allowlist_root: [1u8; 32],
-            ..sol_params(0)
-        },
-        CreatePoolParams {
-            access_type: AccessType::Link,
-            gate_key: key,
             ..sol_params(0)
         },
         CreatePoolParams {
@@ -327,13 +322,105 @@ fn gate_key_and_allowlist_root_must_match_the_access_type_and_only_public_is_cre
         },
         CreatePoolParams {
             access_type: AccessType::Allowlist,
+            ..sol_params(0)
+        },
+    ];
+    for params in refused {
+        expect_create(&f, &m, &c, params, Err(err(E::InvalidAccessType)));
+    }
+    let created = [
+        CreatePoolParams {
+            access_type: AccessType::Link,
+            gate_key: key,
+            ..sol_params(0)
+        },
+        CreatePoolParams {
+            access_type: AccessType::Allowlist,
             allowlist_root: [1u8; 32],
             ..sol_params(0)
         },
     ];
-    for params in cases {
-        expect_create(&f, &m, &c, params, Err(err(E::InvalidAccessType)));
+    for params in created {
+        expect_create(&f, &m, &c, params, Ok(()));
     }
+}
+
+#[test]
+fn create_pool_link_and_allowlist_are_created_with_their_fields() {
+    // PROGRAM §3.3: gate_key is the co-signer when Link, else default; allowlist_root the
+    // root when Allowlist, else zero. §7 PoolCreated.access_type carries 1 / 2.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let c = f.expected_config();
+    let key = to_a(&gate_key_g());
+    let root = tree::root(&allowlist_wallets(8));
+    let pool_key = pool_pda(&standard_game(), &f.creator, NONCE).0;
+
+    let r = expect_create(
+        &f,
+        &m,
+        &c,
+        CreatePoolParams {
+            access_type: AccessType::Link,
+            gate_key: key,
+            ..sol_params(0)
+        },
+        Ok(()),
+    );
+    let pool = decode_pool(account_of(&r, &pool_key));
+    assert_eq!(pool.access_type, AccessType::Link);
+    assert_eq!(pool.gate_key, key);
+    assert_eq!(pool.allowlist_root, [0u8; 32]);
+    let e: PoolCreated = emitted_event(&r).unwrap();
+    assert_eq!(e.access_type, AccessType::Link);
+    assert_eq!(AccessType::Link as u8, 1);
+
+    let r = expect_create(
+        &f,
+        &m,
+        &c,
+        CreatePoolParams {
+            access_type: AccessType::Allowlist,
+            allowlist_root: root,
+            ..sol_params(0)
+        },
+        Ok(()),
+    );
+    let pool = decode_pool(account_of(&r, &pool_key));
+    assert_eq!(pool.access_type, AccessType::Allowlist);
+    assert_eq!(pool.gate_key, anchor_lang::prelude::Pubkey::default());
+    assert_eq!(pool.allowlist_root, root);
+    let e: PoolCreated = emitted_event(&r).unwrap();
+    assert_eq!(e.access_type, AccessType::Allowlist);
+    assert_eq!(AccessType::Allowlist as u8, 2);
+}
+
+#[test]
+fn create_pool_initial_boxes_on_an_allowlist_pool_are_not_gated() {
+    // PROGRAM §4.3: "runs the buy logic ... without the gating step: the creator is setting the
+    // gate in this very instruction, and need not be on their own allowlist."
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let c = f.expected_config();
+    let wallets = allowlist_wallets(8); // the creator is not among them
+    assert!(!wallets.contains(&f.creator));
+    let r = expect_create(
+        &f,
+        &m,
+        &c,
+        CreatePoolParams {
+            access_type: AccessType::Allowlist,
+            allowlist_root: tree::root(&wallets),
+            ..sol_params(3)
+        },
+        Ok(()),
+    );
+    let pool = decode_pool(account_of(
+        &r,
+        &pool_pda(&standard_game(), &f.creator, NONCE).0,
+    ));
+    assert_eq!((pool.sold, pool.creator_boxes), (3, 3));
+    assert_eq!(event_names(&r), ["PoolCreated", "BoxesBought"]);
 }
 
 #[test]

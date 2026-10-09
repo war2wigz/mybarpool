@@ -617,3 +617,496 @@ fn buy_and_sponsor_are_unaffected_by_neighbouring_instructions() {
         account_of(&sandwiched, &vault_pda(&pool_key(&f)).0).lamports
     );
 }
+
+// ---------------------------------------------------------------------------
+// Gating (PROGRAM §4.3, §6.4; Step 8)
+// ---------------------------------------------------------------------------
+
+use mybarpool::{allowlist, AccessType};
+
+/// `buy` on `pool` with a gate slot and proof, every wallet in `extra` funded.
+#[allow(clippy::too_many_arguments)]
+fn gated_buy(
+    f: &Fixture,
+    m: &mollusk_svm::Mollusk,
+    pool: &Pool,
+    buyer: &Pubkey,
+    count: u8,
+    gate: Option<(Pubkey, bool)>,
+    proof: Vec<[u8; 32]>,
+    extra: &[Pubkey],
+) -> mollusk_svm::result::InstructionResult {
+    let vault = rent_for(0) + u64::from(pool.sold) * PRICE;
+    let mut accounts = pool_accounts_with_wallets(f, m, pool, vault, 1, extra);
+    if let Some((key, _)) = gate {
+        if !accounts.iter().any(|(k, _)| *k == key) {
+            accounts.push((key, system_account(0)));
+        }
+    }
+    m.process_instruction(
+        &buy_ix_gated(buyer, pool, count, TokenPath::default(), gate, proof),
+        &accounts,
+    )
+}
+
+fn assert_nothing_moved(result: &mollusk_svm::result::InstructionResult, f: &Fixture, pool: &Pool) {
+    let key = pool_key(f);
+    assert_eq!(decode_pool(account_of(result, &key)), *pool);
+    assert_eq!(
+        account_of(result, &vault_pda(&key).0).lamports,
+        rent_for(0) + u64::from(pool.sold) * PRICE
+    );
+}
+
+fn boxes_of(result: &mollusk_svm::result::InstructionResult, f: &Fixture, owner: &Pubkey) -> usize {
+    decode_pool(account_of(result, &pool_key(f)))
+        .owners
+        .iter()
+        .filter(|o| **o == to_a(owner))
+        .count()
+}
+
+#[test]
+fn buy_link_with_the_gate_key_signing_succeeds() {
+    // PROGRAM §4.3: on a Link pool the gate_key account is present, equals pool.gate_key and signed.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let pool = link_pool(&f);
+    let r = gated_buy(
+        &f,
+        &m,
+        &pool,
+        &f.buyer,
+        2,
+        Some((gate_key_g(), true)),
+        vec![],
+        &[],
+    );
+    assert!(r.program_result.is_ok(), "{:?}", r.program_result);
+    assert_eq!(boxes_of(&r, &f, &f.buyer), 2);
+    assert_eq!(decode_pool(account_of(&r, &pool_key(&f))).sold, 7);
+    assert_eq!(event_names(&r), ["BoxesBought"]);
+    let e: BoxesBought = emitted_event(&r).unwrap();
+    assert_eq!((e.buyer, e.count, e.sold_after), (to_a(&f.buyer), 2, 7));
+    // The gate key is a read-only signer: untouched.
+    assert_eq!(account_of(&r, &gate_key_g()).lamports, 0);
+}
+
+#[test]
+fn buy_link_without_the_slot_is_gate_key_not_signer() {
+    // PROGRAM §8: GateKeyNotSigner 6017 when the gate_key account is absent.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let pool = link_pool(&f);
+    let r = gated_buy(&f, &m, &pool, &f.buyer, 1, None, vec![], &[]);
+    assert_eq!(custom_error(&r), Some(err(E::GateKeyNotSigner)));
+    assert_eq!(err(E::GateKeyNotSigner), 6017);
+    assert_nothing_moved(&r, &f, &pool);
+}
+
+#[test]
+fn buy_link_with_another_key_signing_is_gate_key_not_signer() {
+    // PROGRAM §4.3: its key equals pool.gate_key.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let pool = link_pool(&f);
+    let r = gated_buy(
+        &f,
+        &m,
+        &pool,
+        &f.buyer,
+        1,
+        Some((f.buyer_2, true)),
+        vec![],
+        &[],
+    );
+    assert_eq!(custom_error(&r), Some(err(E::GateKeyNotSigner)));
+    assert_nothing_moved(&r, &f, &pool);
+}
+
+#[test]
+fn buy_link_with_the_gate_key_not_signing_is_gate_key_not_signer() {
+    // PROGRAM §4.3: "and it signed". The right key without is_signer is still 6017.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let pool = link_pool(&f);
+    let r = gated_buy(
+        &f,
+        &m,
+        &pool,
+        &f.buyer,
+        1,
+        Some((gate_key_g(), false)),
+        vec![],
+        &[],
+    );
+    assert_eq!(custom_error(&r), Some(err(E::GateKeyNotSigner)));
+    assert_nothing_moved(&r, &f, &pool);
+}
+
+#[test]
+fn buy_link_after_rotate_gate_key_takes_only_the_new_key() {
+    // PROGRAM §4.3 rotate_gate_key: only signatures from the new key matter.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let pool = link_pool(&f);
+    let g2 = Pubkey::new_from_array([0x62; 32]);
+    let accounts = pool_accounts_with_wallets(&f, &m, &pool, rent_for(0) + 5 * PRICE, 1, &[g2]);
+    let rotate = rotate_gate_key_ix(&f.creator, &pool, &g2);
+    let with_old = buy_ix_gated(
+        &f.buyer,
+        &pool,
+        1,
+        TokenPath::default(),
+        Some((gate_key_g(), true)),
+        vec![],
+    );
+    let with_new = buy_ix_gated(
+        &f.buyer,
+        &pool,
+        1,
+        TokenPath::default(),
+        Some((g2, true)),
+        vec![],
+    );
+
+    let old_fails = m.process_instruction_chain(&[rotate.clone(), with_old], &accounts);
+    assert_eq!(custom_error(&old_fails), Some(err(E::GateKeyNotSigner)));
+
+    let new_works = m.process_instruction_chain(&[rotate, with_new], &accounts);
+    assert!(
+        new_works.program_result.is_ok(),
+        "{:?}",
+        new_works.program_result
+    );
+    let after = decode_pool(account_of(&new_works, &pool_key(&f)));
+    assert_eq!(after.gate_key, to_a(&g2));
+    assert_eq!(after.sold, 6);
+}
+
+#[test]
+fn buy_link_by_the_creator_is_gated_too() {
+    // PROGRAM §4.3: "The creator buying in their own gated pool through buy is gated like
+    // anyone else." ARCHITECTURE › Limits: 5 own boxes, so the creator at 5 needs a raise.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let mut pool = link_pool(&f);
+    pool.creator_boxes = 2;
+    let r = gated_buy(&f, &m, &pool, &f.creator, 1, None, vec![], &[]);
+    assert_eq!(custom_error(&r), Some(err(E::GateKeyNotSigner)));
+    let r = gated_buy(
+        &f,
+        &m,
+        &pool,
+        &f.creator,
+        1,
+        Some((gate_key_g(), true)),
+        vec![],
+        &[],
+    );
+    assert!(r.program_result.is_ok(), "{:?}", r.program_result);
+    assert_eq!(decode_pool(account_of(&r, &pool_key(&f))).creator_boxes, 3);
+}
+
+#[test]
+fn buy_allowlist_with_a_valid_proof_succeeds() {
+    // PROGRAM §6.4: verify(root, w, proof) for every member; the 8-list and the 25-list.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    for (n, members) in [(8usize, 8usize), (25, 3)] {
+        let wallets = allowlist_wallets(n);
+        let pool = allowlist_pool(&f, &wallets);
+        for w in wallets.iter().take(members) {
+            let proof = tree::proof(&wallets, w);
+            assert!(allowlist::verify(&pool.allowlist_root, &to_a(w), &proof));
+            let r = gated_buy(&f, &m, &pool, w, 1, None, proof, &wallets);
+            assert!(r.program_result.is_ok(), "list {n}: {:?}", r.program_result);
+            assert_eq!(boxes_of(&r, &f, w), 1);
+            assert_eq!(event_names(&r), ["BoxesBought"]);
+        }
+    }
+}
+
+#[test]
+fn buy_allowlist_with_a_wrong_proof_is_allowlist_proof_invalid() {
+    // PROGRAM §8: AllowlistProofInvalid 6018 on a false verify.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let wallets = allowlist_wallets(8);
+    let pool = allowlist_pool(&f, &wallets);
+    assert_eq!(err(E::AllowlistProofInvalid), 6018);
+    let (a, b) = (wallets[0], wallets[5]);
+    let mut flipped = tree::proof(&wallets, &a);
+    flipped[0][0] ^= 0x01;
+    let cases: Vec<(Pubkey, Vec<[u8; 32]>)> = vec![
+        (a, tree::proof(&wallets, &b)),       // another member's proof
+        (a, flipped),                         // one entry flipped
+        (f.buyer, tree::proof(&wallets, &a)), // a non-member with a member's proof
+        (a, vec![]),                          // a member with an empty proof on an 8-list
+    ];
+    for (who, proof) in cases {
+        let r = gated_buy(&f, &m, &pool, &who, 1, None, proof, &wallets);
+        assert_eq!(
+            custom_error(&r),
+            Some(err(E::AllowlistProofInvalid)),
+            "{who}"
+        );
+        assert_nothing_moved(&r, &f, &pool);
+    }
+}
+
+#[test]
+fn buy_allowlist_single_wallet_list_takes_an_empty_proof() {
+    // PROGRAM §6.4: one wallet → root = leaf(w); proof(w) = [].
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let wallets = vec![f.buyer_2];
+    let pool = allowlist_pool(&f, &wallets);
+    assert_eq!(pool.allowlist_root, allowlist::leaf(&to_a(&f.buyer_2)));
+    let r = gated_buy(&f, &m, &pool, &f.buyer_2, 1, None, vec![], &[]);
+    assert!(r.program_result.is_ok(), "{:?}", r.program_result);
+    let r = gated_buy(&f, &m, &pool, &f.buyer, 1, None, vec![], &[]);
+    assert_eq!(custom_error(&r), Some(err(E::AllowlistProofInvalid)));
+}
+
+/// A proof of `depth` planted siblings and the root they fold to from `wallet`'s leaf.
+fn planted_chain(wallet: &Pubkey, depth: usize) -> (Vec<[u8; 32]>, [u8; 32]) {
+    let proof: Vec<[u8; 32]> = (0..depth)
+        .map(|i| {
+            let mut s = [0x50u8; 32];
+            s[31] = i as u8;
+            s
+        })
+        .collect();
+    let root = proof.iter().fold(allowlist::leaf(&to_a(wallet)), |acc, s| {
+        allowlist::node(&acc, s)
+    });
+    (proof, root)
+}
+
+#[test]
+fn buy_allowlist_proof_of_33_entries_is_invalid() {
+    // PROGRAM §6.4: len(proof) ≤ 32, checked before the fold; MAX_PROOF_LEN = 32.
+    assert_eq!(allowlist::MAX_PROOF_LEN, 32);
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let (mut proof, root) = planted_chain(&f.buyer, 32);
+    let mut pool = fresh_pool(&f, &f.expected_config(), &sol_params(0));
+    pool.access_type = AccessType::Allowlist;
+    pool.allowlist_root = root;
+    // The first 32 entries fold to the root; a 33rd makes the whole proof invalid.
+    proof.push([0x51; 32]);
+    assert!(!allowlist::verify(&root, &to_a(&f.buyer), &proof));
+    let r = gated_buy(&f, &m, &pool, &f.buyer, 1, None, proof, &[]);
+    assert_eq!(custom_error(&r), Some(err(E::AllowlistProofInvalid)));
+    assert_nothing_moved(&r, &f, &pool);
+}
+
+#[test]
+fn buy_allowlist_depth_32_proof_verifies() {
+    // PROGRAM §6.4 at the limit: 32 entries fold to the planted root (the bench row's shape).
+    let f = Fixture::new();
+    let mut m = mollusk_for_pools(T0, SLOT_HASH);
+    m.compute_budget.compute_unit_limit = 400_000;
+    let (proof, root) = planted_chain(&f.buyer, 32);
+    let mut pool = fresh_pool(&f, &f.expected_config(), &sol_params(0));
+    pool.access_type = AccessType::Allowlist;
+    pool.allowlist_root = root;
+    let r = gated_buy(&f, &m, &pool, &f.buyer, 1, None, proof, &[]);
+    assert!(r.program_result.is_ok(), "{:?}", r.program_result);
+    assert_eq!(boxes_of(&r, &f, &f.buyer), 1);
+}
+
+#[test]
+fn buy_public_ignores_the_gate_key_slot_and_the_proof() {
+    // PROGRAM §4.3: the slot is ignored on pools that are not Link, the proof on pools that
+    // are not Allowlist.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let (pool, _) = open_pool(&f);
+    let r = gated_buy(
+        &f,
+        &m,
+        &pool,
+        &f.buyer,
+        1,
+        Some((f.buyer_2, true)),
+        vec![[1u8; 32], [2u8; 32], [3u8; 32]],
+        &[],
+    );
+    assert!(r.program_result.is_ok(), "{:?}", r.program_result);
+    assert_eq!(boxes_of(&r, &f, &f.buyer), 1);
+}
+
+#[test]
+fn buy_link_ignores_the_proof_and_allowlist_ignores_the_slot() {
+    // PROGRAM §4.3 "so one client code path serves every pool".
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let link = link_pool(&f);
+    let r = gated_buy(
+        &f,
+        &m,
+        &link,
+        &f.buyer,
+        1,
+        Some((gate_key_g(), true)),
+        vec![[0xEE; 32]; 5],
+        &[],
+    );
+    assert!(r.program_result.is_ok(), "{:?}", r.program_result);
+
+    let wallets = allowlist_wallets(8);
+    let pool = allowlist_pool(&f, &wallets);
+    let r = gated_buy(
+        &f,
+        &m,
+        &pool,
+        &wallets[3],
+        1,
+        Some((f.buyer_2, true)),
+        tree::proof(&wallets, &wallets[3]),
+        &wallets,
+    );
+    assert!(r.program_result.is_ok(), "{:?}", r.program_result);
+}
+
+#[test]
+fn buy_gating_runs_after_the_count_and_cap_checks() {
+    // PROGRAM §4.3 order: count (NothingToBuy 6024) and the own-box cap (OwnBoxLimit) come
+    // before gating; ARCHITECTURE › Limits: 5 own boxes.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let pool = link_pool(&f);
+    let r = gated_buy(&f, &m, &pool, &f.buyer, 0, None, vec![], &[]);
+    assert_eq!(custom_error(&r), Some(err(E::NothingToBuy)));
+    assert_eq!(err(E::NothingToBuy), 6024);
+    // The creator holds 5 already (link_pool): the cap fires even with G signing.
+    let r = gated_buy(
+        &f,
+        &m,
+        &pool,
+        &f.creator,
+        1,
+        Some((gate_key_g(), true)),
+        vec![],
+        &[],
+    );
+    assert_eq!(custom_error(&r), Some(err(E::OwnBoxLimit)));
+}
+
+#[test]
+fn buy_link_and_allowlist_on_an_ore_pool() {
+    // PROGRAM §5.4 with §4.3 gating: the token moves on a gated success.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let buyer_ata = Pubkey::new_from_array([0x7A; 32]);
+    let path = TokenPath {
+        mint: Some(f.ore_mint),
+        token_account: Some(buyer_ata),
+        token_program: Some(token_program_id()),
+    };
+
+    let mut link = fresh_pool(&f, &f.expected_config(), &ore_params(0));
+    link.access_type = AccessType::Link;
+    link.gate_key = to_a(&gate_key_g());
+    let mut accounts = ore_pool_accounts(&f, &m, &link, 0, buyer_ata, 10 * PRICE_ORE);
+    accounts.push((gate_key_g(), system_account(0)));
+    let r = m.process_instruction(
+        &buy_ix_gated(&f.buyer, &link, 1, path, Some((gate_key_g(), true)), vec![]),
+        &accounts,
+    );
+    assert!(r.program_result.is_ok(), "{:?}", r.program_result);
+    assert_eq!(
+        decode_token_amount(account_of(&r, &vault_pda(&pool_key(&f)).0)),
+        PRICE_ORE
+    );
+
+    let wallets = vec![f.buyer, f.buyer_2, f.sponsor];
+    let mut allow = fresh_pool(&f, &f.expected_config(), &ore_params(0));
+    allow.access_type = AccessType::Allowlist;
+    allow.allowlist_root = tree::root(&wallets);
+    let accounts = ore_pool_accounts(&f, &m, &allow, 0, buyer_ata, 10 * PRICE_ORE);
+    let r = m.process_instruction(
+        &buy_ix_gated(
+            &f.buyer,
+            &allow,
+            1,
+            path,
+            None,
+            tree::proof(&wallets, &f.buyer),
+        ),
+        &accounts,
+    );
+    assert!(r.program_result.is_ok(), "{:?}", r.program_result);
+    assert_eq!(
+        decode_token_amount(account_of(&r, &vault_pda(&pool_key(&f)).0)),
+        PRICE_ORE
+    );
+    assert_eq!(
+        decode_token_amount(account_of(&r, &buyer_ata)),
+        9 * PRICE_ORE
+    );
+}
+
+#[test]
+fn buy_gated_is_composable() {
+    // PROGRAM §10 Composability, on the gated path.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let pool = link_pool(&f);
+    let accounts = pool_accounts_with_wallets(&f, &m, &pool, rent_for(0) + 5 * PRICE, 1, &[]);
+    let noop = solana_instruction::Instruction::new_with_bytes(
+        Pubkey::default(),
+        &[2u8, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // SystemInstruction::Transfer { lamports: 1 }
+        vec![
+            solana_instruction::AccountMeta::new(f.buyer, true),
+            solana_instruction::AccountMeta::new(f.admin, false),
+        ],
+    );
+    let buy = buy_ix_gated(
+        &f.buyer,
+        &pool,
+        1,
+        TokenPath::default(),
+        Some((gate_key_g(), true)),
+        vec![],
+    );
+    let alone = m.process_instruction_chain(&[buy.clone()], &accounts);
+    let sandwiched = m.process_instruction_chain(&[noop.clone(), buy, noop], &accounts);
+    assert!(alone.program_result.is_ok() && sandwiched.program_result.is_ok());
+    assert_eq!(
+        decode_pool(account_of(&alone, &pool_key(&f))),
+        decode_pool(account_of(&sandwiched, &pool_key(&f)))
+    );
+}
+
+#[test]
+fn gating_events_and_layout_are_unchanged() {
+    // PROGRAM §3.3: Pool::SIZE 1,442, access_type 186, gate_key 187, allowlist_root 219;
+    // §8: 65 errors (6000–6064); the IDL stays 26 / 6 / 24 / 65 (layout.rs and errors.rs
+    // hold the per-field and per-code assertions).
+    assert_eq!(Pool::SIZE, 1_442);
+    assert_eq!(err(E::VarCommitMismatch), 6064);
+    let idl: serde_json::Value =
+        serde_json::from_str(include_str!("../../../idl/mybarpool.json")).unwrap();
+    let n = |k: &str| idl[k].as_array().unwrap().len();
+    assert_eq!(
+        (n("instructions"), n("accounts"), n("events"), n("errors")),
+        (26, 6, 24, 65)
+    );
+    let buy = idl["instructions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == "buy")
+        .unwrap();
+    assert_eq!(buy["args"][1]["name"], "allowlist_proof");
+    let gate = buy["accounts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|a| a["name"] == "gate_key")
+        .unwrap();
+    assert_eq!(gate["optional"], true);
+}

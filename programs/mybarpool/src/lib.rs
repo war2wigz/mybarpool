@@ -15,6 +15,7 @@
 //! caller — each built and audited against `docs/PROGRAM.md`.
 #![allow(unexpected_cfgs)]
 
+pub mod allowlist;
 pub mod assignment;
 pub mod axes;
 pub mod constants;
@@ -134,9 +135,12 @@ pub mod mybarpool {
 
     /// PROGRAM §4.3 `buy`: buy `count` boxes at the pool's price; positions are assigned by
     /// §6.1 from the SlotHashes sysvar. The 25th box locks the pool. Signer and payer: the
-    /// buyer. Emits `BoxesBought` and, on lock, `PoolLocked`.
-    pub fn buy(ctx: Context<Buy>, count: u8) -> Result<()> {
-        instructions::buy::handle_buy(ctx, count)
+    /// buyer. Gating by `access_type`: a `Link` pool needs the optional `gate_key` account
+    /// present and signing; an `Allowlist` pool needs `allowlist_proof`, the §6.4 Merkle proof
+    /// for the buyer (at most 32 entries); a `Public` pool ignores both. Emits `BoxesBought`
+    /// and, on lock, `PoolLocked`.
+    pub fn buy(ctx: Context<Buy>, count: u8, allowlist_proof: Vec<[u8; 32]>) -> Result<()> {
+        instructions::buy::handle_buy(ctx, count, allowlist_proof)
     }
 
     /// PROGRAM §4.3 `sponsor`: add `amount` (≥ one box price, within the token's cap) to the
@@ -196,6 +200,10 @@ pub mod mybarpool {
     /// PROGRAM §4.5 `close_pool`: close a terminal pool with no open sponsorship, sweeping the
     /// vault's remaining balance and both accounts' rent to `fee_wallet` (the creator when
     /// abandoned). Permissionless. Emits `PoolClosed`.
+    /// `arbitrary_cpi_call` is allowed here for the same reason as on the handler (see
+    /// `instructions/close_pool.rs`): the lint attaches its report to the function it started from,
+    /// and this entry point reaches the vault's outbound CPIs through the handler.
+    #[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
     pub fn close_pool(ctx: Context<ClosePool>) -> Result<()> {
         instructions::close_pool::handle_close_pool(ctx)
     }
@@ -210,6 +218,10 @@ pub mod mybarpool {
 
     /// PROGRAM §4.6 `return_sponsorship`: on a `Returned` pool with its fees untaken, return
     /// one sponsorship in full to the recorded wallet and close its account.
+    /// `arbitrary_cpi_call` is allowed here for the same reason as on the handler (see
+    /// `instructions/return_sponsorship.rs`): the lint attaches its report to the function it started from,
+    /// and this entry point reaches the vault's outbound CPIs through the handler.
+    #[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
     pub fn return_sponsorship(ctx: Context<ReturnSponsorship>) -> Result<()> {
         instructions::return_sponsorship::handle_return_sponsorship(ctx)
     }
@@ -223,6 +235,10 @@ pub mod mybarpool {
     /// PROGRAM §4.6 `split`: on a suspended game after a prize was paid, fix
     /// `split_amount = unpaid_prize_pool / 25`, move the pool to `Split` and pay the owners in
     /// the remaining accounts that share per unreturned box.
+    /// `arbitrary_cpi_call` is allowed here for the same reason as on the handler (see
+    /// `instructions/split.rs`): the lint attaches its report to the function it started from,
+    /// and this entry point reaches the vault's outbound CPIs through the handler.
+    #[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
     pub fn split<'info>(ctx: Context<'info, Split<'info>>) -> Result<()> {
         instructions::split::handle_split(ctx)
     }
@@ -236,6 +252,10 @@ pub mod mybarpool {
 
     /// PROGRAM §4.6 `reclaim_sponsorship`: thirty days after the scheduled kickoff, a sponsor
     /// of a pool with its fees untaken takes their sponsorship back and closes its account.
+    /// `arbitrary_cpi_call` is allowed here for the same reason as on the handler (see
+    /// `instructions/reclaim_sponsorship.rs`): the lint attaches its report to the function it started from,
+    /// and this entry point reaches the vault's outbound CPIs through the handler.
+    #[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
     pub fn reclaim_sponsorship(ctx: Context<ReclaimSponsorship>) -> Result<()> {
         instructions::reclaim_sponsorship::handle_reclaim_sponsorship(ctx)
     }

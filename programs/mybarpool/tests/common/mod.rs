@@ -1197,8 +1197,23 @@ pub fn create_pool_ix(
 }
 
 pub fn buy_ix(buyer: &Pubkey, pool: &Pool, count: u8, token: TokenPath) -> Instruction {
+    buy_ix_gated(buyer, pool, count, token, None, vec![])
+}
+
+/// `buy` with the Step 8 gating inputs: `gate` is the optional `gate_key` slot as
+/// `(key, is_signer)` (absent → the program id, Anchor's convention for an absent optional
+/// account) and `proof` is `allowlist_proof`. The slot sits after `system_program` and before
+/// the event-CPI pair, where the IDL puts it.
+pub fn buy_ix_gated(
+    buyer: &Pubkey,
+    pool: &Pool,
+    count: u8,
+    token: TokenPath,
+    gate: Option<(Pubkey, bool)>,
+    proof: Vec<[u8; 32]>,
+) -> Instruction {
     let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
-    instruction(
+    let mut ix = instruction(
         mybarpool::accounts::Buy {
             buyer: to_a(buyer),
             config: to_a(&config_pda().0),
@@ -1212,11 +1227,26 @@ pub fn buy_ix(buyer: &Pubkey, pool: &Pool, count: u8, token: TokenPath) -> Instr
             token_program: token.token_program.map(|k| to_a(&k)),
             slot_hashes: to_a(&solana_sdk_ids::sysvar::slot_hashes::ID),
             system_program: anchor_lang::system_program::ID,
+            gate_key: gate.map(|(k, _)| to_a(&k)),
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,
         },
-        mybarpool::instruction::Buy { count },
-    )
+        mybarpool::instruction::Buy {
+            count,
+            allowlist_proof: proof,
+        },
+    );
+    if let Some((key, is_signer)) = gate {
+        // Anchor renders an `UncheckedAccount` meta as a non-signer; the gate key signs.
+        let slot = ix
+            .accounts
+            .iter_mut()
+            .rev()
+            .find(|m| m.pubkey == key)
+            .expect("gate_key meta");
+        slot.is_signer = is_signer;
+    }
+    ix
 }
 
 pub fn sponsor_ix(sponsor: &Pubkey, pool: &Pool, amount: u64, token: TokenPath) -> Instruction {
@@ -2443,4 +2473,128 @@ pub fn close_sponsorship_ix(
         },
         mybarpool::instruction::CloseSponsorship {},
     )
+}
+
+// ---------------------------------------------------------------------------
+// Step 8: gating fixtures (PROGRAM §4.3, §6.4)
+// ---------------------------------------------------------------------------
+
+/// The reference §6.4 tree on the host, for planting roots and building proofs in tests and
+/// the bench: `canonical` sorts and deduplicates, `root` folds, `proof` collects siblings.
+/// The program only verifies (`mybarpool::allowlist`); `packages/shared` is the client's
+/// builder and the vector file cross-checks the two.
+pub mod tree {
+    use mybarpool::allowlist::{leaf, node};
+    use solana_pubkey::Pubkey;
+
+    /// Sorted bytewise ascending, duplicates removed (§6.4 "deduplicated and sorted").
+    pub fn canonical(wallets: &[Pubkey]) -> Vec<Pubkey> {
+        let mut v: Vec<Pubkey> = wallets.to_vec();
+        v.sort_by_key(|a| a.to_bytes());
+        v.dedup();
+        v
+    }
+
+    fn leaves(wallets: &[Pubkey]) -> Vec<[u8; 32]> {
+        canonical(wallets)
+            .iter()
+            .map(|w| leaf(&anchor_lang::prelude::Pubkey::from(w.to_bytes())))
+            .collect()
+    }
+
+    /// The root over `wallets`; an unpaired last node is carried up unchanged.
+    pub fn root(wallets: &[Pubkey]) -> [u8; 32] {
+        let mut level = leaves(wallets);
+        assert!(!level.is_empty(), "empty allowlist");
+        while level.len() > 1 {
+            level = level
+                .chunks(2)
+                .map(|pair| match pair {
+                    [a, b] => node(a, b),
+                    [a] => *a,
+                    _ => unreachable!(),
+                })
+                .collect();
+        }
+        level[0]
+    }
+
+    /// The sibling at each level for `wallet`, bottom up; no entry where it was carried up.
+    pub fn proof(wallets: &[Pubkey], wallet: &Pubkey) -> Vec<[u8; 32]> {
+        let list = canonical(wallets);
+        let mut index = list
+            .iter()
+            .position(|w| w == wallet)
+            .expect("wallet in the list");
+        let mut level = leaves(wallets);
+        let mut out = Vec::new();
+        while level.len() > 1 {
+            let sibling = index ^ 1;
+            if sibling < level.len() {
+                out.push(level[sibling]);
+            }
+            level = level
+                .chunks(2)
+                .map(|pair| match pair {
+                    [a, b] => node(a, b),
+                    [a] => *a,
+                    _ => unreachable!(),
+                })
+                .collect();
+            index /= 2;
+        }
+        out
+    }
+}
+
+/// The planted gate key of `link_pool`.
+pub fn gate_key_g() -> Pubkey {
+    Pubkey::new_from_array([0x61; 32])
+}
+
+/// A `Link` SOL pool with gate key [`gate_key_g`] and 5 boxes sold to the creator.
+pub fn link_pool(f: &Fixture) -> Pool {
+    let mut pool = pool_with(f, PoolStatus::Open, 5, &f.creator);
+    pool.access_type = AccessType::Link;
+    pool.gate_key = to_a(&gate_key_g());
+    pool
+}
+
+/// `n` deterministic allowlist wallets (literals, not `new_unique`, per the Step 4 L1 rule).
+pub fn allowlist_wallets(n: usize) -> Vec<Pubkey> {
+    (0..n)
+        .map(|i| {
+            let mut b = [0u8; 32];
+            b[0] = 0xA1;
+            b[1..9].copy_from_slice(&(i as u64).to_le_bytes());
+            Pubkey::new_from_array(b)
+        })
+        .collect()
+}
+
+/// An `Allowlist` SOL pool whose root is `tree::root(wallets)`, nothing sold.
+pub fn allowlist_pool(f: &Fixture, wallets: &[Pubkey]) -> Pool {
+    let mut pool = fresh_pool(f, &f.expected_config(), &sol_params(0));
+    pool.access_type = AccessType::Allowlist;
+    pool.allowlist_root = tree::root(wallets);
+    pool
+}
+
+/// `pool_accounts` plus a funded system account for every wallet in `extra` (buyers the
+/// fixture does not already carry) and an empty system account at [`gate_key_g`] so the
+/// Link tests can pass it in the slot (Mollusk wants every meta's account present).
+pub fn pool_accounts_with_wallets(
+    f: &Fixture,
+    m: &Mollusk,
+    pool: &Pool,
+    vault_lamports: u64,
+    open_count: u8,
+    extra: &[Pubkey],
+) -> Vec<(Pubkey, Account)> {
+    let mut accounts = pool_accounts(f, m, &f.expected_config(), pool, vault_lamports, open_count);
+    for w in extra {
+        set_account(&mut accounts, *w, system_account(10 * LAMPORTS_PER_SOL));
+    }
+    accounts.push((gate_key_g(), system_account(0)));
+    accounts
 }

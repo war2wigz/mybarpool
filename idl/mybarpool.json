@@ -13,7 +13,10 @@
       "docs": [
         "PROGRAM §4.3 `buy`: buy `count` boxes at the pool's price; positions are assigned by",
         "§6.1 from the SlotHashes sysvar. The 25th box locks the pool. Signer and payer: the",
-        "buyer. Emits `BoxesBought` and, on lock, `PoolLocked`."
+        "buyer. Gating by `access_type`: a `Link` pool needs the optional `gate_key` account",
+        "present and signing; an `Allowlist` pool needs `allowlist_proof`, the §6.4 Merkle proof",
+        "for the buyer (at most 32 entries); a `Public` pool ignores both. Emits `BoxesBought`",
+        "and, on lock, `PoolLocked`."
       ],
       "discriminator": [
         102,
@@ -223,6 +226,16 @@
           "address": "11111111111111111111111111111111"
         },
         {
+          "name": "gate_key",
+          "docs": [
+            "PROGRAM §4.3: on a `Link` pool this must be present, equal to `pool.gate_key` and",
+            "signing (`GateKeyNotSigner` for all three); ignored on `Public` and `Allowlist` pools.",
+            "Typed `UncheckedAccount` rather than `Signer` so an absent or non-signing key is §8's",
+            "6017 and not Anchor's own error."
+          ],
+          "optional": true
+        },
+        {
           "name": "event_authority"
         },
         {
@@ -233,6 +246,17 @@
         {
           "name": "count",
           "type": "u8"
+        },
+        {
+          "name": "allowlist_proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
         }
       ]
     },
@@ -454,7 +478,10 @@
       "docs": [
         "PROGRAM §4.5 `close_pool`: close a terminal pool with no open sponsorship, sweeping the",
         "vault's remaining balance and both accounts' rent to `fee_wallet` (the creator when",
-        "abandoned). Permissionless. Emits `PoolClosed`."
+        "abandoned). Permissionless. Emits `PoolClosed`.",
+        "`arbitrary_cpi_call` is allowed here for the same reason as on the handler (see",
+        "`instructions/close_pool.rs`): the lint attaches its report to the function it started from,",
+        "and this entry point reaches the vault's outbound CPIs through the handler."
       ],
       "discriminator": [
         140,
@@ -1731,7 +1758,10 @@
       "name": "reclaim_sponsorship",
       "docs": [
         "PROGRAM §4.6 `reclaim_sponsorship`: thirty days after the scheduled kickoff, a sponsor",
-        "of a pool with its fees untaken takes their sponsorship back and closes its account."
+        "of a pool with its fees untaken takes their sponsorship back and closes its account.",
+        "`arbitrary_cpi_call` is allowed here for the same reason as on the handler (see",
+        "`instructions/reclaim_sponsorship.rs`): the lint attaches its report to the function it started from,",
+        "and this entry point reaches the vault's outbound CPIs through the handler."
       ],
       "discriminator": [
         12,
@@ -2241,7 +2271,10 @@
       "name": "return_sponsorship",
       "docs": [
         "PROGRAM §4.6 `return_sponsorship`: on a `Returned` pool with its fees untaken, return",
-        "one sponsorship in full to the recorded wallet and close its account."
+        "one sponsorship in full to the recorded wallet and close its account.",
+        "`arbitrary_cpi_call` is allowed here for the same reason as on the handler (see",
+        "`instructions/return_sponsorship.rs`): the lint attaches its report to the function it started from,",
+        "and this entry point reaches the vault's outbound CPIs through the handler."
       ],
       "discriminator": [
         25,
@@ -3044,7 +3077,10 @@
       "docs": [
         "PROGRAM §4.6 `split`: on a suspended game after a prize was paid, fix",
         "`split_amount = unpaid_prize_pool / 25`, move the pool to `Split` and pay the owners in",
-        "the remaining accounts that share per unreturned box."
+        "the remaining accounts that share per unreturned box.",
+        "`arbitrary_cpi_call` is allowed here for the same reason as on the handler (see",
+        "`instructions/split.rs`): the lint attaches its report to the function it started from,",
+        "and this entry point reaches the vault's outbound CPIs through the handler."
       ],
       "discriminator": [
         124,
