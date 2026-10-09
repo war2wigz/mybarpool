@@ -8,6 +8,7 @@ import {
   formatPercent,
   formatPrice,
   skr,
+  shortAddress,
 } from "../src/format.js";
 
 describe("formatting (DESIGN §10.3; ARCHITECTURE › Buying)", () => {
@@ -78,5 +79,13 @@ describe("formatting (DESIGN §10.3; ARCHITECTURE › Buying)", () => {
   it("rejects negative amounts", () => {
     expect(() => formatAmount(-1n, SOL)).toThrow(RangeError);
     expect(() => formatPrice(-1n, SOL)).toThrow(RangeError);
+  });
+});
+
+describe("shortAddress (DESIGN §10.3)", () => {
+  it("first four, an ellipsis, the last two; short strings untouched", () => {
+    expect(shortAddress("7kq2abcdefghijklmnopqrstuvwxyz9a")).toBe("7kq2…9a");
+    expect(shortAddress("abcdefg")).toBe("abcdefg");
+    expect(shortAddress("abcdefgh")).toBe("abcd…gh");
   });
 });

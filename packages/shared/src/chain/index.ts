@@ -12,4 +12,5 @@ export * from "./watch.js";
 export * from "./fees.js";
 export * from "./transaction.js";
 export * from "./funds.js";
+export * from "./status.js";
 export * from "./instructions/index.js";

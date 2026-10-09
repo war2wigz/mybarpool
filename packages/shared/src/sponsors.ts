@@ -6,6 +6,7 @@
  * arbitrary text, an image or a link on a pool page for the price of a
  * sponsorship. The list starts empty; entries arrive by owner review.
  */
+import { shortAddress } from "./format.js";
 
 export interface SponsorEntry {
   /** The sponsor's wallet, base58. */
@@ -58,4 +59,24 @@ export function sponsorByWallet(
   directory: readonly SponsorEntry[] = SPONSOR_DIRECTORY,
 ): SponsorEntry | undefined {
   return directory.find((entry) => entry.wallet === wallet);
+}
+
+/**
+ * How a sponsor is shown (ARCHITECTURE › Sponsorship): the reviewed directory entry when the
+ * wallet is listed; else its `.skr` name when the app resolved one; else the shortened
+ * address, "which is still true and still verifiable". Names are labels, never payees.
+ */
+export type SponsorResolution =
+  | { kind: "directory"; entry: SponsorEntry }
+  | { kind: "name"; name: string }
+  | { kind: "address"; short: string };
+
+export function resolveSponsor(
+  wallet: string,
+  options: { directory?: readonly SponsorEntry[]; skrName?: string | undefined } = {},
+): SponsorResolution {
+  const entry = sponsorByWallet(wallet, options.directory ?? SPONSOR_DIRECTORY);
+  if (entry) return { kind: "directory", entry };
+  if (options.skrName) return { kind: "name", name: options.skrName };
+  return { kind: "address", short: shortAddress(wallet) };
 }

@@ -96,3 +96,12 @@ export function formatPercent(bps: number): string {
   const fraction = rest.toString().padStart(2, "0").replace(/0+$/, "");
   return `${whole}.${fraction}%`;
 }
+
+/**
+ * A wallet shown by its address (DESIGN §10.3, ARCHITECTURE › Sponsorship: "7kq2…9a"): the
+ * first four characters, an ellipsis, the last two. Labels only, never payees.
+ */
+export function shortAddress(address: string): string {
+  if (address.length <= 7) return address;
+  return `${address.slice(0, 4)}…${address.slice(-2)}`;
+}

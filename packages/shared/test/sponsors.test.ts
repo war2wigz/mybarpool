@@ -4,6 +4,7 @@ import {
   ANDROID_PACKAGE_PATTERN,
   SPONSOR_DIRECTORY,
   dappStoreLink,
+  resolveSponsor,
   sponsorByWallet,
   validateSponsorEntry,
 } from "../src/sponsors.js";
@@ -68,5 +69,26 @@ describe("sponsor directory (ARCHITECTURE › Sponsorship › Directory entry)",
   it("looks up a wallet in a supplied directory", () => {
     expect(sponsorByWallet(ORE_WALLET, [OK])).toBe(OK);
     expect(sponsorByWallet("11111111111111111111111111111111", [OK])).toBeUndefined();
+  });
+});
+
+describe("resolveSponsor (ARCHITECTURE › Sponsorship › Attribution)", () => {
+  it("directory entry first, then the .skr name, then the short address", () => {
+    expect(resolveSponsor(ORE_WALLET, { directory: [OK], skrName: "ore.skr" })).toEqual({
+      kind: "directory",
+      entry: OK,
+    });
+    expect(resolveSponsor(ORE_WALLET, { directory: [], skrName: "ore.skr" })).toEqual({
+      kind: "name",
+      name: "ore.skr",
+    });
+    expect(resolveSponsor(ORE_WALLET, { directory: [] })).toEqual({
+      kind: "address",
+      short: "oreo…cp",
+    });
+    expect(resolveSponsor(ORE_WALLET, { skrName: undefined })).toEqual({
+      kind: "address",
+      short: "oreo…cp",
+    }); // the shipped directory is empty
   });
 });
