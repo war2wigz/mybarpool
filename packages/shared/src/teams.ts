@@ -4,7 +4,8 @@
  *
  * Colours are the teams' published primary and secondary brand colours as
  * `#rrggbb`, used only inside grid axes and team chips (DESIGN §1 Palette).
- * Logos are bundled app assets, not part of this table (DESIGN §10.11).
+ * No club logos exist anywhere: a team is shown as a generic helmet shape in
+ * these two colours beside its abbreviation or name (DESIGN §9, §10.11).
  */
 
 export interface Team {
