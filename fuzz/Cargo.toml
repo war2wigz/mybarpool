@@ -1,0 +1,55 @@
+[package]
+name = "mybarpool-fuzz"
+version = "0.1.0"
+description = "MyBarPool: the fuzz harness (Mollusk fixtures ejected from the unit suite, mutated under proptest, checked against the PROGRAM §10 Money oracle)."
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# The library is pure — a plain model of an instruction's inputs and effects, the mutation
+# strategies and the oracle — so `cargo dylint --workspace -- --lib` and `tests/oracle.rs`
+# build it without Mollusk. Mollusk and the fixture crate sit behind `runner`, which the
+# binary requires: they are Agave 4.3 crates (rust-version 1.97.1) that the lint job's pinned
+# nightly cannot compile, and the fixture crate's build script needs `protoc`.
+[lib]
+name = "mybarpool_fuzz"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mybarpool-fuzz"
+path = "src/main.rs"
+required-features = ["runner"]
+
+[features]
+default = []
+runner = [
+    "dep:mollusk-svm",
+    "dep:mollusk-svm-fuzz-fixture",
+    "dep:mollusk-svm-programs-token",
+    "dep:solana-account",
+    "dep:solana-instruction",
+    "dep:solana-pubkey",
+    "dep:solana-program-error",
+]
+
+[dependencies]
+# The program as a library: its instruction discriminators, account layouts, constants and
+# error codes. The bytecode under test is `target/deploy/mybarpool.so` from `anchor build`.
+mybarpool = { path = "../programs/mybarpool", features = ["no-entrypoint"] }
+anchor-lang = { workspace = true }
+proptest = "1"
+# Replays the fixtures (`runner` only): `fuzz` for `process_fixture`, `inner-instructions`
+# so the report can name what moved.
+mollusk-svm = { workspace = true, features = ["fuzz", "inner-instructions"], optional = true }
+mollusk-svm-fuzz-fixture = { version = "=0.16.0", optional = true }
+mollusk-svm-programs-token = { version = "=0.16.0", optional = true }
+# The Solana crate majors Mollusk 0.16.0 exposes in its public API (as the program's tests).
+solana-account = { version = "4.3", optional = true }
+solana-instruction = { version = "3.2", optional = true }
+solana-pubkey = { version = "4.1", optional = true }
+solana-program-error = { version = "3.0", optional = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(dylint_lib, values(any()))'] }

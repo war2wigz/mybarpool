@@ -20,6 +20,10 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 anchor-debug = []
 custom-heap = []
 custom-panic = []
+# Dev-only: Mollusk writes a fuzz fixture per `process_instruction` call when
+# `EJECT_FUZZ_FIXTURES=<dir>` is set (build plan Step 8). Never on in `anchor build`;
+# the fixture crate's build script needs `protoc`, which only the fuzz CI job installs.
+fuzz-fixtures = ["mollusk-svm/fuzz"]
 
 [dependencies]
 # event-cpi: events are self-CPIs (PROGRAM §7), never truncated out of the logs.
