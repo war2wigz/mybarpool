@@ -9,3 +9,5 @@ export * from "./accounts.js";
 export * from "./errors.js";
 export * from "./events.js";
 export * from "./watch.js";
+export * from "./fees.js";
+export * from "./transaction.js";
