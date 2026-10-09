@@ -61,10 +61,6 @@ pub struct Reclaim<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// `missing_mut_constraint` names `game` here: it is read-only and the lint reads a MIR
-/// temporary derived from a field read as a write (the Step 2 false positive). Shown by
-/// `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace -- --lib` without this line.
-#[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_reclaim(ctx: Context<Reclaim>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let Reclaim {

@@ -125,18 +125,10 @@ fn vault_token_account_len(
 }
 
 /// SOL in: `from` → vault by `system_program::transfer`. `from` is typed `Signer` so no caller
-/// can pass an account that did not sign.
-///
-/// `missing_signer_validation` resolves CPI signers to fields of the handler's `Accounts`
-/// struct; in a free function it falls back to the parameter's source text and can never match
-/// it to a `Signer` field, so it reports the parameter (`from: &Signer<'info>`) itself. The
-/// type is the validation. Shown by `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all
-/// --workspace -- --lib` without this line. (`transfer_in_spl` is not flagged: the lint reads
-/// `transfer_checked`'s authority through `to_account_info()` differently.)
-#[cfg_attr(
-    dylint_lib = "missing_signer_validation",
-    allow(missing_signer_validation)
-)]
+/// can pass an account that did not sign. (Through Step 7 `missing_signer_validation` reported
+/// this parameter, unable to match a free function's `from: &Signer` to a `Signer` field; at
+/// anchor-lints `d8116dd` it no longer fires here once the crate's `Pubkey` prints as
+/// `anchor_lang::prelude::Pubkey`, so the allow is gone — see `AUDIT-READINESS.md`.)
 pub fn transfer_in_sol<'info>(
     from: &Signer<'info>,
     vault: &AccountInfo<'info>,
@@ -211,8 +203,9 @@ pub fn pool_signer_seeds<'a>(
 /// The lint began to see `Pubkey` at all only once a module named
 /// `anchor_lang::prelude::Pubkey` in a signature (its type match is on the printed path, and
 /// `Pubkey` is an alias of `solana_address::Address` in the 3.x crates); the reproduction is in
-/// `AUDIT-READINESS.md`.
-#[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
+/// `AUDIT-READINESS.md`. The report is attached to the handler the lint started from, so the
+/// allow sits there and on its `lib.rs` entry, not here: an attribute on this function
+/// suppresses nothing.
 pub fn transfer_out_sol<'info>(
     vault: &AccountInfo<'info>,
     to: &AccountInfo<'info>,
@@ -245,8 +238,9 @@ pub fn transfer_out_sol<'info>(
 /// The lint began to see `Pubkey` at all only once a module named
 /// `anchor_lang::prelude::Pubkey` in a signature (its type match is on the printed path, and
 /// `Pubkey` is an alias of `solana_address::Address` in the 3.x crates); the reproduction is in
-/// `AUDIT-READINESS.md`.
-#[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
+/// `AUDIT-READINESS.md`. The report is attached to the handler the lint started from, so the
+/// allow sits there and on its `lib.rs` entry, not here: an attribute on this function
+/// suppresses nothing.
 pub fn transfer_out_spl<'info>(
     vault: &AccountInfo<'info>,
     mint: &InterfaceAccount<'info, Mint>,
@@ -283,9 +277,10 @@ pub fn transfer_out_spl<'info>(
 /// The lint began to see `Pubkey` at all only once a module named
 /// `anchor_lang::prelude::Pubkey` in a signature (its type match is on the printed path, and
 /// `Pubkey` is an alias of `solana_address::Address` in the 3.x crates); the reproduction is in
-/// `AUDIT-READINESS.md`.
+/// `AUDIT-READINESS.md`. The report is attached to the handler the lint started from, so
+/// the allow sits there (and on its `lib.rs` entry), not here: an attribute on this function
+/// suppresses nothing.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
 pub fn create_ata_idempotent<'info>(
     payer: &AccountInfo<'info>,
     ata: &AccountInfo<'info>,

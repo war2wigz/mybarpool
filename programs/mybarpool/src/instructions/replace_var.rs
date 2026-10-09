@@ -37,10 +37,6 @@ pub struct ReplaceVar<'info> {
     pub new_var: UncheckedAccount<'info>,
 }
 
-/// `missing_mut_constraint` names `config` here: read-only, the field-read false positive
-/// (Step 2 onward). Shown by `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace
-/// -- --lib` without this line.
-#[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
     let clock = Clock::get()?;
     let ReplaceVar {

@@ -39,10 +39,6 @@ pub struct CancelPool<'info> {
     pub counter: Option<Account<'info, CreatorCounter>>,
 }
 
-/// `missing_mut_constraint` names `config` here: it is read-only and the lint reads a MIR
-/// temporary derived from a field read as a write (the Step 2 false positive). Shown by
-/// `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace -- --lib` without this line.
-#[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_cancel_pool(ctx: Context<CancelPool>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let CancelPool { pool, counter, .. } = ctx.accounts;

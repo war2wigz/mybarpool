@@ -56,10 +56,6 @@ pub struct Split<'info> {
     // Remaining accounts: the owner batch. No counter: a Drawn pool is never Open.
 }
 
-/// `missing_mut_constraint` names `config` and `game` here: both are read-only and the lint
-/// reads a MIR temporary derived from a field read as a write (the Step 2 false positive).
-/// Shown by `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace -- --lib` without
-/// this line.
 /// `arbitrary_cpi_call` reports the vault's outbound CPIs (`vault.rs`: `transfer_out_sol`,
 /// `transfer_out_spl`, `create_ata_idempotent`) against this handler, which reaches them
 /// through `payout.rs`: their program id is a parameter and the lint cannot see that it comes
@@ -67,7 +63,6 @@ pub struct Split<'info> {
 /// the handler it started from, so the allow lives here; the reproduction is in
 /// `AUDIT-READINESS.md`.
 #[cfg_attr(dylint_lib = "arbitrary_cpi_call", allow(arbitrary_cpi_call))]
-#[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_split<'info>(ctx: Context<'info, Split<'info>>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let remaining = ctx.remaining_accounts;

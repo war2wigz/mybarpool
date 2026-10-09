@@ -65,11 +65,6 @@ pub struct ReturnBoxes<'info> {
     // Remaining accounts: the owner batch, `[owner]*` on SOL, `[owner, ata]*` on SPL.
 }
 
-/// `missing_mut_constraint` names `config` and `game` here: both are read-only and the lint
-/// reads a MIR temporary derived from a field read as a write (the Step 2 false positive).
-/// Shown by `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace -- --lib` without
-/// this line.
-#[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_return_boxes<'info>(ctx: Context<'info, ReturnBoxes<'info>>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let remaining = ctx.remaining_accounts;
