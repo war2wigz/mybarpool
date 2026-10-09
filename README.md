@@ -10,7 +10,7 @@ It's the game bars have always run on a paper grid, also known as football squar
 - **Web:** [mybarpool.com](https://mybarpool.com), the same app
 - **Status:** design complete, program and app in development. Nothing is deployed to mainnet yet.
 
-This repository is the open-source part of MyBarPool: the full design, and the Solana program that will hold the money and the client SDK, published commit by commit as they are written. See [What is in this repo](#what-is-in-this-repo).
+This repository is the open-source part of MyBarPool: the full design, and the Solana program that will hold the money and the client SDK, published commit by commit as they are written. See [What is in this repo](#what-is-in-this-repo). Questions people ask first (why a fee, who decides the score, what happens when a game is postponed) and a short history of earlier on-chain attempts at the game are in [docs/FAQ.md](docs/FAQ.md).
 
 ---
 
@@ -175,6 +175,7 @@ docs/PROGRAM.md       Program specification: accounts, seeds, instructions, chec
                       errors, state machines, algorithms
 docs/DESIGN.md        Brand, design system, information architecture, screen wireframes, flows,
                       app build specification
+docs/FAQ.md           The questions people ask first, and a short history of earlier attempts
 docs/mockups/         High-fidelity HTML mockups of every screen and rendered PNGs
 docs/brand/           Logo concept
 LICENSE               Apache-2.0
