@@ -46,7 +46,12 @@ pub fn check_mint(rule: &TokenRule, mint: Option<&InterfaceAccount<Mint>>) -> Re
         let unsupported = extensions.iter().any(|e| {
             matches!(
                 e,
-                ExtensionType::TransferFeeConfig | ExtensionType::TransferHook
+                ExtensionType::TransferFeeConfig
+                    | ExtensionType::TransferHook
+                    | ExtensionType::PermanentDelegate
+                    | ExtensionType::NonTransferable
+                    | ExtensionType::DefaultAccountState
+                    | ExtensionType::Pausable
             )
         });
         require!(!unsupported, MybarpoolError::UnsupportedMintExtension);

@@ -4,9 +4,11 @@
 mod common;
 
 use anchor_spl::token_2022::spl_token_2022::extension::ExtensionType;
+use anchor_spl::token_2022::spl_token_2022::state::AccountState;
 use common::*;
 use mollusk_svm::result::Check;
 use mybarpool::{ConfigUpdated, MybarpoolError as E, OverrideClosed, OverrideSet, TokenRule};
+use solana_account::Account;
 use solana_pubkey::Pubkey;
 
 // ---------------------------------------------------------------------------
@@ -515,46 +517,137 @@ fn token_rule_mint_mismatches_are_invalid_config() {
     );
 }
 
+/// The six extensions that can fail, redirect or freeze a transfer (PROGRAM §5.4).
+const REFUSED: [ExtensionType; 6] = [
+    ExtensionType::TransferFeeConfig,
+    ExtensionType::TransferHook,
+    ExtensionType::PermanentDelegate,
+    ExtensionType::NonTransferable,
+    ExtensionType::DefaultAccountState,
+    ExtensionType::Pausable,
+];
+
+/// A Token-2022 rule in the ORE slot pointing at `mint` (the `initialize` path carries
+/// `mint_2`), and the same rule as an `update_config` of the SKR slot.
+fn rule_2022(f: &Fixture, mint: &Pubkey) -> TokenRule {
+    let mut rule = f.skr_rule_2022();
+    rule.mint = to_a(mint);
+    rule
+}
+
+fn expect_mint(
+    m: &mollusk_svm::Mollusk,
+    f: &Fixture,
+    mint_account: Account,
+    expected: Option<u32>,
+) {
+    let mint = Pubkey::new_unique();
+    let check = || match expected {
+        Some(code) => Check::err(custom(code)),
+        None => Check::success(),
+    };
+    // initialize: the rule in slot 2 with `mint_2`.
+    let mut params = f.initialize_params();
+    params.tokens[2] = rule_2022(f, &mint);
+    let mut accounts = base_accounts(f, None);
+    accounts.push((mint, mint_account.clone()));
+    m.process_and_validate_instruction(
+        &initialize_ix(&f.admin, params, Some(&mint)),
+        &accounts,
+        &[check()],
+    );
+    // update_config: the rule in slot 1 with `mint_1`.
+    let params = mybarpool::UpdateConfigParams {
+        tokens: [None, Some(rule_2022(f, &mint)), None],
+        ..no_update()
+    };
+    let mut accounts = base_accounts(f, Some(&f.expected_config()));
+    accounts.push((mint, mint_account));
+    m.process_and_validate_instruction(
+        &update_config_ix(&f.admin, params, Some(&mint), None),
+        &accounts,
+        &[check()],
+    );
+}
+
 #[test]
-fn token_2022_transfer_fee_and_transfer_hook_are_unsupported_metadata_pointer_is_fine() {
-    // PROGRAM §5.4: mints with transfer fees or transfer hooks are not supported.
+fn token_2022_extensions_that_break_transfers_are_unsupported_the_rest_are_fine() {
+    // PROGRAM §5.4: transfer fees, transfer hooks, a permanent delegate, non-transferable,
+    // a default account state and pausable are refused — each alone, at `initialize` and at
+    // `update_config`. A metadata pointer and a bare mint are fine.
     let f = Fixture::new();
     let m = mollusk();
-    let cases = [
-        (
-            vec![ExtensionType::TransferFeeConfig],
+    for ext in REFUSED {
+        expect_mint(
+            &m,
+            &f,
+            token_2022_mint_account(6, &[ext]),
             Some(err(E::UnsupportedMintExtension)),
+        );
+    }
+    expect_mint(
+        &m,
+        &f,
+        token_2022_mint_account(6, &[ExtensionType::MetadataPointer]),
+        None,
+    );
+    expect_mint(&m, &f, token_2022_mint_account(6, &[]), None);
+    // Refused even when it rides along with an accepted extension, in any position.
+    expect_mint(
+        &m,
+        &f,
+        token_2022_mint_account(
+            6,
+            &[ExtensionType::MetadataPointer, ExtensionType::Pausable],
         ),
-        (
-            vec![ExtensionType::TransferHook],
-            Some(err(E::UnsupportedMintExtension)),
-        ),
-        (vec![ExtensionType::MetadataPointer], None),
-        (vec![], None),
-    ];
-    for (extensions, expected) in cases {
-        let mint = Pubkey::new_unique();
-        let mut rule = Fixture::skr_placeholder();
-        rule.enabled = true;
-        rule.mint = to_a(&mint);
-        rule.token_program = anchor_spl::token_2022::ID;
-        rule.decimals = 6;
-        rule.min_price = 100_000_000; // SKR 100 at 6 decimals (ARCHITECTURE › Buying table)
-        rule.step = 100_000_000;
-        rule.max_price = 5_000_000_000;
-        rule.max_sponsorship = 125_000_000_000;
-        let params = mybarpool::UpdateConfigParams {
-            tokens: [None, Some(rule), None],
-            ..no_update()
-        };
-        let mut accounts = base_accounts(&f, Some(&f.expected_config()));
-        accounts.push((mint, token_2022_mint_account(6, &extensions)));
-        let ix = update_config_ix(&f.admin, params, Some(&mint), None);
-        let check = match expected {
-            Some(code) => Check::err(custom(code)),
-            None => Check::success(),
-        };
-        m.process_and_validate_instruction(&ix, &accounts, &[check]);
+        Some(err(E::UnsupportedMintExtension)),
+    );
+}
+
+#[test]
+fn token_2022_refused_extension_is_refused_whatever_its_value() {
+    // PROGRAM §5.4: the check is on the extension's presence, not its current value — a
+    // zero fee, an unset delegate, `Initialized` as the default state and an unpaused mint
+    // are all one authority action away from breaking a payout.
+    use anchor_spl::token_2022::spl_token_2022::extension::{
+        default_account_state::DefaultAccountState, pausable::PausableConfig,
+        permanent_delegate::PermanentDelegate, transfer_fee::TransferFeeConfig,
+        BaseStateWithExtensionsMut, StateWithExtensionsMut,
+    };
+    use anchor_spl::token_2022::spl_token_2022::state::Mint as Mint2022;
+    let f = Fixture::new();
+    let m = mollusk();
+
+    let mut fee = token_2022_mint_account(6, &[ExtensionType::TransferFeeConfig]);
+    {
+        let mut state = StateWithExtensionsMut::<Mint2022>::unpack(&mut fee.data).unwrap();
+        let ext = state.get_extension_mut::<TransferFeeConfig>().unwrap();
+        ext.newer_transfer_fee.transfer_fee_basis_points = 0.into();
+        ext.newer_transfer_fee.maximum_fee = 0.into();
+        ext.older_transfer_fee.transfer_fee_basis_points = 0.into();
+        ext.older_transfer_fee.maximum_fee = 0.into();
+    }
+    let mut delegate = token_2022_mint_account(6, &[ExtensionType::PermanentDelegate]);
+    {
+        let mut state = StateWithExtensionsMut::<Mint2022>::unpack(&mut delegate.data).unwrap();
+        let ext = state.get_extension_mut::<PermanentDelegate>().unwrap();
+        ext.delegate = None.try_into().unwrap();
+    }
+    let mut initialized = token_2022_mint_account(6, &[ExtensionType::DefaultAccountState]);
+    {
+        let mut state = StateWithExtensionsMut::<Mint2022>::unpack(&mut initialized.data).unwrap();
+        let ext = state.get_extension_mut::<DefaultAccountState>().unwrap();
+        ext.state = AccountState::Initialized.into();
+    }
+    let mut unpaused = token_2022_mint_account(6, &[ExtensionType::Pausable]);
+    {
+        let mut state = StateWithExtensionsMut::<Mint2022>::unpack(&mut unpaused.data).unwrap();
+        let ext = state.get_extension_mut::<PausableConfig>().unwrap();
+        ext.paused = false.into();
+        ext.authority = Some(f.admin.to_bytes().into()).try_into().unwrap();
+    }
+    for account in [fee, delegate, initialized, unpaused] {
+        expect_mint(&m, &f, account, Some(err(E::UnsupportedMintExtension)));
     }
 }
 

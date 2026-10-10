@@ -18,7 +18,9 @@ use solana_pubkey::Pubkey;
 // fixtures and the program agree on one version of each (Step 2 audit M1).
 use anchor_spl::token::spl_token::state::Mint as MintLegacy;
 use anchor_spl::token_2022::spl_token_2022::extension::{
-    metadata_pointer::MetadataPointer, transfer_fee::TransferFeeConfig,
+    default_account_state::DefaultAccountState, metadata_pointer::MetadataPointer,
+    non_transferable::NonTransferable, pausable::PausableConfig,
+    permanent_delegate::PermanentDelegate, transfer_fee::TransferFeeConfig,
     transfer_hook::TransferHook, BaseStateWithExtensionsMut, ExtensionType, StateWithExtensionsMut,
 };
 use anchor_spl::token_2022::spl_token_2022::state::Mint as Mint2022;
@@ -339,6 +341,22 @@ pub fn token_2022_mint_account(decimals: u8, extensions: &[ExtensionType]) -> Ac
                 }
                 ExtensionType::MetadataPointer => {
                     state.init_extension::<MetadataPointer>(true).expect("init");
+                }
+                ExtensionType::PermanentDelegate => {
+                    state
+                        .init_extension::<PermanentDelegate>(true)
+                        .expect("init");
+                }
+                ExtensionType::NonTransferable => {
+                    state.init_extension::<NonTransferable>(true).expect("init");
+                }
+                ExtensionType::DefaultAccountState => {
+                    state
+                        .init_extension::<DefaultAccountState>(true)
+                        .expect("init");
+                }
+                ExtensionType::Pausable => {
+                    state.init_extension::<PausableConfig>(true).expect("init");
                 }
                 other => panic!("fixture does not support {other:?}"),
             }
