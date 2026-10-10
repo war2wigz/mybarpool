@@ -264,6 +264,7 @@ describe("watch* (DESIGN §10.1)", () => {
     const errors: unknown[] = [];
     const stop = watchEvents(client, { mentions: POOL }, (e) => events.push(e), {
       onError: (e) => errors.push(e),
+      fetchRetries: 0,
     });
     for (let i = 0; i < 6; i++) await tick();
     stop();
@@ -272,7 +273,8 @@ describe("watch* (DESIGN §10.1)", () => {
       ["PoolLocked", "buy", 8n],
       ["QuarterSettled", "settle", 9n],
     ]);
-    expect(errors).toHaveLength(1); // "gone": NotFound reported, not thrown
+    expect(errors).toHaveLength(1); // "gone": NotFound reported (asked once here), not thrown
+    expect(isSdkError(errors[0], "NotFound")).toBe(true);
     expect(recorded[0]).toEqual([
       "logsNotifications",
       { mentions: [POOL] },
@@ -284,6 +286,60 @@ describe("watch* (DESIGN §10.1)", () => {
     for (let i = 0; i < 6; i++) await tick();
     stop2();
     expect(settled).toEqual([1]);
+  });
+
+  it("watchEvents asks getTransaction again when the node has not indexed an announced signature yet", async () => {
+    // The log notification can arrive a moment before `getTransaction` knows the signature;
+    // a settlement must not be dropped for that. Two nulls, then the transaction.
+    const subs = mockSubscriptions({
+      logsNotifications: [
+        { context: { slot: 9n }, value: { err: null, logs: [], signature: "settle" } },
+      ],
+    });
+    let asked = 0;
+    const { rpc, calls } = mockRpc({
+      getTransaction: () => (++asked <= 2 ? null : { ...F.settle, slot: 9n }),
+    });
+    const client = createMyBarPoolClient({
+      rpc,
+      rpcSubscriptions: subs as never,
+      programAddress: PROGRAM,
+    });
+    const settled: number[] = [];
+    const errors: unknown[] = [];
+    const stop = watchSettlements(client, POOL, (s) => settled.push(s.event.quarter), {
+      onError: (e) => errors.push(e),
+      fetchRetryDelayMs: 0,
+    });
+    for (let i = 0; i < 6; i++) await tick();
+    stop();
+    expect(settled).toEqual([1]);
+    expect(errors).toEqual([]);
+    expect(calls.filter((c) => c.method === "getTransaction")).toHaveLength(3);
+
+    // Past the retry budget it is reported, once.
+    asked = 0;
+    const never = mockRpc({ getTransaction: () => null });
+    const client2 = createMyBarPoolClient({
+      rpc: never.rpc,
+      rpcSubscriptions: mockSubscriptions({
+        logsNotifications: [
+          { context: { slot: 9n }, value: { err: null, logs: [], signature: "settle" } },
+        ],
+      }) as never,
+      programAddress: PROGRAM,
+    });
+    const errors2: unknown[] = [];
+    const stop2 = watchSettlements(client2, POOL, () => {}, {
+      onError: (e) => errors2.push(e),
+      fetchRetries: 2,
+      fetchRetryDelayMs: 0,
+    });
+    for (let i = 0; i < 6; i++) await tick();
+    stop2();
+    expect(errors2).toHaveLength(1);
+    expect(isSdkError(errors2[0], "NotFound")).toBe(true);
+    expect(never.calls.filter((c) => c.method === "getTransaction")).toHaveLength(3);
   });
 
   it("an external abort signal ends the watch; a failing subscription reaches onError", async () => {

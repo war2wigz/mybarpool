@@ -17,7 +17,20 @@ export interface WatchOptions {
   onError?: (error: unknown) => void;
   /** An external signal; aborting it ends the watch too. */
   abortSignal?: AbortSignal;
+  /**
+   * `watchEvents` only: how many more times `getTransaction` is asked for a signature the log
+   * subscription announced but the node has not indexed yet (an RPC answers the notification a
+   * moment before `getTransaction` knows the signature). Default 5; `0` asks once.
+   */
+  fetchRetries?: number;
+  /** `watchEvents` only: the wait between those attempts, in ms. Default 400. */
+  fetchRetryDelayMs?: number;
 }
+
+/** Defaults of {@link WatchOptions.fetchRetries} and {@link WatchOptions.fetchRetryDelayMs}. */
+export const WATCH_FETCH_RETRIES = 5;
+/** @see WATCH_FETCH_RETRIES */
+export const WATCH_FETCH_RETRY_DELAY_MS = 400;
 
 /** The function a `watch*` returns: ends the subscription. */
 export type Unsubscribe = () => void;
@@ -81,6 +94,30 @@ export interface WatchEventsFilter {
 }
 
 /**
+ * `eventsOf`, asked again on `NotFound` up to `fetchRetries` times: a node can deliver the log
+ * notification for a signature a moment before its `getTransaction` index has it, and a
+ * `QuarterSettled` dropped for that reason would be a result the client never shows.
+ */
+async function eventsOfAnnounced(
+  client: MyBarPoolClient,
+  signature: Parameters<typeof eventsOf>[1],
+  options: WatchOptions,
+  signal: AbortSignal,
+): Promise<EmittedEvent[]> {
+  const retries = options.fetchRetries ?? WATCH_FETCH_RETRIES;
+  const delay = options.fetchRetryDelayMs ?? WATCH_FETCH_RETRY_DELAY_MS;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await eventsOf(client, signature);
+    } catch (e) {
+      if (attempt >= retries || !(e instanceof SdkError) || e.code !== "NotFound") throw e;
+      await new Promise<void>((resolve) => setTimeout(resolve, delay));
+      if (signal.aborted) throw e;
+    }
+  }
+}
+
+/**
  * Every event of every confirmed, successful transaction mentioning `mentions`
  * (`logsNotifications({ mentions })` for the signatures, `eventsOf` for the bodies).
  */
@@ -100,7 +137,8 @@ export function watchEvents(
       for await (const n of notifications) {
         if (n.value.err !== null) continue;
         try {
-          for (const e of await eventsOf(client, n.value.signature)) onEvent(e);
+          const events = await eventsOfAnnounced(client, n.value.signature, options, abort.signal);
+          for (const e of events) onEvent(e);
         } catch (e) {
           options.onError?.(e);
         }
