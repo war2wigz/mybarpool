@@ -63,10 +63,10 @@ fn the_elf_fixture_is_the_verified_deployed_bytecode() {
 #[test]
 fn the_fork_elf_fixture_is_the_forks_verifiable_build() {
     // war2wigz/entropy at ENTROPY_FORK_COMMIT, `solana-verify build --arch v3` on the Agave
-    // 4.3.0 image: 106,648 bytes; file sha256 below (NOTES › First task). The executable hash
-    // (trailing zeros stripped, 106,633 bytes) is dae04201…bf53f1. CI rebuilds the fork and
-    // compares the bytes with this fixture.
-    assert_eq!(ENTROPY_FORK_ELF.len(), 106_648);
+    // 4.3.0 image: 102,464 bytes; file sha256 below. The executable hash (trailing zeros
+    // stripped, 102,449 bytes) is d3a28f35…9307c. CI rebuilds the fork and compares the bytes
+    // with this fixture.
+    assert_eq!(ENTROPY_FORK_ELF.len(), 102_464);
     // The verifiable build's section-header table ends exactly at the file's end: no padding.
     assert_eq!(
         section_header_end(ENTROPY_FORK_ELF),
@@ -74,22 +74,24 @@ fn the_fork_elf_fixture_is_the_forks_verifiable_build() {
     );
     assert_eq!(
         hex(&solana_sha256_hasher::hashv(&[ENTROPY_FORK_ELF]).to_bytes()),
-        "2ec504ac1a71ff0f0f515c70a541522a5c58ef126aebb893dbf6ad7245d65fe8"
+        "d081350a0d2d1dc88e94e8dbfe9647cf30dbc8af3d85a82b5fa433487af342b8"
     );
     let stripped_len = ENTROPY_FORK_ELF
         .iter()
         .rposition(|&b| b != 0)
         .map_or(0, |i| i + 1);
-    assert_eq!(stripped_len, 106_633);
+    assert_eq!(stripped_len, 102_449);
     assert_eq!(
         hex(&solana_sha256_hasher::hashv(&[&ENTROPY_FORK_ELF[..stripped_len]]).to_bytes()),
-        "dae042011c5d881edd8287a61694d60cf19471fb68c7fccd45f8965734bf53f1"
+        "d3a28f3554a5c1478af0bdf7f51da0a57df7abdccb2082c0bf288f0b41a9307c"
     );
     // SBPFv3: e_flags at 0x30 is 0x3.
     assert_eq!(
         u32::from_le_bytes(ENTROPY_FORK_ELF[0x30..0x34].try_into().unwrap()),
         3
     );
+    // The fork is not Regolith's bytecode: four source changes, a different ELF.
+    assert_ne!(ENTROPY_FORK_ELF, REGOLITH_ENTROPY_ELF);
 }
 
 #[test]

@@ -17,6 +17,7 @@ import { join } from "node:path";
 
 import {
   drawAxes,
+  EntropyError,
   entropyValue,
   fallbackHash,
   INITIAL_LADDERS,
@@ -50,6 +51,7 @@ import {
   REGOLITH_ENTROPY_EXECUTABLE_HASH,
   rentForVar,
   revealInstruction,
+  sampleInstruction,
   sha256Hex,
   slotHashes,
   slotHashFor,
@@ -527,10 +529,16 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     await localnet.timeTravel({ absoluteSlot: Number(target) });
     await waitForSlot(target);
     expect((await slotHashes()).find((e) => e.slot === a.endAt)).toBeUndefined();
+    // The fork's Sample fails inside the CPI; nothing is written to the Var.
     expect(await sampleVarExpectingError(keeper, p5.pool, a.address)).toBe(
-      errorCode("SampleWindowMissed"), // 6039
+      EntropyError.SlotHashUnavailable, // 2
     );
-    expect((await fetchVar(a.address))!.slotHash).toEqual(ZERO32); // the CPI rolled back
+    expect((await fetchVar(a.address))!.slotHash).toEqual(ZERO32);
+    // Direct to Entropy, same answer: a missed window leaves the Var unsampled for anyone.
+    expect(await sendExpectingError(stranger, [sampleInstruction(stranger, a.address)])).toBe(
+      EntropyError.SlotHashUnavailable,
+    );
+    expect((await fetchVar(a.address))!.slotHash).toEqual(ZERO32);
 
     // Open B, replace: the pool's recorded commit moves with it.
     const b = await openFresh(keeper, keeper.address, SEED_B);
@@ -570,7 +578,7 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     ).toBe(errorCode("PoolNotLocked")); // 6027
   });
 
-  it("8. the Step 5 negatives hold against the fork: shape, too early, missed window with rollback, forged fallback", async () => {
+  it("8. the Step 5 negatives hold against the fork: shape, too early, missed window fails inside Entropy, forged fallback", async () => {
     const refs = await lockedPool();
     const setVarBy = async (who: KeyPairSigner, v: Address) =>
       sendExpectingError(who, await setVarInstruction(who, refs.pool, v));
@@ -604,15 +612,19 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
       await sendExpectingError(keeper, await drawInstruction(keeper, refs.pool, v.address)),
     ).toBe(errorCode("VarNotSampledHere")); // 6038
 
-    // Window missed: the CPI writes the fallback, sample_var refuses, the write rolls back.
+    // Window missed: the fork's Sample fails with SlotHashUnavailable, the Var is untouched.
     const target = v.endAt + 600n;
     await localnet.timeTravel({ absoluteSlot: Number(target) });
     await waitForSlot(target);
     expect(await sampleVarExpectingError(keeper, refs.pool, v.address)).toBe(
-      errorCode("SampleWindowMissed"), // 6039
+      EntropyError.SlotHashUnavailable, // 2
     );
     expect((await fetchVar(v.address))!.slotHash).toEqual(ZERO32);
     expect((await fetchPool(refs.pool)).sampledSlot).toBe(0n);
+    expect(await sendExpectingError(keeper, [sampleInstruction(keeper, v.address)])).toBe(
+      EntropyError.SlotHashUnavailable,
+    );
+    expect((await fetchVar(v.address))!.slotHash).toEqual(ZERO32);
 
     // Forged fallback: a Var carrying keccak(end_at) with a consistent reveal.
     const fallback = fallbackHash(v.endAt);

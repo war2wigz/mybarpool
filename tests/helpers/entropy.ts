@@ -55,13 +55,13 @@ const localnet = new Localnet();
  * rebuilds the fork at the same commit and compares. The fixture is named by the first seven
  * characters.
  */
-export const ENTROPY_FORK_COMMIT = "486225b288e70aeda37e1179c673ab02254587d2";
+export const ENTROPY_FORK_COMMIT = "5a869c8c1a89842cfbbbb904fa7b61da083f3dae";
 /** SHA-256 of the fixture file (`programs/mybarpool/tests/fixtures/entropy-<fork7>.so`). */
 export const ENTROPY_FORK_ELF_SHA256 =
-  "2ec504ac1a71ff0f0f515c70a541522a5c58ef126aebb893dbf6ad7245d65fe8";
+  "d081350a0d2d1dc88e94e8dbfe9647cf30dbc8af3d85a82b5fa433487af342b8";
 /** `solana-verify get-executable-hash`: the same bytes with trailing zeros stripped. */
 export const ENTROPY_FORK_EXECUTABLE_HASH =
-  "dae042011c5d881edd8287a61694d60cf19471fb68c7fccd45f8965734bf53f1";
+  "d3a28f3554a5c1478af0bdf7f51da0a57df7abdccb2082c0bf288f0b41a9307c";
 /** Regolith's deployed bytecode, `verify.osec.io`'s `on_chain_hash` for `3jSk…` (Step 5). */
 export const REGOLITH_ENTROPY_EXECUTABLE_HASH =
   "b64ffdfef7bb05839fbe0d24196697cc20de6bc72081031bc0523699181b18b1";

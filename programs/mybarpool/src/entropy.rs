@@ -6,10 +6,12 @@
 //! reports as Regolith's deployed `3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X`
 //! (`api/src/state/var.rs`, `api/src/instruction.rs`, `program/src/sample.rs`,
 //! `program/src/reveal.rs`). The deployment this program uses, `ENTROPY_PROGRAM`,
-//! is the platform's fork `war2wigz/entropy` of that commit (program id, the
-//! `Open` arm and the `security.txt` contact changed; the layout, `Sample`,
-//! `Reveal` and the formulas unmodified), pinned at `ENTROPY_FORK_COMMIT` in
-//! the test helpers and CI. A test decodes a `Var` fetched from mainnet and
+//! is the platform's fork `war2wigz/entropy` of that commit (four changes:
+//! program id, the `Open` arm, the `security.txt` contact, and `Sample`
+//! failing with `SlotHashUnavailable` once the end slot has left `SlotHashes`
+//! instead of recording `keccak(end_at)`; the layout, `Reveal` and the
+//! formulas unmodified), pinned at `ENTROPY_FORK_COMMIT` in the test helpers
+//! and CI. A test decodes a `Var` fetched from mainnet and
 //! others check both ELF fixtures' hashes.
 //!
 //! The program never opens, reveals, rolls or closes a `Var`: it reads one and

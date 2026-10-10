@@ -323,7 +323,9 @@ fn sample_var_on_a_third_party_sampled_var_records_without_a_cpi() {
 #[test]
 fn sample_var_refuses_a_hash_the_sysvar_does_not_confirm() {
     // PROGRAM §4.4: a different hash for end_at, and the fallback with end_at gone, are both
-    // SampleWindowMissed (ARCHITECTURE › Randomness "two ways").
+    // SampleWindowMissed (ARCHITECTURE › Randomness "two ways"). The fallback is planted: the
+    // platform's deployment never writes it, so this guards against any other deployment's
+    // `Var`.
     let f = Fixture::new();
     let var = f.var_key();
     let pool = locked_pool_with_var(&f, &var, END_AT);
@@ -355,10 +357,19 @@ fn sample_var_refuses_a_hash_the_sysvar_does_not_confirm() {
     );
 }
 
+/// The fork's `EntropyError::SlotHashUnavailable` (`api/src/error.rs`), as the CPI returns it.
+const SLOT_HASH_UNAVAILABLE: u32 = 2;
+
+/// `Var.slot_hash`: discriminator 8, authority 32, id 8, provider 32, commit 32, seed 32.
+const VAR_SLOT_HASH: std::ops::Range<usize> = 144..176;
+
 #[test]
-fn sample_var_after_the_window_lets_entropy_write_the_fallback_and_then_refuses_it() {
-    // PROGRAM §4.4: the CPI writes keccak(end_at); our check fails; the whole transaction
-    // fails, so the Var write is rolled back too.
+fn sample_var_after_the_window_fails_inside_entropy_and_writes_nothing() {
+    // PROGRAM §4.4; ARCHITECTURE › Randomness (2026-10-10): the fork's `Sample` fails with
+    // `SlotHashUnavailable` when `SlotHashes` has no entry for `end_at`, so the CPI error is
+    // the transaction's error and the `Var` is never written — not even transiently. Before
+    // the fourth fork change this was Regolith's fallback write, refused afterwards by our
+    // `SampleWindowMissed` check and rolled back.
     let f = Fixture::new();
     let mut m = mollusk_for_draw(
         END_AT + 600,
@@ -371,15 +382,122 @@ fn sample_var_after_the_window_lets_entropy_write_the_fallback_and_then_refuses_
     let result = m.process_and_validate_instruction(
         &sample_var_ix(&f.keeper, &pool, &var),
         &accounts,
-        &[Check::err(custom(err(E::SampleWindowMissed)))],
+        &[Check::err(custom(SLOT_HASH_UNAVAILABLE))],
     );
     let after = decode_pool(account_of(&result, &pool_key(&f)));
     assert_eq!((after.sampled_slot, after.sampled_hash), (0, [0u8; 32]));
     assert_eq!(
-        &account_of(&result, &var).data[144..176],
+        &account_of(&result, &var).data[VAR_SLOT_HASH],
         &[0u8; 32],
-        "rolled back"
+        "Var unsampled"
     );
+    m.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::err(custom(err(E::VarNotSampledHere)))],
+    );
+}
+
+#[test]
+fn sample_var_in_the_end_slot_itself_is_slot_hash_unavailable() {
+    // PROGRAM §4.4: `SlotHashes` never holds the current slot, so a sample in slot `end_at`
+    // passes Entropy's `slot >= end_at` and finds no entry — the fork fails it rather than
+    // writing `keccak(end_at)`. The window opens one slot later.
+    let f = Fixture::new();
+    let mut m = mollusk_for_draw(
+        END_AT,
+        &[(END_AT - 1, [0xE1; 32]), (END_AT - 2, [0xE0; 32])],
+    );
+    with_entropy(&mut m);
+    let var = f.var_key();
+    let pool = locked_pool_with_var(&f, &var, END_AT);
+    let accounts = draw_accounts(&f, &m, &pool, Some((&var, &f.fresh_var(END_AT))));
+    let result = m.process_and_validate_instruction(
+        &sample_var_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::err(custom(SLOT_HASH_UNAVAILABLE))],
+    );
+    assert_eq!(&account_of(&result, &var).data[VAR_SLOT_HASH], &[0u8; 32]);
+
+    // One slot later the entry is there (ARCHITECTURE › Randomness "the entry appears in the
+    // first slot after the end slot"): the sample succeeds.
+    let mut next = mollusk_for_draw(END_AT + 1, &[(END_AT, END_HASH), (END_AT - 1, [0xE1; 32])]);
+    with_entropy(&mut next);
+    let accounts = draw_accounts(&f, &next, &pool, Some((&var, &f.fresh_var(END_AT))));
+    let result = next.process_and_validate_instruction(
+        &sample_var_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::success()],
+    );
+    let after = decode_pool(account_of(&result, &pool_key(&f)));
+    assert_eq!(
+        (after.sampled_slot, after.sampled_hash),
+        (END_AT + 1, END_HASH)
+    );
+}
+
+/// `mybarpool::entropy::sample_instruction` in Mollusk's instruction type.
+fn direct_sample(signer: &Pubkey, var: &Pubkey) -> solana_instruction::Instruction {
+    let ix = mybarpool::entropy::sample_instruction(&to_a(signer), &to_a(var));
+    solana_instruction::Instruction {
+        program_id: to_m(&ix.program_id),
+        accounts: ix
+            .accounts
+            .iter()
+            .map(|a| solana_instruction::AccountMeta {
+                pubkey: to_m(&a.pubkey),
+                is_signer: a.is_signer,
+                is_writable: a.is_writable,
+            })
+            .collect(),
+        data: ix.data,
+    }
+}
+
+#[test]
+fn a_direct_entropy_sample_after_the_window_fails_and_leaves_the_var_unsampled() {
+    // ARCHITECTURE › Randomness (2026-10-10): the fork change holds for anyone calling
+    // Entropy directly, not only through `sample_var` — a missed window leaves the `Var`
+    // unsampled, so `replace_var` stays open. Within the window the same call writes the end
+    // slot's hash.
+    let f = Fixture::new();
+    let var = f.var_key();
+    let pool = locked_pool_with_var(&f, &var, END_AT);
+    let direct = direct_sample(&f.keeper, &var);
+
+    let mut closed = mollusk_for_draw(
+        END_AT + 600,
+        &[(END_AT + 2, [0xE3; 32]), (END_AT + 1, [0xE2; 32])],
+    );
+    with_entropy(&mut closed);
+    let accounts = draw_accounts(&f, &closed, &pool, Some((&var, &f.fresh_var(END_AT))));
+    let result = closed.process_and_validate_instruction(
+        &direct,
+        &accounts,
+        &[Check::err(custom(SLOT_HASH_UNAVAILABLE))],
+    );
+    assert_eq!(&account_of(&result, &var).data[VAR_SLOT_HASH], &[0u8; 32]);
+
+    // In slot end_at itself, mainnet's sysvar shape (no entry for the current slot): the same.
+    let mut end_slot = mollusk_for_draw(
+        END_AT,
+        &[(END_AT - 1, [0xE1; 32]), (END_AT - 2, [0xE0; 32])],
+    );
+    with_entropy(&mut end_slot);
+    let accounts = draw_accounts(&f, &end_slot, &pool, Some((&var, &f.fresh_var(END_AT))));
+    let result = end_slot.process_and_validate_instruction(
+        &direct,
+        &accounts,
+        &[Check::err(custom(SLOT_HASH_UNAVAILABLE))],
+    );
+    assert_eq!(&account_of(&result, &var).data[VAR_SLOT_HASH], &[0u8; 32]);
+
+    // One slot later, with the entry present: the real hash is written.
+    let mut open = mollusk_for_draw(END_AT + 1, &[(END_AT, END_HASH), (END_AT - 1, [0xE1; 32])]);
+    with_entropy(&mut open);
+    let accounts = draw_accounts(&f, &open, &pool, Some((&var, &f.fresh_var(END_AT))));
+    let result = open.process_and_validate_instruction(&direct, &accounts, &[Check::success()]);
+    assert_eq!(&account_of(&result, &var).data[VAR_SLOT_HASH], &END_HASH);
 }
 
 #[test]

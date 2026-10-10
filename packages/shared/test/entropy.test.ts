@@ -20,6 +20,7 @@ import {
   encodeSample,
   encodeVar,
   entropyValue,
+  EntropyError,
   EntropyInstruction,
   fallbackHash,
   keccak,
@@ -105,6 +106,8 @@ describe("Entropy Var (regolith-labs/entropy f26ae03)", () => {
 
   it("instruction data: Open, Sample, Reveal, Next, Close", () => {
     expect(EntropyInstruction).toEqual({ Open: 0, Close: 1, Next: 2, Reveal: 4, Sample: 5 });
+    // api/src/error.rs on the fork: IncompleteDigest, InvalidSeed, and the fork's own code.
+    expect(EntropyError).toEqual({ IncompleteDigest: 0, InvalidSeed: 1, SlotHashUnavailable: 2 });
     const commit = new Uint8Array(32).fill(0xab);
     const open = encodeOpen({ id: 7n, commit, isAuto: false, samples: 1n, endAt: 1000n });
     // api/src/instruction.rs `Open`: id [u8;8], commit [u8;32], is_auto [u8;8], samples [u8;8],

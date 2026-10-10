@@ -34,7 +34,7 @@ fn usage() -> ! {
     eprintln!(
         "usage: mybarpool-fuzz --fixtures <dir> [--seconds <n>] [--cases <n>] [--seed <u64>] \
          [--filter buy|settle|all] [--program target/deploy/mybarpool.so] \
-         [--entropy programs/mybarpool/tests/fixtures/entropy-486225b.so]\n       \
+         [--entropy programs/mybarpool/tests/fixtures/entropy-5a869c8.so]\n       \
          mybarpool-fuzz --inspect <fixture.fix>"
     );
     std::process::exit(2)
@@ -48,7 +48,7 @@ fn parse() -> Args {
         seed: None,
         filter: "all".into(),
         program: PathBuf::from("target/deploy/mybarpool.so"),
-        entropy: PathBuf::from("programs/mybarpool/tests/fixtures/entropy-486225b.so"),
+        entropy: PathBuf::from("programs/mybarpool/tests/fixtures/entropy-5a869c8.so"),
         inspect: None,
     };
     let mut it = std::env::args().skip(1);

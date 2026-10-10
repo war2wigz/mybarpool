@@ -15,8 +15,9 @@ import { ascii, assertU64, concatBytes } from "./bytes.js";
 /** PROGRAM §1 `ENTROPY_PROGRAM`, base58. */
 /**
  * The platform's own deployment of Entropy (PROGRAM §1): the fork `war2wigz/entropy` of
- * `regolith-labs/entropy` `f26ae03`, program id changed, `Open` re-enabled, `security.txt`
- * contact changed, nothing else. Through Step 5 this was Regolith's id below.
+ * `regolith-labs/entropy` `f26ae03` with four changes — program id, `Open` re-enabled,
+ * `security.txt` contact, and `Sample` failing with `SlotHashUnavailable` when the end slot's
+ * hash has left `SlotHashes` — nothing else. Through Step 5 this was Regolith's id below.
  */
 export const ENTROPY_PROGRAM = "ASo8r4EEFLPAMDk1w3XdKbEmq4c1GynbsHGa6RGG83fH";
 /**
@@ -39,6 +40,18 @@ export const EntropyInstruction = Object.freeze({
   Reveal: 4,
   Sample: 5,
 });
+
+/**
+ * The fork's `EntropyError` codes (`api/src/error.rs`), as `Custom(n)` in a failed
+ * transaction's logs. `SlotHashUnavailable` is the fork's own: `Sample` after the end slot
+ * has left `SlotHashes` (≈ 512 slots) fails instead of recording `keccak(end_at)`, so a
+ * missed window shows as this error and the `Var` stays unsampled for `replace_var`.
+ */
+export const EntropyError = Object.freeze({
+  IncompleteDigest: 0,
+  InvalidSeed: 1,
+  SlotHashUnavailable: 2,
+} as const);
 
 /** An Entropy `Var` account's fields. */
 export interface Var {
