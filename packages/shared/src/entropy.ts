@@ -25,7 +25,9 @@ export const ENTROPY_PROGRAM = "ASo8r4EEFLPAMDk1w3XdKbEmq4c1GynbsHGa6RGG83fH";
  * `Open` canary only.
  */
 export const REGOLITH_ENTROPY_PROGRAM = "3jSkUuYBoJzQPMEzTvkDFXCZUBksPamrVhrnHR9igu2X";
+/** Size of an Entropy `Var` account in bytes. */
 export const VAR_LEN = 240;
+/** The `Var` account's 8-byte discriminator (zero in Entropy's layout). */
 export const VAR_DISCRIMINATOR: Uint8Array = new Uint8Array(8);
 const PUBKEY_BYTES = 32;
 
@@ -38,6 +40,7 @@ export const EntropyInstruction = Object.freeze({
   Sample: 5,
 });
 
+/** An Entropy `Var` account's fields. */
 export interface Var {
   readonly authority: Uint8Array;
   readonly id: bigint;
@@ -96,6 +99,7 @@ export function varSeeds(authority: Uint8Array, id: bigint): Uint8Array[] {
   return [ascii("var"), assertPubkey(authority, "authority"), u64le(id, "id")];
 }
 
+/** keccak-256 of `bytes`, Entropy's hash. */
 export function keccak(bytes: Uint8Array): Uint8Array {
   return keccak_256(bytes);
 }
@@ -112,6 +116,7 @@ export function entropyValue(slotHash: Uint8Array, seed: Uint8Array, samples: bi
   );
 }
 
+/** Decodes a `Var` account's bytes. */
 export function decodeVar(bytes: Uint8Array): Var {
   if (bytes.length !== VAR_LEN) {
     throw new RangeError(`Var must be ${VAR_LEN} bytes, got ${bytes.length}`);

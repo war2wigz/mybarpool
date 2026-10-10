@@ -18,6 +18,7 @@
 import { assertLane, LANES } from "./boxes.js";
 import { ascii, sha256, u64le, u8 } from "./bytes.js";
 
+/** Digits on an axis (0–9). */
 export const DIGITS = 10;
 
 /** A permutation of 0–9 as the program records it on the pool. */
@@ -34,10 +35,13 @@ export type Digits = readonly [
   number,
 ];
 
+/** Which axis: `home` is the columns, `away` the rows. */
 export type AxisLabel = "home" | "away";
 
+/** Bytes of an Entropy value. */
 export const ENTROPY_VALUE_BYTES = 32;
 
+/** Checks that `digits` is a permutation of 0–9 and returns it typed. */
 export function assertDigits(digits: readonly number[]): Digits {
   if (digits.length !== DIGITS) throw new RangeError(`axis must have ${DIGITS} digits`);
   const seen = new Set<number>();
@@ -50,6 +54,7 @@ export function assertDigits(digits: readonly number[]): Digits {
   return digits as unknown as Digits;
 }
 
+/** PROGRAM §6.2: one axis's digit order from the Entropy value. */
 export function axis(value: Uint8Array, label: AxisLabel): Digits {
   if (value.length !== ENTROPY_VALUE_BYTES) {
     throw new RangeError(`value must be ${ENTROPY_VALUE_BYTES} bytes, got ${value.length}`);
@@ -64,6 +69,7 @@ export function axis(value: Uint8Array, label: AxisLabel): Digits {
   return a as unknown as Digits;
 }
 
+/** PROGRAM §6.2: both axes from the Entropy value. */
 export function drawAxes(value: Uint8Array): { home: Digits; away: Digits } {
   return { home: axis(value, "home"), away: axis(value, "away") };
 }

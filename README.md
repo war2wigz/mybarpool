@@ -159,9 +159,11 @@ How a client earns: create pools itself on its own site (5% creator share plus u
 
 Third parties pay for their own RPC. The SDK takes a connection as a parameter and ships with no default endpoint. Pool state is read directly from the chain, so a client needs nothing from MyBarPool's servers to work. A public pools/games listing API may be offered as a best-effort convenience, rate-limited and without SLA; nothing in the SDK depends on it.
 
+The SDK is `@mybarpool/shared` ([packages/shared/README.md](packages/shared/README.md)): built on `@solana/kit` only, it takes a connection and a program address, and gives a client the ten user-facing instruction helpers, transaction preparation for the v1 and legacy formats, typed reads, event decoding and subscriptions, and the derived states the app shows. The Codama-generated client for the whole program is under `@mybarpool/shared/generated`.
+
 Clients must show a box as **won** only after the settle event, never from live scores. Live scores may mark a box as **leading**, clearly provisional.
 
-The program specification, [docs/PROGRAM.md](docs/PROGRAM.md), is the contract: every account and its fields, every instruction with its checks, every event and error, and the exact box-assignment, shuffle and winner algorithms. It is what the program is built and audited against, and what an integrator's own verification can be built against. Integration guide, SDK reference and the official program ID and config PDA will be published here when the program is deployed. Check the program ID against this repo before trusting a deployment; forks are possible and will not be served by the keeper.
+The program specification, [docs/PROGRAM.md](docs/PROGRAM.md), is the contract: every account and its fields, every instruction with its checks, every event and error, and the exact box-assignment, shuffle and winner algorithms. It is what the program is built and audited against, and what an integrator's own verification can be built against. The SDK reference is generated from the package (`npm run docs`); the official program ID and config PDA will be published here when the program is deployed. Check the program ID against this repo before trusting a deployment; forks are possible and will not be served by the keeper.
 
 ## What is in this repo
 

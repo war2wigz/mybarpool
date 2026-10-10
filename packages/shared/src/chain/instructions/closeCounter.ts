@@ -6,6 +6,7 @@ import type { MyBarPoolClient } from "../client.js";
 import { SdkError } from "../errors.js";
 import { configPda, counterPda } from "../pdas.js";
 
+/** Input to {@link closeCounterInstruction}. */
 export interface CloseCounterInput {
   creator: Address;
   game: Address;

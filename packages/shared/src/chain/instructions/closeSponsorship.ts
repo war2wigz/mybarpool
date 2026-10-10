@@ -4,6 +4,7 @@ import { getCloseSponsorshipInstructionAsync } from "../../generated/index.js";
 import type { MyBarPoolClient } from "../client.js";
 import { sponsorshipPda } from "../pdas.js";
 
+/** Input to {@link closeSponsorshipInstruction}. */
 export interface CloseSponsorshipInput {
   pool: Address;
   /** The sponsor whose returned `Sponsorship` is closed; receives its rent. */

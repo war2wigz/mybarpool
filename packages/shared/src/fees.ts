@@ -17,6 +17,7 @@ export const CREATOR_BPS_MAX = 500;
 export const ADDON_BUDGET_BPS_MAX = 500;
 /** PROGRAM §1: ceiling on platform + creator base + add-on budget. */
 export const TOTAL_BPS_MAX = 1500;
+/** Basis points in a whole: 10,000. */
 export const BPS_DENOMINATOR = 10_000n;
 
 /** PROGRAM §1 payout presets; the discriminant is the on-chain value. */
@@ -26,6 +27,7 @@ export enum PayoutPreset {
   FinalOnly = 2,
 }
 
+/** A payout preset's per-quarter percentages, summing to 100. */
 export type Split = readonly [q1: number, q2: number, q3: number, final: number];
 
 /** PROGRAM §1 preset table, in percent. */
@@ -35,6 +37,7 @@ export const PRESET_SPLITS: Readonly<Record<PayoutPreset, Split>> = Object.freez
   [PayoutPreset.FinalOnly]: [0, 0, 0, 100],
 });
 
+/** Whether `value` is one of the PROGRAM §1 presets. */
 export function isPayoutPreset(value: number): value is PayoutPreset {
   return (
     value === PayoutPreset.Standard ||
@@ -43,6 +46,7 @@ export function isPayoutPreset(value: number): value is PayoutPreset {
   );
 }
 
+/** Checks that `value` is a preset and returns it typed. */
 export function assertPayoutPreset(value: number): PayoutPreset {
   if (!isPayoutPreset(value)) throw new RangeError(`invalid payout preset: ${value}`);
   return value;
@@ -55,6 +59,7 @@ function assertBps(value: number, max: number, what: string): number {
   return value;
 }
 
+/** The platform's fee settings from `PlatformConfig` (PROGRAM §3.1). */
 export interface FeeConfig {
   /** Platform share, ≤ `PLATFORM_BPS_MAX` (initial 500). */
   readonly platformBps: number;
@@ -64,6 +69,7 @@ export interface FeeConfig {
   readonly addonBudgetBps: number;
 }
 
+/** What a creator chose for a pool: the add-on and the integrator share. */
 export interface PoolFeeChoice {
   /** Creator add-on, 0–500 (ARCHITECTURE › Fees). */
   readonly creatorAddonBps: number;
@@ -96,12 +102,14 @@ export function pot(price: bigint): bigint {
   return assertU64(BigInt(BOXES) * price, "pot");
 }
 
+/** Input to {@link feeAmounts}: the price and every fee rate. */
 export interface FeeAmountsInput extends PoolFeeChoice {
   readonly price: bigint;
   readonly platformBps: number;
   readonly creatorBps: number;
 }
 
+/** The three fees of a pool, fixed at creation (PROGRAM §5). */
 export interface FeeAmounts {
   /** `floor(P × platform_bps / 10_000)` */
   readonly platformFee: bigint;
@@ -131,6 +139,7 @@ export function feeAmounts(input: FeeAmountsInput): FeeAmounts {
   };
 }
 
+/** Input to {@link prizePool}. */
 export interface PrizePoolInput {
   readonly pot: bigint;
   readonly fees: FeeAmounts;
@@ -147,8 +156,10 @@ export function prizePool({ pot: P, fees, sponsoredTotal }: PrizePoolInput): big
   return assertU64(afterFees + sponsoredTotal, "prizePool");
 }
 
+/** The four quarter prizes in base units. */
 export type QuarterAmounts = readonly [q1: bigint, q2: bigint, q3: bigint, final: bigint];
 
+/** Result of {@link quarterPrizes}: the four amounts and the dust. */
 export interface QuarterPrizes {
   /** `floor(prize_pool × split[q] / 100)` per quarter. */
   readonly quarters: QuarterAmounts;
@@ -170,6 +181,7 @@ export function quarterPrizes(prizePoolAmount: bigint, preset: PayoutPreset): Qu
   };
 }
 
+/** Input to {@link creatorBreakEvenBoxes}. */
 export interface BreakEvenInput extends PoolFeeChoice {
   readonly platformBps: number;
   readonly creatorBps: number;

@@ -14,13 +14,16 @@
 import { BOXES, type BoxIndex } from "./boxes.js";
 import { sha256, u64le, u8 } from "./bytes.js";
 
+/** Bytes of a public key. */
 export const PUBKEY_BYTES = 32;
 
 /** A box owner: 32 pubkey bytes, or unowned. `null` and 32 zero bytes (`Pubkey::default()`) both mean unowned. */
 export type Owner = Uint8Array | null;
 
+/** The 25 owners in index order; the default key marks an unsold box. */
 export type Owners = readonly Owner[];
 
+/** Input to {@link assignBoxes}: the owners before the buy, the buyer and the count. */
 export interface AssignBoxesInput {
   /** 32 bytes: the hash of the most recent `SlotHashes` entry. */
   readonly slothash: Uint8Array;
@@ -34,6 +37,7 @@ export interface AssignBoxesInput {
   readonly owners: Owners;
 }
 
+/** What {@link assignBoxes} produced: the owners after the buy and the indices assigned. */
 export interface AssignBoxesResult {
   /** The assigned indices, in assignment order. */
   readonly boxes: readonly BoxIndex[];
@@ -41,6 +45,7 @@ export interface AssignBoxesResult {
   readonly owners: readonly Owner[];
 }
 
+/** Whether `owner` is the default key, i.e. the box is unsold. */
 export function isUnowned(owner: Owner): boolean {
   if (owner === null) return true;
   if (owner.length !== PUBKEY_BYTES) {
@@ -55,6 +60,7 @@ function assertPubkey(bytes: Uint8Array, what: string): void {
   }
 }
 
+/** PROGRAM §6.1 box assignment: the reference implementation the program reproduces byte for byte. */
 export function assignBoxes(input: AssignBoxesInput): AssignBoxesResult {
   const { slothash, buyer, sold, count, owners } = input;
   assertPubkey(slothash, "slothash");

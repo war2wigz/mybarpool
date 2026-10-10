@@ -23,6 +23,7 @@ export interface PriceLadder {
   readonly maxPrice: bigint;
 }
 
+/** `10^decimals` as a bigint. */
 export function pow10(decimals: number): bigint {
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 38) {
     throw new RangeError(`decimals out of range 0–38: ${decimals}`);
@@ -101,7 +102,9 @@ export function skrLadder(decimals: number): PriceLadder {
   return scaled(INITIAL_LADDERS_WHOLE.SKR, decimals);
 }
 
+/** SOL has 9 decimals (lamports). */
 export const SOL_DECIMALS = 9;
+/** ORE has 11 decimals. */
 export const ORE_DECIMALS = 11;
 
 /** ARCHITECTURE › Buying table in base units: SOL and ORE `0.05 / 0.05 / 1`. */

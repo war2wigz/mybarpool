@@ -8,6 +8,7 @@
  */
 import { shortAddress } from "./format.js";
 
+/** One reviewed sponsor: wallet, display name, logo, website and optional Seeker app. */
 export interface SponsorEntry {
   /** The sponsor's wallet, base58. */
   readonly wallet: string;
@@ -20,6 +21,7 @@ export interface SponsorEntry {
   readonly androidPackage?: string;
 }
 
+/** The shipped directory; empty until entries arrive by owner review. */
 export const SPONSOR_DIRECTORY: readonly SponsorEntry[] = Object.freeze([]);
 
 /** Android application id: dot-separated segments, each starting with a letter. */
@@ -35,6 +37,7 @@ function isHttpsUrl(value: string): boolean {
   return HTTPS_URL.test(value);
 }
 
+/** Checks an entry's wallet, `https` URLs and Android package; throws `RangeError`. */
 export function validateSponsorEntry(entry: SponsorEntry): SponsorEntry {
   if (!BASE58.test(entry.wallet)) throw new RangeError("wallet must be a base58 public key");
   if (entry.displayName.trim().length === 0) throw new RangeError("displayName must not be empty");
@@ -54,6 +57,7 @@ export function dappStoreLink(androidPackage: string): string {
   return `solanadappstore://details?id=${androidPackage}`;
 }
 
+/** The directory entry for `wallet`, or `undefined`. */
 export function sponsorByWallet(
   wallet: string,
   directory: readonly SponsorEntry[] = SPONSOR_DIRECTORY,
@@ -71,6 +75,7 @@ export type SponsorResolution =
   | { kind: "name"; name: string }
   | { kind: "address"; short: string };
 
+/** How to show the sponsor at `wallet`: see {@link SponsorResolution}. */
 export function resolveSponsor(
   wallet: string,
   options: { directory?: readonly SponsorEntry[]; skrName?: string | undefined } = {},

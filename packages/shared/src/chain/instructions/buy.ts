@@ -10,6 +10,7 @@ import { addressBytes, existingTokenAccount, poolPdas, requirePool, splOf } from
 /** PROGRAM §4.3 gating input: the gate key co-signs a `Link` pool; the list proves an `Allowlist` buyer. */
 export type BuyGate = { gateKey: TransactionSigner } | { wallets: readonly Address[] };
 
+/** Input to {@link buyInstruction}. */
 export interface BuyInput {
   buyer: TransactionSigner;
   pool: Address;
@@ -19,6 +20,7 @@ export interface BuyInput {
   gate?: BuyGate;
 }
 
+/** Result of {@link buyInstruction}: the instruction and the addresses it derived. */
 export interface BuyResult {
   instruction: Instruction;
   game: Address;

@@ -21,6 +21,7 @@ export type BoxIndex = number;
 /** 1-based box label as a person sees it. */
 export type BoxLabel = number;
 
+/** Checks that `index` is an integer in 0–24 and returns it typed. */
 export function assertBoxIndex(index: number): BoxIndex {
   if (!Number.isInteger(index) || index < 0 || index >= BOXES) {
     throw new RangeError(`box index out of range 0–${BOXES - 1}: ${index}`);
@@ -28,6 +29,7 @@ export function assertBoxIndex(index: number): BoxIndex {
   return index;
 }
 
+/** Checks that `label` is an integer in 1–25 and returns it typed. */
 export function assertBoxLabel(label: number): BoxLabel {
   if (!Number.isInteger(label) || label < 1 || label > BOXES) {
     throw new RangeError(`box label out of range 1–${BOXES}: ${label}`);
@@ -35,6 +37,7 @@ export function assertBoxLabel(label: number): BoxLabel {
   return label;
 }
 
+/** Checks that `lane` is an integer in 0–4 (a row or a column) and returns it. */
 export function assertLane(lane: number): number {
   if (!Number.isInteger(lane) || lane < 0 || lane >= LANES) {
     throw new RangeError(`lane out of range 0–${LANES - 1}: ${lane}`);

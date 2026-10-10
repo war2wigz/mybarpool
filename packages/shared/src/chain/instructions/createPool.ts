@@ -2,11 +2,12 @@ import type { Address, Instruction, TransactionSigner } from "@solana/kit";
 
 import { allowlistRoot } from "../../allowlist.js";
 import { isValidPrice } from "../../price.js";
+import type { PayoutPreset } from "../../fees.js";
 import {
   AccessType,
   getCreatePoolInstructionAsync,
   GameStatus,
-  type PayoutPreset,
+  type PayoutPresetArgs,
 } from "../../generated/index.js";
 import { accountExists, CREATOR_COUNTER_SIZE, getConfig, getGame, POOL_SIZE } from "../accounts.js";
 import type { MyBarPoolClient } from "../client.js";
@@ -28,6 +29,7 @@ export type PoolAccess =
   | { type: "link"; gateKey: Address }
   | { type: "allowlist"; wallets: readonly Address[] };
 
+/** Input to {@link createPoolInstruction}. */
 export interface CreatePoolInput {
   creator: TransactionSigner;
   game: Address;
@@ -37,6 +39,7 @@ export interface CreatePoolInput {
   token: number;
   /** Per box, base units; must be on the token's ladder. */
   price: bigint;
+  /** PROGRAM §1 payout preset (the root's enum; the generated one has the same values). */
   preset: PayoutPreset;
   access: PoolAccess;
   creatorAddonBps?: number;
@@ -51,6 +54,7 @@ export interface CreatePoolInput {
   now?: bigint;
 }
 
+/** Result of {@link createPoolInstruction}: the instruction and the addresses it derived. */
 export interface CreatePoolResult {
   instruction: Instruction;
   pool: Address;
@@ -135,7 +139,7 @@ export async function createPoolInstruction(
       nonce,
       token: input.token,
       price: input.price,
-      preset: input.preset,
+      preset: input.preset as number as PayoutPresetArgs,
       accessType,
       gateKey: input.access.type === "link" ? input.access.gateKey : DEFAULT_ADDRESS,
       allowlistRoot: root,

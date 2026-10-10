@@ -303,6 +303,29 @@ jobs:
       - run: npm run typecheck
       - run: npm run format
 
+      - name: No endpoint in the bundle (PUBLISHING › Who pays for what)
+        # The SDK ships with no default RPC endpoint and forms no platform URL. The only URL
+        # literals allowed in dist/ are Codama's attribution comment and the dApp Store scheme.
+        run: |
+          set -euo pipefail
+          found=$(grep -rhoE '[a-z][a-z0-9+.-]*://[^ "`)]*' packages/shared/dist \
+            | grep -vE '^https://github.com/codama-idl/codama$|^solanadappstore://' || true)
+          if [ -n "$found" ]; then
+            echo "URL literals in dist/:"; echo "$found"; exit 1
+          fi
+
+      - name: API reference builds with every export documented (typedoc, warnings as errors)
+        run: npm run docs --workspace packages/shared
+
+      - name: Package contents (npm pack --dry-run)
+        # dist/**, src/vectors/*.json, README.md, LICENSE, package.json and nothing else.
+        run: |
+          set -euo pipefail
+          npm pack --dry-run --workspace packages/shared 2>&1 | tee pack.log
+          if grep -E '^npm notice [0-9.]+ ?[kMB]*B? +' pack.log | grep -vE ' (dist/|src/vectors/|README\.md|LICENSE|package\.json)'; then
+            echo "unexpected file in the package"; exit 1
+          fi
+
   entropy-fork-hash:
     name: Entropy fork rebuilt equals the fixture
     runs-on: ubuntu-latest

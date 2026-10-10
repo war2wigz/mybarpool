@@ -9,6 +9,7 @@ import type { MyBarPoolClient } from "./client.js";
 import { SdkError } from "./errors.js";
 import { associatedTokenAddress, configPda } from "./pdas.js";
 
+/** Input to {@link checkFunds}. */
 export interface CheckFundsInput {
   wallet: Address;
   /** PROGRAM §2 token index: 0 SOL, else an SPL token. */
@@ -22,6 +23,7 @@ export interface CheckFundsInput {
   feeLamports: bigint;
 }
 
+/** Result of {@link checkFunds}. */
 export type FundsCheck =
   | { ok: true }
   | {

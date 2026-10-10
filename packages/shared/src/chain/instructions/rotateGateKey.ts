@@ -3,6 +3,7 @@ import type { Address, Instruction, TransactionSigner } from "@solana/kit";
 import { getRotateGateKeyInstructionAsync } from "../../generated/index.js";
 import type { MyBarPoolClient } from "../client.js";
 
+/** Input to {@link rotateGateKeyInstruction}. */
 export interface RotateGateKeyInput {
   creator: TransactionSigner;
   pool: Address;

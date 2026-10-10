@@ -8,12 +8,14 @@ import { TOKEN_ACCOUNT_BYTES } from "../fees.js";
 import { configPda, vaultPda } from "../pdas.js";
 import { requirePool, splOf, tokenAccountToCredit } from "./common.js";
 
+/** Input to {@link closePoolInstruction}. */
 export interface ClosePoolInput {
   /** Whoever pays the fee; the rent goes to the creator and the dust to the fee wallet. */
   payer: TransactionSigner;
   pool: Address;
 }
 
+/** Result of {@link closePoolInstruction}. */
 export interface ClosePoolResult {
   instruction: Instruction;
   vault: Address;

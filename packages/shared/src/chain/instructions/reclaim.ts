@@ -5,11 +5,13 @@ import type { MyBarPoolClient } from "../client.js";
 import { TOKEN_ACCOUNT_BYTES } from "../fees.js";
 import { poolPdas, requirePool, splOf, tokenAccountToCredit } from "./common.js";
 
+/** Input to {@link reclaimInstruction}. */
 export interface ReclaimInput {
   owner: TransactionSigner;
   pool: Address;
 }
 
+/** Result of {@link reclaimInstruction}. */
 export interface ReclaimResult {
   instruction: Instruction;
   game: Address;

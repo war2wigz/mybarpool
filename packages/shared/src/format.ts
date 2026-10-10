@@ -9,6 +9,7 @@
  */
 import { pow10 } from "./price.js";
 
+/** How a token is shown: symbol, base-unit decimals and the decimals a price displays with. */
 export interface TokenDescriptor {
   readonly symbol: string;
   /** Base-unit decimals of the mint (9 SOL, 11 ORE, SKR per mint). */
@@ -17,7 +18,9 @@ export interface TokenDescriptor {
   readonly priceDecimals: number;
 }
 
+/** SOL for display: 9 decimals, prices to 2. */
 export const SOL: TokenDescriptor = { symbol: "SOL", decimals: 9, priceDecimals: 2 };
+/** ORE for display: 11 decimals, prices to 2. */
 export const ORE: TokenDescriptor = { symbol: "ORE", decimals: 11, priceDecimals: 2 };
 
 /** SKR's decimals are per mint (PROGRAM §3.1); the caller supplies them. */

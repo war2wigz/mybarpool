@@ -6,6 +6,7 @@ import type { MyBarPoolClient } from "../client.js";
 import { sponsorshipPda, vaultPda } from "../pdas.js";
 import { existingTokenAccount, requirePool, splOf } from "./common.js";
 
+/** Input to {@link sponsorInstruction}. */
 export interface SponsorInput {
   sponsor: TransactionSigner;
   pool: Address;
@@ -13,6 +14,7 @@ export interface SponsorInput {
   amount: bigint;
 }
 
+/** Result of {@link sponsorInstruction}. */
 export interface SponsorResult {
   instruction: Instruction;
   game: Address;

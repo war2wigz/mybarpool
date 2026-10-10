@@ -8,6 +8,7 @@
  */
 import { sha256 as nobleSha256 } from "@noble/hashes/sha2.js";
 
+/** The largest u64. */
 export const U64_MAX = (1n << 64n) - 1n;
 
 export function concatBytes(...parts: readonly Uint8Array[]): Uint8Array {
@@ -84,12 +85,14 @@ export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   return true;
 }
 
+/** Lower-case hex of `bytes`. */
 export function toHex(bytes: Uint8Array): string {
   let out = "";
   for (const byte of bytes) out += byte.toString(16).padStart(2, "0");
   return out;
 }
 
+/** Bytes of a hex string (an even number of hex digits, optional `0x`). */
 export function fromHex(hex: string): Uint8Array {
   if (hex.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(hex)) {
     throw new RangeError("not a hex string");

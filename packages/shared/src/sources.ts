@@ -7,8 +7,10 @@
  */
 import type { GameKey } from "./gameKey.js";
 
+/** A live-score source whose game ids map to a {@link GameKey}. */
 export type ScoreSource = "apiSports" | "sportradar" | "espn";
 
+/** Every {@link ScoreSource}. */
 export const SCORE_SOURCES: readonly ScoreSource[] = ["apiSports", "sportradar", "espn"];
 
 /** A game's IDs at each source; any may be unknown. */
@@ -24,6 +26,7 @@ export interface SourceGameIds {
 /** `sourceKey(source, id)` → `GameKey`. */
 export type GameIdMap = ReadonlyMap<string, GameKey>;
 
+/** The map key for a source's game id. */
 export function sourceKey(source: ScoreSource, id: number | string): string {
   if (!SCORE_SOURCES.includes(source)) throw new RangeError(`unknown score source: ${source}`);
   const text = typeof id === "number" ? id.toString() : id;
@@ -31,6 +34,7 @@ export function sourceKey(source: ScoreSource, id: number | string): string {
   return `${source}:${text}`;
 }
 
+/** The {@link GameKey} a source's game id maps to, or `undefined`. */
 export function lookupGameKey(
   map: GameIdMap,
   source: ScoreSource,
@@ -61,6 +65,7 @@ export function buildGameIdMap(entries: Iterable<{ key: GameKey; ids: SourceGame
   return map;
 }
 
+/** Field-wise equality of two keys. */
 export function sameGameKey(a: GameKey, b: GameKey): boolean {
   return a.season === b.season && a.week === b.week && a.home === b.home && a.away === b.away;
 }

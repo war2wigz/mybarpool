@@ -14,3 +14,5 @@ export * from "./transaction.js";
 export * from "./funds.js";
 export * from "./status.js";
 export * from "./instructions/index.js";
+
+export * from "./types.js";

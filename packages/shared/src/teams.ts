@@ -28,6 +28,7 @@ function team(
   return { id, abbreviation, city, name, colors: { primary, secondary } };
 }
 
+/** The frozen 32-team table, ids 1–32 (PROGRAM §2). */
 export const TEAMS: readonly Team[] = Object.freeze([
   team(0, "ARI", "Arizona", "Cardinals", "#97233F", "#000000"),
   team(1, "ATL", "Atlanta", "Falcons", "#A71930", "#000000"),
@@ -65,10 +66,12 @@ export const TEAMS: readonly Team[] = Object.freeze([
 
 const BY_ABBREVIATION: ReadonlyMap<string, Team> = new Map(TEAMS.map((t) => [t.abbreviation, t]));
 
+/** The team with this abbreviation, or `undefined`. */
 export function teamByAbbreviation(abbreviation: string): Team | undefined {
   return BY_ABBREVIATION.get(abbreviation.toUpperCase());
 }
 
+/** The team with this id (1–32); throws `RangeError` otherwise. */
 export function teamById(id: number): Team {
   const found = TEAMS[id];
   if (found === undefined)

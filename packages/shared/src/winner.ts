@@ -14,6 +14,7 @@
 import { DIGITS, type Digits, assertDigits, laneDigits, laneOfDigit } from "./axes.js";
 import { type BoxIndex, colOf, indexAt, rowOf } from "./boxes.js";
 
+/** Input to {@link winningBox}: the scores and the two axes. */
 export interface WinningBoxInput {
   /** Home team's cumulative score (u16). */
   readonly home: number;
@@ -25,6 +26,7 @@ export interface WinningBoxInput {
   readonly awayAxis: Digits;
 }
 
+/** The largest score the program accepts (u16). */
 export const SCORE_MAX = 0xffff;
 
 function assertScore(score: number, what: string): number {

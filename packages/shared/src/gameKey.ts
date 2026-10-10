@@ -7,6 +7,7 @@
  */
 import { ascii, concatBytes, i64le, u16le, u8 } from "./bytes.js";
 
+/** The canonical game key (PROGRAM §2): season, week, home and away team ids. */
 export interface GameKey {
   /** The year the regular season starts in (2026 for the 2026–27 season). */
   readonly season: number;
@@ -18,17 +19,25 @@ export interface GameKey {
   readonly away: number;
 }
 
+/** Encoded size of a {@link GameKey}: u16 season, u8 week, u8 home, u8 away. */
 export const GAME_KEY_BYTES = 5;
+/** Teams in the frozen table. */
 export const TEAM_COUNT = 32;
+/** Weeks 1–18 are the regular season. */
 export const REGULAR_SEASON_WEEKS = 18;
+/** Week 22 is the Super Bowl; 19–21 the earlier playoff rounds. */
 export const SUPER_BOWL_WEEK = 22;
+/** First preseason week number, so it can never collide with the season. */
 export const PRESEASON_WEEK_MIN = 101;
+/** Last preseason week number. */
 export const PRESEASON_WEEK_MAX = 103;
 
+/** Whether `week` is a preseason week (101–103). */
 export function isPreseasonWeek(week: number): boolean {
   return week >= PRESEASON_WEEK_MIN && week <= PRESEASON_WEEK_MAX;
 }
 
+/** Checks every field of a {@link GameKey} and returns it. */
 export function assertGameKey(key: GameKey): GameKey {
   const { season, week, home, away } = key;
   if (!Number.isInteger(season) || season < 0 || season > 0xffff) {
@@ -54,11 +63,13 @@ export function assertGameKey(key: GameKey): GameKey {
   return key;
 }
 
+/** The 5 little-endian bytes of a {@link GameKey}, the `GameRecord` seed. */
 export function encodeGameKey(key: GameKey): Uint8Array {
   assertGameKey(key);
   return concatBytes(u16le(key.season), u8(key.week), u8(key.home), u8(key.away));
 }
 
+/** Inverse of {@link encodeGameKey}. */
 export function decodeGameKey(bytes: Uint8Array): GameKey {
   if (bytes.length !== GAME_KEY_BYTES) {
     throw new RangeError(`game key must be ${GAME_KEY_BYTES} bytes, got ${bytes.length}`);

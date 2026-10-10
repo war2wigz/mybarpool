@@ -6,11 +6,13 @@ import { TOKEN_ACCOUNT_BYTES } from "../fees.js";
 import { sponsorshipPda } from "../pdas.js";
 import { poolPdas, requirePool, splOf, tokenAccountToCredit } from "./common.js";
 
+/** Input to {@link reclaimSponsorshipInstruction}. */
 export interface ReclaimSponsorshipInput {
   sponsor: TransactionSigner;
   pool: Address;
 }
 
+/** Result of {@link reclaimSponsorshipInstruction}. */
 export interface ReclaimSponsorshipResult {
   instruction: Instruction;
   game: Address;

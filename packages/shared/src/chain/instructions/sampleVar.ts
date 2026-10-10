@@ -5,6 +5,7 @@ import { getSampleVarInstructionAsync } from "../../generated/index.js";
 import type { MyBarPoolClient } from "../client.js";
 import { requirePool } from "./common.js";
 
+/** Input to {@link sampleVarInstruction}. */
 export interface SampleVarInput {
   /** Anyone; the program checks the window, not the signer (PROGRAM §4.5). */
   signer: TransactionSigner;
