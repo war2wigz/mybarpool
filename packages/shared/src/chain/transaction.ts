@@ -246,8 +246,9 @@ export interface SignAndSendOptions {
  * (`TransactionSendingSigner`) signs with every partial signer first (a gate key) and then
  * sends; confirmation polls `getSignatureStatuses` bounded by `lastValidBlockHeight` — past it
  * with no status the transaction was never processed and `SdkError("BlockhashExpired")` is
- * thrown, never a second send. A keypair fee payer signs here and goes through
- * `sendAndConfirmTransactionFactory` (needs `client.rpcSubscriptions`). A program custom code
+ * thrown, never a second send. Any other fee payer (a keypair, or a wallet signer that only
+ * signs) is signed here and sent through `sendAndConfirmTransactionFactory` (needs
+ * `client.rpcSubscriptions`). A program custom code
  * is rethrown as `SdkError("ProgramError", { programError })`.
  */
 export async function signAndSend(
