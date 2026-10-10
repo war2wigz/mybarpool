@@ -303,7 +303,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run format
 
-      - name: No endpoint in the bundle (PUBLISHING › Who pays for what)
+      - name: No endpoint in the bundle (the SDK ships with no RPC endpoint)
         # The SDK ships with no default RPC endpoint and forms no platform URL. The only URL
         # literals allowed in dist/ are Codama's attribution comment and the dApp Store scheme.
         run: |
