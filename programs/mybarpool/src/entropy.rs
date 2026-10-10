@@ -8,11 +8,12 @@
 //! `program/src/reveal.rs`). The deployment this program uses, `ENTROPY_PROGRAM`,
 //! is the platform's fork `war2wigz/entropy` of that commit (four changes:
 //! program id, the `Open` arm, the `security.txt` contact, and `Sample`
-//! failing with `SlotHashUnavailable` once the end slot has left `SlotHashes`
-//! instead of recording `keccak(end_at)`; the layout, `Reveal` and the
-//! formulas unmodified), pinned at `ENTROPY_FORK_COMMIT` in the test helpers
-//! and CI. A test decodes a `Var` fetched from mainnet and
-//! others check both ELF fixtures' hashes.
+//! failing with `SlotHashUnavailable` whenever the end slot's hash is not in
+//! `SlotHashes` — too early, a skipped slot, or aged out — instead of
+//! recording `keccak(end_at)`; the layout, `Reveal` and the formulas
+//! unmodified), pinned at `ENTROPY_FORK_COMMIT` in the test helpers and CI.
+//! A test decodes a `Var` fetched from mainnet and others check both ELF
+//! fixtures' hashes.
 //!
 //! The program never opens, reveals, rolls or closes a `Var`: it reads one and
 //! CPIs `Sample`. Nothing here depends on the provider's auto mode.
@@ -108,8 +109,9 @@ fn u64_at(data: &[u8], at: usize) -> Result<u64> {
     Ok(u64::from_le_bytes(out))
 }
 
-/// `keccak(end_at.to_le_bytes())`: what `Sample` writes when `end_at` has left SlotHashes
-/// (`program/src/sample.rs`). Predictable at `Open`; a `Var` carrying it is never drawn on.
+/// `keccak(end_at.to_le_bytes())`: what Regolith's `Sample` writes when `end_at`'s hash is not
+/// in SlotHashes (`program/src/sample.rs`; the platform's deployment fails instead). Predictable
+/// at `Open`; a `Var` carrying it is never drawn on.
 pub fn fallback_hash(end_at: u64) -> [u8; 32] {
     keccak(&[&end_at.to_le_bytes()]).to_bytes()
 }

@@ -12,12 +12,12 @@ import { keccak_256 } from "@noble/hashes/sha3.js";
 
 import { ascii, assertU64, concatBytes } from "./bytes.js";
 
-/** PROGRAM §1 `ENTROPY_PROGRAM`, base58. */
 /**
- * The platform's own deployment of Entropy (PROGRAM §1): the fork `war2wigz/entropy` of
- * `regolith-labs/entropy` `f26ae03` with four changes — program id, `Open` re-enabled,
- * `security.txt` contact, and `Sample` failing with `SlotHashUnavailable` when the end slot's
- * hash has left `SlotHashes` — nothing else. Through Step 5 this was Regolith's id below.
+ * PROGRAM §1 `ENTROPY_PROGRAM`, base58: the platform's own deployment of Entropy, the fork
+ * `war2wigz/entropy` of `regolith-labs/entropy` `f26ae03` with four changes — program id,
+ * `Open` re-enabled, `security.txt` contact, and `Sample` failing with `SlotHashUnavailable`
+ * whenever the end slot's hash is not in `SlotHashes` (too early, a skipped slot, or aged out)
+ * — nothing else. Through Step 5 this was Regolith's id below.
  */
 export const ENTROPY_PROGRAM = "ASo8r4EEFLPAMDk1w3XdKbEmq4c1GynbsHGa6RGG83fH";
 /**
@@ -43,9 +43,10 @@ export const EntropyInstruction = Object.freeze({
 
 /**
  * The fork's `EntropyError` codes (`api/src/error.rs`), as `Custom(n)` in a failed
- * transaction's logs. `SlotHashUnavailable` is the fork's own: `Sample` after the end slot
- * has left `SlotHashes` (≈ 512 slots) fails instead of recording `keccak(end_at)`, so a
- * missed window shows as this error and the `Var` stays unsampled for `replace_var`.
+ * transaction's logs. `SlotHashUnavailable` is the fork's own: `Sample` fails instead of
+ * recording `keccak(end_at)` whenever the end slot's hash is not in `SlotHashes` — in slot
+ * `end_at` itself, on a skipped `end_at`, or after the entry has aged out (≈ 512 slots) — so
+ * a missed window shows as this error and the `Var` stays unsampled for `replace_var`.
  */
 export const EntropyError = Object.freeze({
   IncompleteDigest: 0,
