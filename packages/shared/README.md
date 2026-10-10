@@ -17,7 +17,8 @@ deployment yet.
   prize pool, quarter prizes, dust; price ladders), and DESIGN §10.3 display formatting.
 - `gameKey`, `teams`, `sources`, `sourceTeams`, `sponsors` — the canonical game key and
   `GameRecord` seeds, the frozen 32-team table, the score-source ID map shape, each source's
-  team-id table (the one place a source's team id becomes ours), and the sponsor directory
+  team-id tables — ESPN ids, Kalshi UUIDs, nflverse codes — the one place a source's
+  team id becomes ours, and the sponsor directory
   shape with its validator.
 
 Home is the columns (across the top), away the rows (down the side); `box = row × 5 + col`.
