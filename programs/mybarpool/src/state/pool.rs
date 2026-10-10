@@ -225,8 +225,12 @@ impl Pool {
     }
 
     /// The boxes `b` with `owners[b] == wallet` and bit `b` clear, in ascending index order
-    /// (PROGRAM §4.6 owner batches).
+    /// (PROGRAM §4.6 owner batches). The default pubkey is the unsold-box marker, never an
+    /// owner: it collects nothing, so unsold boxes cannot be paid to anyone.
     pub fn unreturned_boxes_of(&self, wallet: &Pubkey) -> Vec<u8> {
+        if *wallet == Pubkey::default() {
+            return Vec::new();
+        }
         (0..BOXES)
             .filter(|&b| self.owners[usize::from(b)] == *wallet && !self.is_returned(b))
             .collect()

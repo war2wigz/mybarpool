@@ -1224,3 +1224,215 @@ fn cancel_pool_then_return_boxes_before_kickoff() {
     let ev: PoolClosed = emitted_event(&closed).expect("PoolClosed");
     assert_eq!(ev.destination, to_a(&f.fee_wallet));
 }
+
+// ---------------------------------------------------------------------------
+// Step 8b, F1: the default pubkey is never an owner (PROGRAM §4.6, §10 Money)
+// ---------------------------------------------------------------------------
+
+/// An ORE `Open` pool, 15 of 25 sold (`owners[15..25]` default), at kickoff on a scheduled
+/// game: the unfilled return.
+fn ore_unfilled(f: &Fixture, m: &Mollusk) -> (Pool, SplBatch, Vec<(Pubkey, Account)>) {
+    let pool = pool_with_owners(
+        f,
+        &f.expected_config(),
+        &ore_params(0),
+        PoolStatus::Open,
+        &unfilled_15_plan(f),
+    );
+    let spl = SplBatch::of(&pool);
+    let mut accounts = returns_accounts(
+        f,
+        m,
+        &f.expected_config(),
+        &pool,
+        &standard_record(),
+        1,
+        Some(15 * PRICE_ORE),
+    );
+    // The default key's would-be ATA, empty: present so Mollusk can resolve the meta.
+    set_account(
+        &mut accounts,
+        spl.ata(&Pubkey::default()),
+        system_account(0),
+    );
+    set_account(
+        &mut accounts,
+        spl.ata(&f.buyer),
+        token_account(&f.ore_mint, &f.buyer, 0),
+    );
+    (pool, spl, accounts)
+}
+
+fn has_account(result: &InstructionResult, key: &Pubkey) -> bool {
+    result
+        .resulting_accounts
+        .iter()
+        .any(|(k, a)| k == key && (a.lamports > 0 || !a.data.is_empty()))
+}
+
+#[test]
+fn return_boxes_never_pays_the_default_key_for_unsold_boxes_ore() {
+    // PROGRAM §4.6 "the default pubkey is the unsold-box marker, never an owner"; §10 Money:
+    // no instruction moves funds to anything but an owner, a sponsor, fee_wallet, creator or
+    // integrator. Before Step 8b a batch entry of 11111111111111111111111111111111 collected
+    // the ten unsold boxes and, on an SPL pool, paid 10 × PRICE_ORE into an associated token
+    // account owned by the System program's key, where nothing can sign.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(SCHEDULED);
+    let (pool, spl, accounts) = ore_unfilled(&f, &m);
+    let key = pool_key(&pool);
+    let default = Pubkey::default();
+    let default_ata = spl.ata(&default);
+    let batch = [(default, Some(default_ata))];
+    let ix = return_boxes_ix(
+        &f.keeper,
+        &pool,
+        &standard_game(),
+        Some(counter(&f)),
+        &batch,
+        Some(spl),
+    );
+    // Success: the status change is the progress (§4.6 success rule).
+    let result = ok(&m, &ix, &accounts);
+    assert_eq!(
+        token_amount_of(&result, &vault_pda(&key).0),
+        15 * PRICE_ORE,
+        "vault untouched"
+    );
+    assert!(
+        !has_account(&result, &default_ata),
+        "nothing created for the default key"
+    );
+    let after = decode_pool(account_of(&result, &key));
+    assert_eq!(after.status, PoolStatus::Returned);
+    assert_eq!(after.returned, 0, "no box paid");
+    assert_eq!(
+        decode_counter(account_of(&result, &counter(&f))).open_count,
+        0,
+        "counter decremented"
+    );
+    assert_eq!(
+        event_names(&result),
+        Vec::<String>::new(),
+        "no BoxesReturned"
+    );
+
+    // The same batch again: nothing to return.
+    let again = m.process_instruction(
+        &return_boxes_ix(&f.keeper, &pool, &standard_game(), None, &batch, Some(spl)),
+        &result.resulting_accounts,
+    );
+    assert_eq!(custom_error(&again), Some(err(E::NothingToReturn)));
+
+    // A real owner's batch pays as before.
+    let real = [(f.buyer, Some(spl.ata(&f.buyer)))];
+    let paid = m.process_and_validate_instruction(
+        &return_boxes_ix(&f.keeper, &pool, &standard_game(), None, &real, Some(spl)),
+        &result.resulting_accounts,
+        &[Check::success()],
+    );
+    assert_eq!(token_amount_of(&paid, &spl.ata(&f.buyer)), 10 * PRICE_ORE);
+    assert_eq!(token_amount_of(&paid, &vault_pda(&key).0), 5 * PRICE_ORE);
+}
+
+#[test]
+fn return_boxes_never_pays_the_default_key_for_unsold_boxes_sol() {
+    // PROGRAM §4.6; on SOL the runtime already refused the credit (the System program's key
+    // is read-only in every transaction) — now the program never attempts it.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(SCHEDULED);
+    let pool = sol_pool(&f, PoolStatus::Open, &unfilled_15_plan(&f));
+    let accounts = setup(&f, &m, &pool, &standard_record(), 1);
+    let key = pool_key(&pool);
+    let vault_before = lamports_of(&accounts, &vault_pda(&key).0);
+    let result = ok(
+        &m,
+        &rb(&f, &pool, Some(counter(&f)), &[Pubkey::default()]),
+        &accounts,
+    );
+    let after = decode_pool(account_of(&result, &key));
+    assert_eq!(after.status, PoolStatus::Returned);
+    assert_eq!(after.returned, 0);
+    assert_eq!(
+        account_of(&result, &vault_pda(&key).0).lamports,
+        vault_before
+    );
+    assert_eq!(event_names(&result), Vec::<String>::new());
+    let again = m.process_instruction(
+        &rb(&f, &pool, None, &[Pubkey::default()]),
+        &result.resulting_accounts,
+    );
+    assert_eq!(custom_error(&again), Some(err(E::NothingToReturn)));
+}
+
+#[test]
+fn return_boxes_default_key_mixed_into_a_real_batch_is_ignored() {
+    // PROGRAM §4.6 "a duplicate or a stranger in the list is harmless": the default key is
+    // the stranger that owns every unsold box on paper and none in fact.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(SCHEDULED);
+    let (pool, spl, accounts) = ore_unfilled(&f, &m);
+    let key = pool_key(&pool);
+    let default = Pubkey::default();
+    let batch = [
+        (default, Some(spl.ata(&default))),
+        (f.buyer, Some(spl.ata(&f.buyer))),
+    ];
+    let ix = return_boxes_ix(
+        &f.keeper,
+        &pool,
+        &standard_game(),
+        Some(counter(&f)),
+        &batch,
+        Some(spl),
+    );
+    let result = ok(&m, &ix, &accounts);
+    assert_eq!(token_amount_of(&result, &spl.ata(&f.buyer)), 10 * PRICE_ORE);
+    assert_eq!(token_amount_of(&result, &vault_pda(&key).0), 5 * PRICE_ORE);
+    assert_eq!(event_names(&result), ["BoxesReturned"]);
+    assert_eq!(returned_event(&result, &f.buyer).amount, 10 * PRICE_ORE);
+    assert_eq!(
+        decode_pool(account_of(&result, &key)).returned,
+        0b111_1111_1110_0000
+    );
+    assert!(!has_account(&result, &spl.ata(&default)));
+}
+
+#[test]
+fn split_never_pays_the_default_key() {
+    // PROGRAM §4.6: the guard sits on `Pool::unreturned_boxes_of`, which `split` shares with
+    // `return_boxes`. A Drawn pool has no unsold box, so plant one.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(SCHEDULED + 7_200);
+    let mut pool = settled_pool(&f, &f.expected_config(), &sol_params(0), 0, 1, true);
+    pool.owners[7] = to_a(&Pubkey::default());
+    let key = pool_key(&pool);
+    let accounts = returns_accounts(
+        &f,
+        &m,
+        &f.expected_config(),
+        &pool,
+        &suspended_record_with_quarters(1),
+        0,
+        None,
+    );
+    let vault_before = lamports_of(&accounts, &vault_pda(&key).0);
+    let batch = [(Pubkey::default(), None)];
+    let ix = split_ix(&f.keeper, &pool, &standard_game(), &batch, None);
+    let result = ok(&m, &ix, &accounts);
+    let after = decode_pool(account_of(&result, &key));
+    assert_eq!(after.status, PoolStatus::Split);
+    assert_eq!(after.split_amount, pool.unpaid_prize_pool / 25);
+    assert_eq!(after.returned, 0);
+    assert_eq!(after.unpaid_prize_pool, pool.unpaid_prize_pool);
+    assert_eq!(
+        account_of(&result, &vault_pda(&key).0).lamports,
+        vault_before
+    );
+    assert_eq!(event_names(&result), Vec::<String>::new());
+    let again = m.process_instruction(
+        &split_ix(&f.keeper, &pool, &standard_game(), &batch, None),
+        &result.resulting_accounts,
+    );
+    assert_eq!(custom_error(&again), Some(err(E::NothingToReturn)));
+}
