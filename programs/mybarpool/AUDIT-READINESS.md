@@ -50,7 +50,7 @@ green before and after):
 | cargo-dylint / anchor-lints | 6.1.0 / `otter-sec/anchor-lints@d8116dd`, nightly-2025-09-18 |
 | cargo-audit | 0.22.2 |
 | `@solana/kit` / Node | 8.4.0 / 22 |
-| Entropy fork | `war2wigz/entropy@486225b` (fixture `tests/fixtures/entropy-486225b.so`, rebuilt and compared in CI) |
+| Entropy fork | `war2wigz/entropy@5a869c8` (fixture `tests/fixtures/entropy-5a869c8.so`, rebuilt and compared in CI) |
 
 ## 2. What the program does
 
@@ -1100,7 +1100,71 @@ entry (depth 1 → 32: 29,819 → 36,179).
   take a SOL vault below its own minimum (`return_boxes_is_atomic_when_the_vault_is_short`),
   and the fuzzer classifies that report separately.
 
-## 9. Out of scope
+## 9. Pre-audit review
+
+Before the external engagement the whole program was read once more against the
+specification, instruction by instruction, with the money rules of PROGRAM §10 and the
+randomness argument of ARCHITECTURE › Randomness as the two yardsticks. It found no place
+where code and specification disagree. Three things were changed as a result — the program's
+one unfreeze since the snapshot above, two hunks in `src/` plus doc comments, with no new
+instruction, account, event or error and the schema snapshot byte-identical — and the rest is
+listed here for the auditor's attention.
+
+### Fixed in this review
+
+- **The owner batch never pays the default pubkey.** `return_boxes` and `split` take a list of
+  owners and pay each one the boxes `owners[b] == owner` still outstanding (§4.6: the list
+  "decides which owners, never how much or to where"). The default pubkey is the program's
+  unsold-box marker, so a batch entry naming it collected every unsold box; on a SOL pool the
+  runtime refused the credit (the System program's key is read-only), on an SPL pool it would
+  have paid the price of each unsold box into an associated token account owned by a key
+  nobody can sign for. `Pool::unreturned_boxes_of` now returns nothing for the default pubkey,
+  before anything is derived or created, and both instructions go through it. Tests
+  (`tests/returns.rs`): the default-key batch on ORE and SOL succeeds with `returned == 0`, no
+  event and the vault untouched, then repeats as `NothingToReturn`; the default key mixed into
+  a real batch is ignored; `split` with a planted default owner pays nothing. With the guard
+  reverted the ORE test moves ten boxes' worth of tokens out of the vault.
+- **Six Token-2022 extensions are refused, not two.** `check_mint` refused `TransferFeeConfig`
+  and `TransferHook`; it now also refuses `PermanentDelegate` (an authority that can move the
+  vault's tokens without the program), `NonTransferable` (every payout transfer fails),
+  `DefaultAccountState` (a new owner's ATA can be born frozen, so the payout to it fails) and
+  `Pausable` (the mint authority can stop every transfer). The check is on the extension's
+  presence at `initialize` and `update_config`, not on its current value, since each is one
+  authority action away from breaking a payout. Tests (`tests/config.rs`): each of the six
+  alone through both instructions, a refused one riding with `MetadataPointer`, and the
+  harmless-looking values (zero fee, unset delegate, `Initialized` default state, unpaused) —
+  all refused; each new arm fails its case when removed.
+- **The platform's Entropy deployment fails `Sample` instead of recording a fallback.**
+  Regolith's `Sample` looks up the `Var`'s `end_at` in `SlotHashes` and, when the lookup
+  misses, records `keccak(end_at)` — a value anyone can compute — as the slot hash. The lookup
+  misses in three cases, not one: after the window (the entry has aged out of the sysvar), on a
+  skipped `end_at` (no block was produced in that slot), and in slot `end_at` itself (the
+  sysvar never holds the current slot, and `Sample` only requires `slot >= end_at`). The third
+  is a way for anyone to spoil a pool's draw in the one slot before the window opens. The
+  platform's deployment (`war2wigz/entropy@5a869c8`, its fourth and last change against
+  Regolith's source) fails that branch with `SlotHashUnavailable` (`2`) and writes nothing,
+  so a `Var` whose window was missed stays unsampled and `replace_var` remains available. This
+  program's `sample_var` still re-reads the `Var` after the CPI and requires `SlotHashes` to
+  confirm the recorded hash (`SampleWindowMissed`), and `draw` still refuses the fallback value
+  (`VarFallbackHash`), so a `Var` written by any other deployment is caught as before; those
+  tests now plant the fallback, since the platform's deployment never writes it. Tests
+  (`tests/draw.rs`): `sample_var` after the window and in slot `end_at` fail with `Custom(2)`
+  and the `Var`'s `slot_hash` stays zero; a direct Entropy `Sample` behaves the same and
+  succeeds one slot after `end_at`; the Surfpool draw suite runs the same against the loaded
+  deployment. Against the previous fixture the three tests fail.
+
+### Known and not changed
+
+| Item | Effect | Smallest fix |
+|---|---|---|
+| A skipped `end_at` (no block in that slot) means the sample can never succeed and the draw needs `replace_var` from the admin. | Operational: the keeper must detect the miss at `end_at + 1`, alert, and the runbook must say who signs and how fast, with the two-replacement cap in view; three skips in a row ends in `cancel_pool`. | A paragraph in ARCHITECTURE › Randomness and the keeper plan; no program change. |
+| `PlatformConfig::validate` refuses only a default `admin`, not a default `fee_wallet`, `score_authority` or `entropy_provider`. | With `fee_wallet` default the first prize on every pool fails at the fee transfer until `update_config`; the other two idle the keeper. Recoverable, no loss. | Three `require!`s beside the `admin` one, or leave it since `update_config` repairs all three in one call. |
+| No two-step admin transfer: `update_config { admin }` takes effect at once. | A mistyped key leaves a config nobody can change. The multisig's proposal review is the mitigation; dry-run the proposal against a devnet config first. | A `pending_admin` field and an `accept_admin` instruction — a layout and instruction change, so after the audit. |
+| `prize_pool`, `quarter_prize` and `unpaid_prize_pool` stay populated on a pool returned after zero-share settlements (e.g. a Q4-only pool suspended after Q1–Q3 settled). | None on money: nothing reads them on a `Returned` pool. An indexer that sums `unpaid_prize_pool` across statuses would be wrong; clients key off `status`. | A sentence in the specification: meaningful only in `Drawn`, `Settled`, `Split`. |
+| `set_var`/`replace_var` accept any future `end_at`. | A keeper can park a pool in `Locked` with a far-off window; `replace_var` or `cancel_pool` undoes it. Keeper-trusted, recoverable. | One `require!` and a new error for an upper bound — a post-audit question. |
+| The §6.1 note on which slot hash positions the boxes was measured on Surfpool, which includes the current slot in `SlotHashes`; mainnet's newest entry is the previous produced slot. | None: the program reads the sysvar's newest entry either way and `BoxesBought` carries the positions; only the client-reproduction sentence was off by one. | Fixed in the specification; no code effect. |
+
+## 10. Out of scope
 
 The keeper (scores, settlement and return automation), the scores service and its two
 sources, the Android app and the web app, the Entropy fork's own repository and audit trail
