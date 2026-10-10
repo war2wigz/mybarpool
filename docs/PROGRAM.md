@@ -34,7 +34,7 @@ Payout presets, an enum with exactly three values. The program rejects any other
 ## 2. Identifiers
 
 ### Game key
-A game is identified on-chain by a canonical key, not by any source's ID, so the record does not depend on ESPN, API-Sports or Sportradar numbering:
+A game is identified on-chain by a canonical key, not by any source's ID, so the record does not depend on ESPN, Kalshi or Sportradar numbering:
 
 ```
 GameKey { season: u16, week: u8, home: u8, away: u8 }
