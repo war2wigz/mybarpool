@@ -15,9 +15,10 @@ deployment yet.
   the program's own tests load.
 - `fees`, `price`, `format` — PROGRAM §5 money arithmetic in `bigint` base units (fees,
   prize pool, quarter prizes, dust; price ladders), and DESIGN §10.3 display formatting.
-- `gameKey`, `teams`, `sources`, `sponsors` — the canonical game key and `GameRecord` seeds,
-  the frozen 32-team table, the score-source ID map shape, and the sponsor directory shape
-  with its validator.
+- `gameKey`, `teams`, `sources`, `sourceTeams`, `sponsors` — the canonical game key and
+  `GameRecord` seeds, the frozen 32-team table, the score-source ID map shape, each source's
+  team-id table (the one place a source's team id becomes ours), and the sponsor directory
+  shape with its validator.
 
 Home is the columns (across the top), away the rows (down the side); `box = row × 5 + col`.
 Money is `bigint` end to end; `floor` is `bigint` division; half-up rounding exists only in
