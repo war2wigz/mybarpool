@@ -314,6 +314,16 @@ jobs:
             echo "URL literals in dist/:"; echo "$found"; exit 1
           fi
 
+      - name: No Node-only globals in the SDK source (it runs in the browser and on the phone)
+        # `types: []` does not keep `@types/node` out (a transitive reference pulls it in), so a
+        # `Buffer` or `process` use type-checks and then fails at runtime off Node. The
+        # generated client's `process.env.NODE_ENV` guard is the bundler's to inline, as Kit's own is.
+        run: |
+          set -euo pipefail
+          if grep -rnE '\bBuffer\b|\bprocess\.' packages/shared/src --include='*.ts' --exclude-dir=generated; then
+            echo "Node-only global in packages/shared/src"; exit 1
+          fi
+
       - name: API reference builds with every export documented (typedoc, warnings as errors)
         run: npm run docs --workspace packages/shared
 

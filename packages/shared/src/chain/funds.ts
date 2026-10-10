@@ -2,7 +2,7 @@
  * DESIGN §10.4: the balance check the app runs before the wallet opens, so an
  * `InsufficientFunds` is named here rather than by a failed simulation.
  */
-import type { Address } from "@solana/kit";
+import { getBase64Encoder, type Address } from "@solana/kit";
 
 import { getConfig } from "./accounts.js";
 import type { MyBarPoolClient } from "./client.js";
@@ -48,7 +48,8 @@ async function tokenBalanceOf(client: MyBarPoolClient, address: Address): Promis
     .getAccountInfo(address, { commitment: "confirmed", encoding: "base64" })
     .send();
   if (!value) return 0n;
-  const bytes = Uint8Array.from(Buffer.from(value.data[0], "base64"));
+  // Kit's codec, never a Node-only global: the SDK runs in the browser and on the phone too.
+  const bytes = Uint8Array.from(getBase64Encoder().encode(value.data[0]));
   if (bytes.length < 72) return 0n;
   return new DataView(bytes.buffer, bytes.byteOffset).getBigUint64(64, true);
 }
