@@ -83,9 +83,9 @@ describe("formatting (DESIGN §10.3; ARCHITECTURE › Buying)", () => {
 });
 
 describe("shortAddress (DESIGN §10.3)", () => {
-  it("first four, an ellipsis, the last two; short strings untouched", () => {
-    expect(shortAddress("7kq2abcdefghijklmnopqrstuvwxyz9a")).toBe("7kq2…9a");
-    expect(shortAddress("abcdefg")).toBe("abcdefg");
-    expect(shortAddress("abcdefgh")).toBe("abcd…gh");
+  it("first four, an ellipsis, the last four; short strings untouched", () => {
+    expect(shortAddress("7kq2abcdefghijklmnopqrstuvwxyz9a3f")).toBe("7kq2…9a3f");
+    expect(shortAddress("abcdefghi")).toBe("abcdefghi");
+    expect(shortAddress("abcdefghij")).toBe("abcd…ghij");
   });
 });

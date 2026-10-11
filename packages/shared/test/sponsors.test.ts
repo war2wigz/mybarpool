@@ -84,11 +84,11 @@ describe("resolveSponsor (ARCHITECTURE › Sponsorship › Attribution)", () => 
     });
     expect(resolveSponsor(ORE_WALLET, { directory: [] })).toEqual({
       kind: "address",
-      short: "oreo…cp",
+      short: "oreo…ybcp",
     });
     expect(resolveSponsor(ORE_WALLET, { skrName: undefined })).toEqual({
       kind: "address",
-      short: "oreo…cp",
+      short: "oreo…ybcp",
     }); // the shipped directory is empty
   });
 });
