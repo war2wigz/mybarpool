@@ -17,7 +17,8 @@ deployment yet.
   prize pool, quarter prizes, dust; price ladders), and DESIGN §10.3 display formatting.
 - `gameKey`, `teams`, `sources`, `sourceTeams`, `sponsors` — the canonical game key and
   `GameRecord` seeds, the frozen 32-team table, the score-source ID map shape, each source's
-  team-id tables — ESPN ids, Kalshi UUIDs, nflverse codes — the one place a source's
+  team-id tables — ESPN ids, Kalshi UUIDs, nflverse codes, the Sportradar abbreviations
+  Polymarket's stream carries — the one place a source's
   team id becomes ours, and the sponsor directory
   shape with its validator.
 
@@ -64,18 +65,18 @@ transport type-checks.
 Each takes the client and returns `{ instruction, …derivedAddresses }` plus
 `createdAccountBytes` where the instruction may create an account. None sends.
 
-| Helper                            | Instruction           | Signer            | Reads                 |
-| --------------------------------- | --------------------- | ----------------- | --------------------- |
-| `createPoolInstruction`           | `create_pool`         | creator           | `config`, `game`      |
-| `buyInstruction`                  | `buy`                 | buyer (+gate key) | pool, buyer's ATA     |
-| `sponsorInstruction`              | `sponsor`             | sponsor           | pool, sponsorship     |
-| `rotateGateKeyInstruction`        | `rotate_gate_key`     | creator           | —                     |
-| `reclaimInstruction`              | `reclaim`             | box owner         | pool, owner's ATA     |
-| `reclaimSponsorshipInstruction`   | `reclaim_sponsorship` | sponsor           | pool, sponsor's ATA   |
-| `closeSponsorshipInstruction`     | `close_sponsorship`   | none (anyone)     | —                     |
-| `sampleVarInstruction`            | `sample_var`          | anyone            | pool                  |
-| `closePoolInstruction`            | `close_pool`          | none (anyone)     | pool, `config`        |
-| `closeCounterInstruction`         | `close_counter`       | none (anyone)     | `config`              |
+| Helper                          | Instruction           | Signer            | Reads               |
+| ------------------------------- | --------------------- | ----------------- | ------------------- |
+| `createPoolInstruction`         | `create_pool`         | creator           | `config`, `game`    |
+| `buyInstruction`                | `buy`                 | buyer (+gate key) | pool, buyer's ATA   |
+| `sponsorInstruction`            | `sponsor`             | sponsor           | pool, sponsorship   |
+| `rotateGateKeyInstruction`      | `rotate_gate_key`     | creator           | —                   |
+| `reclaimInstruction`            | `reclaim`             | box owner         | pool, owner's ATA   |
+| `reclaimSponsorshipInstruction` | `reclaim_sponsorship` | sponsor           | pool, sponsor's ATA |
+| `closeSponsorshipInstruction`   | `close_sponsorship`   | none (anyone)     | —                   |
+| `sampleVarInstruction`          | `sample_var`          | anyone            | pool                |
+| `closePoolInstruction`          | `close_pool`          | none (anyone)     | pool, `config`      |
+| `closeCounterInstruction`       | `close_counter`       | none (anyone)     | `config`            |
 
 `createPoolInstruction` fails a paused platform, a disabled token, an off-ladder price and a
 game that is not open for sales with the program's own error name before anything is
@@ -89,7 +90,11 @@ and admin instructions have no hand-written helper; their generated builders are
 ### Transactions
 
 ```ts
-const { instruction, createdAccountBytes } = await buyInstruction(client, { buyer, pool, count: 2 });
+const { instruction, createdAccountBytes } = await buyInstruction(client, {
+  buyer,
+  pool,
+  count: 2,
+});
 const prepared = await prepareTransaction(client, {
   feePayer: buyer,
   instructions: [instruction],

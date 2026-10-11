@@ -6,8 +6,8 @@
  *
  * Keyed by the source's id rather than its label where the source has one, because labels
  * drift between vendors (ESPN writes Washington as `WSH`, our table `WAS`; nflverse writes the
- * Rams as `LA`). The Sportradar abbreviations the Polymarket stream carries follow once the
- * first NFL recording has shown them.
+ * Rams as `LA`). The Sportradar abbreviations the Polymarket stream carries are pinned from
+ * the recordings, one game day at a time, and only as seen.
  */
 import { teamByAbbreviation } from "./teams.js";
 
@@ -136,13 +136,53 @@ export const NFLVERSE_CODES: Readonly<Record<string, number>> = Object.freeze({
   WAS: id("WAS"),
 });
 
+/**
+ * The Sportradar team abbreviations Polymarket's live stream carries as `homeTeam` /
+ * `awayTeam` → team id, keyed `polymarket` after the source that carries them. Pinned from the
+ * 2026-10-11 NFL recording: the 24 teams that played in the early and late windows; the eight
+ * that did not (ATL, BAL, BUF, CAR, DAL, KC, LAR, TB) are added as they appear, never guessed,
+ * so this table is the one that may be short of 32 until the season has shown every team. Note
+ * `WAS` (ESPN says `WSH`), `JAX` (Kalshi's titles say `JAC`), `NO` (Kalshi's titles say `NOLA`).
+ */
+export const SPORTRADAR_ABBREVIATIONS: Readonly<Record<string, number>> = Object.freeze({
+  ARI: id("ARI"),
+  CHI: id("CHI"),
+  CIN: id("CIN"),
+  CLE: id("CLE"),
+  DEN: id("DEN"),
+  DET: id("DET"),
+  GB: id("GB"),
+  HOU: id("HOU"),
+  IND: id("IND"),
+  JAX: id("JAX"),
+  LAC: id("LAC"),
+  LV: id("LV"),
+  MIA: id("MIA"),
+  MIN: id("MIN"),
+  NE: id("NE"),
+  NO: id("NO"),
+  NYG: id("NYG"),
+  NYJ: id("NYJ"),
+  PHI: id("PHI"),
+  PIT: id("PIT"),
+  SEA: id("SEA"),
+  SF: id("SF"),
+  TEN: id("TEN"),
+  WAS: id("WAS"),
+});
+
 /** The source names the scores service uses for its team tables. */
-export type TeamTableSource = "espn" | "kalshi" | "nflverse";
+export type TeamTableSource = "espn" | "kalshi" | "nflverse" | "polymarket";
 
 /** Every source table the package carries, by the name the scores service uses. */
 export const SOURCE_TEAM_TABLES: Readonly<
   Record<TeamTableSource, Readonly<Record<string, number>>>
-> = Object.freeze({ espn: ESPN_TEAM_IDS, kalshi: KALSHI_TEAM_IDS, nflverse: NFLVERSE_CODES });
+> = Object.freeze({
+  espn: ESPN_TEAM_IDS,
+  kalshi: KALSHI_TEAM_IDS,
+  nflverse: NFLVERSE_CODES,
+  polymarket: SPORTRADAR_ABBREVIATIONS,
+});
 
 /**
  * Our team id for a source's team identifier, or `undefined` when the source does not list it

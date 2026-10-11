@@ -6,16 +6,22 @@ import {
   NFLVERSE_CODES,
   resolveSourceTeam,
   SOURCE_TEAM_TABLES,
+  SPORTRADAR_ABBREVIATIONS,
 } from "../src/sourceTeams.js";
 import { TEAMS } from "../src/teams.js";
 
 describe("source team tables (ARCHITECTURE › Games)", () => {
   for (const [source, table] of Object.entries(SOURCE_TEAM_TABLES)) {
-    it(`${source}: every one of our 32 teams appears exactly once, no two ids share a team`, () => {
+    // The Sportradar column is pinned from recordings as teams appear; every id present maps
+    // to a distinct team, and the table is complete once the season has shown all 32.
+    const complete = source !== "polymarket";
+    it(`${source}: ${complete ? "every one of our 32 teams appears exactly once" : "every id present maps to a distinct team"}, no two ids share a team`, () => {
       const values = Object.values(table);
-      expect(values).toHaveLength(TEAMS.length);
-      expect(new Set(values).size).toBe(TEAMS.length);
-      for (const team of TEAMS) expect(values).toContain(team.id);
+      if (complete) {
+        expect(values).toHaveLength(TEAMS.length);
+        for (const team of TEAMS) expect(values).toContain(team.id);
+      }
+      expect(new Set(values).size).toBe(values.length);
       for (const v of values) expect(Number.isInteger(v) && v >= 0 && v < TEAMS.length).toBe(true);
     });
   }
@@ -42,6 +48,21 @@ describe("source team tables (ARCHITECTURE › Games)", () => {
     expect(NFLVERSE_CODES["LAR"]).toBeUndefined();
     expect(resolveSourceTeam("nflverse", "JAX")).toBe(14);
     expect(resolveSourceTeam("nflverse", "WAS")).toBe(31);
-    expect(Object.keys(SOURCE_TEAM_TABLES).sort()).toEqual(["espn", "kalshi", "nflverse"]);
+    expect(Object.keys(SOURCE_TEAM_TABLES).sort()).toEqual([
+      "espn",
+      "kalshi",
+      "nflverse",
+      "polymarket",
+    ]);
+  });
+
+  it("Sportradar (Polymarket's homeTeam/awayTeam): the 24 teams of 2026-10-11; WAS, JAX, NO as ours; the unseen eight absent", () => {
+    expect(Object.keys(SPORTRADAR_ABBREVIATIONS)).toHaveLength(24);
+    expect(resolveSourceTeam("polymarket", "WAS")).toBe(31);
+    expect(resolveSourceTeam("polymarket", "JAX")).toBe(14);
+    expect(resolveSourceTeam("polymarket", "NO")).toBe(22);
+    expect(resolveSourceTeam("polymarket", "LAC")).toBe(16);
+    for (const unseen of ["ATL", "BAL", "BUF", "CAR", "DAL", "KC", "LAR", "LA", "TB", "WSH", "JAC"])
+      expect(resolveSourceTeam("polymarket", unseen)).toBeUndefined();
   });
 });
