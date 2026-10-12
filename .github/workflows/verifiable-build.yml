@@ -101,4 +101,17 @@ jobs:
           readelf -h target/deploy/mybarpool.so | tee /dev/stderr | grep -q 'Flags:\s*0x3'
 
       - name: Executable hash
-        run: solana-verify get-executable-hash target/deploy/mybarpool.so
+        run: |
+          set -euo pipefail
+          sha256sum target/deploy/mybarpool.so
+          solana-verify get-executable-hash target/deploy/mybarpool.so | tee executable-hash.txt
+
+      # The bytes, so a downstream repository can vendor the program as a
+      # localnet fixture without a Docker host of its own (its CI rebuilds
+      # with the same command and compares).
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mybarpool-verifiable-${{ github.sha }}
+          path: |
+            target/deploy/mybarpool.so
+            executable-hash.txt
