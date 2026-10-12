@@ -1,24 +1,24 @@
 /**
  * The game-ID mapping shape for the three score sources (ARCHITECTURE › Games,
- * Score integrity: API-Sports, the Sportradar ID the Polymarket stream carries,
- * ESPN). Shape and pure helpers only; the scores service fills the map in Step
- * 10. A game is identified on-chain by its `GameKey`, never by a source's ID
- * (PROGRAM §2).
+ * Score integrity: Polymarket's live stream, Kalshi's live data, ESPN's
+ * scoreboard). Shape and pure helpers only; the scores service fills the map in
+ * Step 10. A game is identified on-chain by its `GameKey`, never by a source's
+ * ID (PROGRAM §2).
  */
 import type { GameKey } from "./gameKey.js";
 
 /** A live-score source whose game ids map to a {@link GameKey}. */
-export type ScoreSource = "apiSports" | "sportradar" | "espn";
+export type ScoreSource = "polymarket" | "kalshi" | "espn";
 
 /** Every {@link ScoreSource}. */
-export const SCORE_SOURCES: readonly ScoreSource[] = ["apiSports", "sportradar", "espn"];
+export const SCORE_SOURCES: readonly ScoreSource[] = ["polymarket", "kalshi", "espn"];
 
 /** A game's IDs at each source; any may be unknown. */
 export interface SourceGameIds {
-  /** API-Sports `game.id`. */
-  readonly apiSports?: number;
-  /** The Sportradar game ID the Polymarket stream carries. */
-  readonly sportradar?: string;
+  /** Polymarket's `gameId` on its live frames (a small integer, as a string). */
+  readonly polymarket?: string;
+  /** Kalshi's milestone id (a UUID). */
+  readonly kalshi?: string;
   /** ESPN event ID. */
   readonly espn?: string;
 }
@@ -48,8 +48,8 @@ export function buildGameIdMap(entries: Iterable<{ key: GameKey; ids: SourceGame
   const map = new Map<string, GameKey>();
   for (const { key, ids } of entries) {
     const pairs: Array<[ScoreSource, number | string | undefined]> = [
-      ["apiSports", ids.apiSports],
-      ["sportradar", ids.sportradar],
+      ["polymarket", ids.polymarket],
+      ["kalshi", ids.kalshi],
       ["espn", ids.espn],
     ];
     for (const [source, id] of pairs) {

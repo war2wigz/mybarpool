@@ -56,13 +56,15 @@ describe("source team tables (ARCHITECTURE › Games)", () => {
     ]);
   });
 
-  it("Sportradar (Polymarket's homeTeam/awayTeam): the 24 teams of 2026-10-11; WAS, JAX, NO as ours; the unseen eight absent", () => {
-    expect(Object.keys(SPORTRADAR_ABBREVIATIONS)).toHaveLength(24);
+  it("Sportradar (Polymarket's homeTeam/awayTeam): the 26 teams of 2026-10-11 (ATL and BAL from the night game); WAS, JAX, NO as ours; the unseen six absent", () => {
+    expect(Object.keys(SPORTRADAR_ABBREVIATIONS)).toHaveLength(26);
+    expect(resolveSourceTeam("polymarket", "ATL")).toBe(1);
+    expect(resolveSourceTeam("polymarket", "BAL")).toBe(2);
     expect(resolveSourceTeam("polymarket", "WAS")).toBe(31);
     expect(resolveSourceTeam("polymarket", "JAX")).toBe(14);
     expect(resolveSourceTeam("polymarket", "NO")).toBe(22);
     expect(resolveSourceTeam("polymarket", "LAC")).toBe(16);
-    for (const unseen of ["ATL", "BAL", "BUF", "CAR", "DAL", "KC", "LAR", "LA", "TB", "WSH", "JAC"])
+    for (const unseen of ["BUF", "CAR", "DAL", "KC", "LAR", "LA", "TB", "WSH", "JAC"])
       expect(resolveSourceTeam("polymarket", unseen)).toBeUndefined();
   });
 });

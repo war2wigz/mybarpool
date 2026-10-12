@@ -139,13 +139,17 @@ export const NFLVERSE_CODES: Readonly<Record<string, number>> = Object.freeze({
 /**
  * The Sportradar team abbreviations Polymarket's live stream carries as `homeTeam` /
  * `awayTeam` → team id, keyed `polymarket` after the source that carries them. Pinned from the
- * 2026-10-11 NFL recording: the 24 teams that played in the early and late windows; the eight
- * that did not (ATL, BAL, BUF, CAR, DAL, KC, LAR, TB) are added as they appear, never guessed,
- * so this table is the one that may be short of 32 until the season has shown every team. Note
- * `WAS` (ESPN says `WSH`), `JAX` (Kalshi's titles say `JAC`), `NO` (Kalshi's titles say `NOLA`).
+ * 2026-10-11 NFL recording: the 24 teams of the early and late windows, then `ATL` and `BAL`
+ * from the night game (129 frames, `homeTeam: "ATL"`, `awayTeam: "BAL"`); the six that have
+ * not played on a recorded day (BUF, CAR, DAL, KC, LAR, TB) are added as they appear, never
+ * guessed — the Rams' code in particular is not taken from ESPN's `LAR` — so this table is the
+ * one that may be short of 32 until the season has shown every team. Note `WAS` (ESPN says
+ * `WSH`), `JAX` (Kalshi's titles say `JAC`), `NO` (Kalshi's titles say `NOLA`).
  */
 export const SPORTRADAR_ABBREVIATIONS: Readonly<Record<string, number>> = Object.freeze({
   ARI: id("ARI"),
+  ATL: id("ATL"),
+  BAL: id("BAL"),
   CHI: id("CHI"),
   CIN: id("CIN"),
   CLE: id("CLE"),
