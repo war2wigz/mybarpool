@@ -140,16 +140,18 @@ export const NFLVERSE_CODES: Readonly<Record<string, number>> = Object.freeze({
  * The Sportradar team abbreviations Polymarket's live stream carries as `homeTeam` /
  * `awayTeam` → team id, keyed `polymarket` after the source that carries them. Pinned from the
  * 2026-10-11 NFL recording: the 24 teams of the early and late windows, then `ATL` and `BAL`
- * from the night game (129 frames, `homeTeam: "ATL"`, `awayTeam: "BAL"`); the six that have
- * not played on a recorded day (BUF, CAR, DAL, KC, LAR, TB) are added as they appear, never
- * guessed — the Rams' code in particular is not taken from ESPN's `LAR` — so this table is the
- * one that may be short of 32 until the season has shown every team. Note `WAS` (ESPN says
- * `WSH`), `JAX` (Kalshi's titles say `JAC`), `NO` (Kalshi's titles say `NOLA`).
+ * from the night game (129 frames, `homeTeam: "ATL"`, `awayTeam: "BAL"`); `LAR` and `BUF`
+ * from the 2026-10-12 Monday night game (`homeTeam: "LAR"`, `awayTeam: "BUF"`). The four that
+ * have not played on a recorded day (CAR, DAL, KC, TB) are added as they appear, never
+ * guessed, so this table is the one that may be short of 32 until the season has shown every
+ * team. Note `WAS` (ESPN says `WSH`), `JAX` (Kalshi's titles say `JAC`), `NO` (Kalshi's
+ * titles say `NOLA`), `LAR` (nflverse and API-Sports say `LA`).
  */
 export const SPORTRADAR_ABBREVIATIONS: Readonly<Record<string, number>> = Object.freeze({
   ARI: id("ARI"),
   ATL: id("ATL"),
   BAL: id("BAL"),
+  BUF: id("BUF"),
   CHI: id("CHI"),
   CIN: id("CIN"),
   CLE: id("CLE"),
@@ -160,6 +162,7 @@ export const SPORTRADAR_ABBREVIATIONS: Readonly<Record<string, number>> = Object
   IND: id("IND"),
   JAX: id("JAX"),
   LAC: id("LAC"),
+  LAR: id("LAR"),
   LV: id("LV"),
   MIA: id("MIA"),
   MIN: id("MIN"),
@@ -175,8 +178,51 @@ export const SPORTRADAR_ABBREVIATIONS: Readonly<Record<string, number>> = Object
   WAS: id("WAS"),
 });
 
+/**
+ * API-Sports `teams.home.id` / `teams.away.id` (a number on the games feed) → team id. Read
+ * from the feed's own team list (`GET /teams?league=1&season=2024`, 34 entries, 2026-10-13):
+ * the 32 teams keyed by their numeric id, each resolved through its `code` — the codes are
+ * exactly nflverse's (`LA` for the Rams, `WAS`, `JAX`, `NO`) — so every entry here is
+ * `NFLVERSE_CODES[code]`; the two conference pseudo-teams (`33 NFC`, `34 AFC`, `code: null`)
+ * are excluded. The raw list is the test fixture, and the test rebuilds this table from it.
+ */
+export const API_SPORTS_TEAM_IDS: Readonly<Record<string, number>> = Object.freeze({
+  "1": id("LV"),
+  "2": id("JAX"),
+  "3": id("NE"),
+  "4": id("NYG"),
+  "5": id("BAL"),
+  "6": id("TEN"),
+  "7": id("DET"),
+  "8": id("ATL"),
+  "9": id("CLE"),
+  "10": id("CIN"),
+  "11": id("ARI"),
+  "12": id("PHI"),
+  "13": id("NYJ"),
+  "14": id("SF"),
+  "15": id("GB"),
+  "16": id("CHI"),
+  "17": id("KC"),
+  "18": id("WAS"),
+  "19": id("CAR"),
+  "20": id("BUF"),
+  "21": id("IND"),
+  "22": id("PIT"),
+  "23": id("SEA"),
+  "24": id("TB"),
+  "25": id("MIA"),
+  "26": id("HOU"),
+  "27": id("NO"),
+  "28": id("DEN"),
+  "29": id("DAL"),
+  "30": id("LAC"),
+  "31": id("LAR"), // API-Sports' code is LA, as nflverse's
+  "32": id("MIN"),
+});
+
 /** The source names the scores service uses for its team tables. */
-export type TeamTableSource = "espn" | "kalshi" | "nflverse" | "polymarket";
+export type TeamTableSource = "espn" | "kalshi" | "nflverse" | "polymarket" | "apiSports";
 
 /** Every source table the package carries, by the name the scores service uses. */
 export const SOURCE_TEAM_TABLES: Readonly<
@@ -186,6 +232,7 @@ export const SOURCE_TEAM_TABLES: Readonly<
   kalshi: KALSHI_TEAM_IDS,
   nflverse: NFLVERSE_CODES,
   polymarket: SPORTRADAR_ABBREVIATIONS,
+  apiSports: API_SPORTS_TEAM_IDS,
 });
 
 /**

@@ -1,17 +1,18 @@
 /**
- * The game-ID mapping shape for the three score sources (ARCHITECTURE › Games,
+ * The game-ID mapping shape for the four score sources (ARCHITECTURE › Games,
  * Score integrity: Polymarket's live stream, Kalshi's live data, ESPN's
- * scoreboard). Shape and pure helpers only; the scores service fills the map in
+ * scoreboard, and API-Sports, the reserve read only when a decision has gone
+ * slow). Shape and pure helpers only; the scores service fills the map in
  * Step 10. A game is identified on-chain by its `GameKey`, never by a source's
  * ID (PROGRAM §2).
  */
 import type { GameKey } from "./gameKey.js";
 
 /** A live-score source whose game ids map to a {@link GameKey}. */
-export type ScoreSource = "polymarket" | "kalshi" | "espn";
+export type ScoreSource = "polymarket" | "kalshi" | "espn" | "apiSports";
 
 /** Every {@link ScoreSource}. */
-export const SCORE_SOURCES: readonly ScoreSource[] = ["polymarket", "kalshi", "espn"];
+export const SCORE_SOURCES: readonly ScoreSource[] = ["polymarket", "kalshi", "espn", "apiSports"];
 
 /** A game's IDs at each source; any may be unknown. */
 export interface SourceGameIds {
@@ -21,6 +22,8 @@ export interface SourceGameIds {
   readonly kalshi?: string;
   /** ESPN event ID. */
   readonly espn?: string;
+  /** API-Sports `game.id` (a number on the feed, as a string). */
+  readonly apiSports?: string;
 }
 
 /** `sourceKey(source, id)` → `GameKey`. */
@@ -51,6 +54,7 @@ export function buildGameIdMap(entries: Iterable<{ key: GameKey; ids: SourceGame
       ["polymarket", ids.polymarket],
       ["kalshi", ids.kalshi],
       ["espn", ids.espn],
+      ["apiSports", ids.apiSports],
     ];
     for (const [source, id] of pairs) {
       if (id === undefined) continue;
