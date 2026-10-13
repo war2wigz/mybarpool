@@ -138,29 +138,33 @@ export const NFLVERSE_CODES: Readonly<Record<string, number>> = Object.freeze({
 
 /**
  * The Sportradar team abbreviations Polymarket's live stream carries as `homeTeam` /
- * `awayTeam` → team id, keyed `polymarket` after the source that carries them. Pinned from the
- * 2026-10-11 NFL recording: the 24 teams of the early and late windows, then `ATL` and `BAL`
+ * `awayTeam` → team id, keyed `polymarket` after the source that carries them. 28 pinned from
+ * recordings: the 24 teams of the 2026-10-11 early and late windows, then `ATL` and `BAL`
  * from the night game (129 frames, `homeTeam: "ATL"`, `awayTeam: "BAL"`); `LAR` and `BUF`
  * from the 2026-10-12 Monday night game (`homeTeam: "LAR"`, `awayTeam: "BUF"`). The four that
- * have not played on a recorded day (CAR, DAL, KC, TB) are added as they appear, never
- * guessed, so this table is the one that may be short of 32 until the season has shown every
- * team. Note `WAS` (ESPN says `WSH`), `JAX` (Kalshi's titles say `JAC`), `NO` (Kalshi's
- * titles say `NOLA`), `LAR` (nflverse and API-Sports say `LA`).
+ * had not played on a recorded day — `CAR`, `DAL`, `KC`, `TB` — were completed on 2026-10-13
+ * from Sportradar's published NFL aliases, which every recorded abbreviation has matched so
+ * far; the first recording that shows them confirms it. Note `WAS` (ESPN says `WSH`), `JAX`
+ * (Kalshi's titles say `JAC`), `NO` (Kalshi's titles say `NOLA`), `LAR` (nflverse and
+ * API-Sports say `LA`).
  */
 export const SPORTRADAR_ABBREVIATIONS: Readonly<Record<string, number>> = Object.freeze({
   ARI: id("ARI"),
   ATL: id("ATL"),
   BAL: id("BAL"),
   BUF: id("BUF"),
+  CAR: id("CAR"),
   CHI: id("CHI"),
   CIN: id("CIN"),
   CLE: id("CLE"),
+  DAL: id("DAL"),
   DEN: id("DEN"),
   DET: id("DET"),
   GB: id("GB"),
   HOU: id("HOU"),
   IND: id("IND"),
   JAX: id("JAX"),
+  KC: id("KC"),
   LAC: id("LAC"),
   LAR: id("LAR"),
   LV: id("LV"),
@@ -174,6 +178,7 @@ export const SPORTRADAR_ABBREVIATIONS: Readonly<Record<string, number>> = Object
   PIT: id("PIT"),
   SEA: id("SEA"),
   SF: id("SF"),
+  TB: id("TB"),
   TEN: id("TEN"),
   WAS: id("WAS"),
 });

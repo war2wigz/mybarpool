@@ -15,15 +15,10 @@ import { TEAMS } from "../src/teams.js";
 
 describe("source team tables (ARCHITECTURE › Games)", () => {
   for (const [source, table] of Object.entries(SOURCE_TEAM_TABLES)) {
-    // The Sportradar column is pinned from recordings as teams appear; every id present maps
-    // to a distinct team, and the table is complete once the season has shown all 32.
-    const complete = source !== "polymarket";
-    it(`${source}: ${complete ? "every one of our 32 teams appears exactly once" : "every id present maps to a distinct team"}, no two ids share a team`, () => {
+    it(`${source}: every one of our 32 teams appears exactly once, no two ids share a team`, () => {
       const values = Object.values(table);
-      if (complete) {
-        expect(values).toHaveLength(TEAMS.length);
-        for (const team of TEAMS) expect(values).toContain(team.id);
-      }
+      expect(values).toHaveLength(TEAMS.length);
+      for (const team of TEAMS) expect(values).toContain(team.id);
       expect(new Set(values).size).toBe(values.length);
       for (const v of values) expect(Number.isInteger(v) && v >= 0 && v < TEAMS.length).toBe(true);
     });
@@ -60,8 +55,12 @@ describe("source team tables (ARCHITECTURE › Games)", () => {
     ]);
   });
 
-  it("Sportradar (Polymarket's homeTeam/awayTeam): the 26 teams of 2026-10-11 (ATL and BAL from the night game) and LAR, BUF from 2026-10-12; WAS, JAX, NO as ours; the unseen four absent", () => {
-    expect(Object.keys(SPORTRADAR_ABBREVIATIONS)).toHaveLength(28);
+  it("Sportradar (Polymarket's homeTeam/awayTeam): the 26 teams of 2026-10-11 (ATL and BAL from the night game), LAR and BUF from 2026-10-12, and CAR, DAL, KC, TB from Sportradar's aliases; WAS, JAX, NO as ours; the other sources' spellings absent", () => {
+    expect(Object.keys(SPORTRADAR_ABBREVIATIONS)).toHaveLength(32);
+    expect(resolveSourceTeam("polymarket", "CAR")).toBe(4);
+    expect(resolveSourceTeam("polymarket", "DAL")).toBe(8);
+    expect(resolveSourceTeam("polymarket", "KC")).toBe(15);
+    expect(resolveSourceTeam("polymarket", "TB")).toBe(29);
     expect(resolveSourceTeam("polymarket", "ATL")).toBe(1);
     expect(resolveSourceTeam("polymarket", "BAL")).toBe(2);
     expect(resolveSourceTeam("polymarket", "LAR")).toBe(17);
@@ -70,8 +69,8 @@ describe("source team tables (ARCHITECTURE › Games)", () => {
     expect(resolveSourceTeam("polymarket", "JAX")).toBe(14);
     expect(resolveSourceTeam("polymarket", "NO")).toBe(22);
     expect(resolveSourceTeam("polymarket", "LAC")).toBe(16);
-    for (const unseen of ["CAR", "DAL", "KC", "LA", "TB", "WSH", "JAC"])
-      expect(resolveSourceTeam("polymarket", unseen)).toBeUndefined();
+    for (const other of ["LA", "WSH", "JAC", "NOLA"])
+      expect(resolveSourceTeam("polymarket", other)).toBeUndefined();
   });
 
   it("API-Sports: the 32 numeric ids, each the team nflverse's code names; the feed's own team list rebuilds the table; the conference pseudo-teams 33 and 34 are absent", () => {
