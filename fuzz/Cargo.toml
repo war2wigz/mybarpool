@@ -46,7 +46,7 @@ mollusk-svm = { workspace = true, features = ["fuzz", "inner-instructions"], opt
 mollusk-svm-fuzz-fixture = { version = "=0.16.0", optional = true }
 mollusk-svm-programs-token = { version = "=0.16.0", optional = true }
 # The Solana crate majors Mollusk 0.16.0 exposes in its public API (as the program's tests).
-solana-account = { version = "4.3", optional = true }
+solana-account = { version = "5.1", optional = true }
 solana-instruction = { version = "3.2", optional = true }
 solana-pubkey = { version = "4.1", optional = true }
 solana-program-error = { version = "3.0", optional = true }
