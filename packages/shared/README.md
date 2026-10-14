@@ -18,7 +18,7 @@ deployment yet.
 - `gameKey`, `teams`, `sources`, `sourceTeams`, `sponsors` — the canonical game key and
   `GameRecord` seeds, the frozen 32-team table, the score-source ID map shape, each source's
   team-id tables — ESPN ids, Kalshi UUIDs, nflverse codes, the Sportradar abbreviations
-  Polymarket's stream carries, API-Sports ids — the one place a source's
+  Polymarket's stream carries, TxODDS team names — the one place a source's
   team id becomes ours, and the sponsor directory
   shape with its validator.
 

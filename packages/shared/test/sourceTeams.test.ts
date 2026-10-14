@@ -1,15 +1,13 @@
-import { readFileSync } from "node:fs";
-
 import { describe, expect, it } from "vitest";
 
 import {
-  API_SPORTS_TEAM_IDS,
   ESPN_TEAM_IDS,
   KALSHI_TEAM_IDS,
   NFLVERSE_CODES,
   resolveSourceTeam,
   SOURCE_TEAM_TABLES,
   SPORTRADAR_ABBREVIATIONS,
+  TXODDS_TEAMS,
 } from "../src/sourceTeams.js";
 import { TEAMS } from "../src/teams.js";
 
@@ -47,11 +45,11 @@ describe("source team tables (ARCHITECTURE › Games)", () => {
     expect(resolveSourceTeam("nflverse", "JAX")).toBe(14);
     expect(resolveSourceTeam("nflverse", "WAS")).toBe(31);
     expect(Object.keys(SOURCE_TEAM_TABLES).sort()).toEqual([
-      "apiSports",
       "espn",
       "kalshi",
       "nflverse",
       "polymarket",
+      "txodds",
     ]);
   });
 
@@ -73,31 +71,17 @@ describe("source team tables (ARCHITECTURE › Games)", () => {
       expect(resolveSourceTeam("polymarket", other)).toBeUndefined();
   });
 
-  it("API-Sports: the 32 numeric ids, each the team nflverse's code names; the feed's own team list rebuilds the table; the conference pseudo-teams 33 and 34 are absent", () => {
-    const list = JSON.parse(
-      readFileSync(new URL("./fixtures/apisports-teams-2024.json", import.meta.url), "utf8"),
-    ) as { results: number; response: Array<{ id: number; code: string | null }> };
-    expect(list.results).toBe(34);
-    const fromFeed: Record<string, number> = {};
-    for (const t of list.response) {
-      if (t.code === null) {
-        expect([33, 34]).toContain(t.id);
-        continue;
-      }
-      const ours = NFLVERSE_CODES[t.code];
-      expect(ours, `code ${t.code} is not one of nflverse's`).toBeDefined();
-      fromFeed[String(t.id)] = ours!;
-    }
-    expect(API_SPORTS_TEAM_IDS).toEqual(fromFeed);
-    expect(Object.keys(API_SPORTS_TEAM_IDS)).toHaveLength(32);
-    const codes = list.response.filter((t) => t.code !== null).map((t) => t.code);
-    expect([...codes].sort()).toEqual(Object.keys(NFLVERSE_CODES).sort());
-    expect(resolveSourceTeam("apiSports", 31)).toBe(17); // LA, the Rams
-    expect(resolveSourceTeam("apiSports", "20")).toBe(3); // BUF
-    expect(resolveSourceTeam("apiSports", 2)).toBe(14); // JAX
-    expect(resolveSourceTeam("apiSports", 12)).toBe(25); // PHI
-    expect(resolveSourceTeam("apiSports", 33)).toBeUndefined();
-    expect(resolveSourceTeam("apiSports", 34)).toBeUndefined();
-    expect(resolveSourceTeam("apiSports", "LA")).toBeUndefined();
+  it("TxODDS: the 32 NFL team names from the TxLINE schedule, including dotted L.A. and N.Y. prefixes", () => {
+    expect(Object.keys(TXODDS_TEAMS)).toHaveLength(32);
+    expect(resolveSourceTeam("txodds", "L.A. Rams")).toBe(17);
+    expect(resolveSourceTeam("txodds", "L.A. Chargers")).toBe(16);
+    expect(resolveSourceTeam("txodds", "N.Y. Giants")).toBe(23);
+    expect(resolveSourceTeam("txodds", "N.Y. Jets")).toBe(24);
+    expect(resolveSourceTeam("txodds", "Buffalo Bills")).toBe(3);
+    expect(resolveSourceTeam("txodds", "Jacksonville Jaguars")).toBe(14);
+    expect(resolveSourceTeam("txodds", "Philadelphia Eagles")).toBe(25);
+    expect(resolveSourceTeam("txodds", "Washington Commanders")).toBe(31);
+    expect(resolveSourceTeam("txodds", "Los Angeles Rams")).toBeUndefined();
+    expect(resolveSourceTeam("txodds", "LAR")).toBeUndefined();
   });
 });

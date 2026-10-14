@@ -184,50 +184,48 @@ export const SPORTRADAR_ABBREVIATIONS: Readonly<Record<string, number>> = Object
 });
 
 /**
- * API-Sports `teams.home.id` / `teams.away.id` (a number on the games feed) → team id. Read
- * from the feed's own team list (`GET /teams?league=1&season=2024`, 34 entries, 2026-10-13):
- * the 32 teams keyed by their numeric id, each resolved through its `code` — the codes are
- * exactly nflverse's (`LA` for the Rams, `WAS`, `JAX`, `NO`) — so every entry here is
- * `NFLVERSE_CODES[code]`; the two conference pseudo-teams (`33 NFC`, `34 AFC`, `code: null`)
- * are excluded. The raw list is the test fixture, and the test rebuilds this table from it.
+ * TxODDS TxLINE `Participant1` / `Participant2` team strings (`ScheduledFixtureResponse` on
+ * `/api/fixtures/snapshot`, SportId 6, NFL) → team id. Pinned from the TxLINE published NFL
+ * schedule (`txodds/tx-on-chain` `documentation/scores/schedule.mdx`, 32 teams). Note the
+ * dotted city prefixes `L.A. Chargers`, `L.A. Rams`, `N.Y. Giants`, `N.Y. Jets`.
  */
-export const API_SPORTS_TEAM_IDS: Readonly<Record<string, number>> = Object.freeze({
-  "1": id("LV"),
-  "2": id("JAX"),
-  "3": id("NE"),
-  "4": id("NYG"),
-  "5": id("BAL"),
-  "6": id("TEN"),
-  "7": id("DET"),
-  "8": id("ATL"),
-  "9": id("CLE"),
-  "10": id("CIN"),
-  "11": id("ARI"),
-  "12": id("PHI"),
-  "13": id("NYJ"),
-  "14": id("SF"),
-  "15": id("GB"),
-  "16": id("CHI"),
-  "17": id("KC"),
-  "18": id("WAS"),
-  "19": id("CAR"),
-  "20": id("BUF"),
-  "21": id("IND"),
-  "22": id("PIT"),
-  "23": id("SEA"),
-  "24": id("TB"),
-  "25": id("MIA"),
-  "26": id("HOU"),
-  "27": id("NO"),
-  "28": id("DEN"),
-  "29": id("DAL"),
-  "30": id("LAC"),
-  "31": id("LAR"), // API-Sports' code is LA, as nflverse's
-  "32": id("MIN"),
+export const TXODDS_TEAMS: Readonly<Record<string, number>> = Object.freeze({
+  "Arizona Cardinals": id("ARI"),
+  "Atlanta Falcons": id("ATL"),
+  "Baltimore Ravens": id("BAL"),
+  "Buffalo Bills": id("BUF"),
+  "Carolina Panthers": id("CAR"),
+  "Chicago Bears": id("CHI"),
+  "Cincinnati Bengals": id("CIN"),
+  "Cleveland Browns": id("CLE"),
+  "Dallas Cowboys": id("DAL"),
+  "Denver Broncos": id("DEN"),
+  "Detroit Lions": id("DET"),
+  "Green Bay Packers": id("GB"),
+  "Houston Texans": id("HOU"),
+  "Indianapolis Colts": id("IND"),
+  "Jacksonville Jaguars": id("JAX"),
+  "Kansas City Chiefs": id("KC"),
+  "L.A. Chargers": id("LAC"),
+  "L.A. Rams": id("LAR"),
+  "Las Vegas Raiders": id("LV"),
+  "Miami Dolphins": id("MIA"),
+  "Minnesota Vikings": id("MIN"),
+  "New England Patriots": id("NE"),
+  "New Orleans Saints": id("NO"),
+  "N.Y. Giants": id("NYG"),
+  "N.Y. Jets": id("NYJ"),
+  "Philadelphia Eagles": id("PHI"),
+  "Pittsburgh Steelers": id("PIT"),
+  "Seattle Seahawks": id("SEA"),
+  "San Francisco 49ers": id("SF"),
+  "Tampa Bay Buccaneers": id("TB"),
+  "Tennessee Titans": id("TEN"),
+  "Washington Commanders": id("WAS"),
 });
 
 /** The source names the scores service uses for its team tables. */
-export type TeamTableSource = "espn" | "kalshi" | "nflverse" | "polymarket" | "apiSports";
+export type TeamTableSource = "espn" | "kalshi" | "nflverse" | "polymarket" | "txodds";
 
 /** Every source table the package carries, by the name the scores service uses. */
 export const SOURCE_TEAM_TABLES: Readonly<
@@ -237,7 +235,7 @@ export const SOURCE_TEAM_TABLES: Readonly<
   kalshi: KALSHI_TEAM_IDS,
   nflverse: NFLVERSE_CODES,
   polymarket: SPORTRADAR_ABBREVIATIONS,
-  apiSports: API_SPORTS_TEAM_IDS,
+  txodds: TXODDS_TEAMS,
 });
 
 /**
