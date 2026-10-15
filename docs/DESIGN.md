@@ -170,9 +170,9 @@ Wireframes are mobile (390px) since that is the primary target. Desktop is the s
 ```
 
 - Pool card: status pill, price, fill bar with count, pot, split, total fee (10% plus any add-on, shown as one number), creator. Every card shows the fee and the creator without exception. Live pools show the latest result line. A sponsored pool adds one line under the pot, "Sponsored by ORE · +1 ORE", with the sponsor's small logo when the sponsor is in the directory (ARCHITECTURE.md, Sponsorship); the pot figure itself stays boxes only, so "Pot" always means the same thing.
-- Team order is home team first everywhere: cards, headers, the create list ("PHI – DAL" means Philadelphia is home).
+- Team order is away first, home second, everywhere, written "away vs home": cards (away row on top), headers, score strips and line scores ("DAL 3 · KC 7"), the create list, share text and images ("PHI vs DAL" means Dallas is home). The grid is the one exception and says so: home across the top, labelled HOME, because that is the program's axis. (Owner's rule, 2026-10-15, replacing "home first".)
 - Status pills: `OPEN` purple outline · `LOCKED` amber · `LIVE` teal pulse · `SETTLED` green · `RETURNED` red outline · `SPLIT` amber outline (suspended game, prizes split). An abandoned pool (unresolved 30 days after the scheduled kickoff) shows `RETURNED` styling with a "Reclaim your share" button in place of the buy bar; it is the only button in the app that sends a transaction the platform didn't initiate.
-- Sort: open pools first (most filled first, they lock soonest), then live, then settled.
+- Sort: pools still selling first, most boxes sold on top (they lock soonest, and the top card is where the next buyer goes, so play concentrates in one pool at a time instead of spreading across several half-empty ones); then full pools (locked, drawn, live); then pools that reached kickoff unfilled; then settled, returned and split. Equal fills keep a fixed order (by address) so cards don't swap places between refreshes. The list re-sorts as it refreshes, so a pool climbs as it fills and drops below the open ones the moment it locks.
 - Filters (chips): token, price range. Only shown when a game has more than 5 pools.
 
 ### 4.3 Pool
@@ -503,7 +503,7 @@ Results (`won`, payouts, returns) come only from decoded program events or from 
 - Token amounts: `TokenAmount` takes base units and the token index. Box prices in natural precision (SOL/ORE two decimals, SKR whole). Prizes and fees to four decimals, half-up, trailing zeros trimmed to at least two decimals for SOL/ORE ("0.45 SOL", "0.2813 SOL") and none for SKR ("2,250 SKR"). Tap shows the exact base-unit amount. Thousands separators always. The USD hint is optional, in `text-2`, and only when a price feed is available; never in shared images.
 - Percentages: integers ("Fee 12%"); the breakdown uses integers too ("Platform 5% · Creator 7%").
 - Times: kickoff in the device time zone with zone label on hover/tap ("Sun 1:00 PM"); relative for activity under 24 h ("2m", "1h"); dates beyond that ("Sep 28").
-- Scores: tabular numerals; home first everywhere ("KC 14 · BAL 10"); the clock as the feed gives it.
+- Scores: tabular numerals; away first, home second ("BAL 10 · KC 14"); the clock as the feed gives it.
 - Wallets: the short address from `shortAddress` in `packages/shared`, the first four characters, an ellipsis and the last four (`7kq2…9a3f`), everywhere a wallet is shown — boxes, activity rows, sponsor lines, My Boxes; the full address is one tap away (copy, explorer). A `.skr` name replaces the short form only when one resolves, which is rare; the connected wallet is always "YOU" on the grid and "You" in sentences. `.skr` names are AllDomains names on mainnet and are resolved there whatever cluster the app is on. The app never resolves them itself: it asks the scores service for a batch (`GET /v1/names?addresses=…`, reverse lookup, sorted so the label is stable, cached for an hour with misses cached too), so a grid of 25 owners is one request, not 25 RPC calls from a phone, and no RPC key ships in the APK. A name that fails to resolve degrades to the short address, never to a blank or a spinner. Names are labels, never payees: nothing in the app resolves a `.skr` forward to send money anywhere.
 - Box labels: 1–25, from `packages/shared` only. No file in `apps/app` adds 1 to an index.
 
@@ -593,7 +593,7 @@ Strings that appear in more than one place live in one file, `apps/app/src/copy.
 - Returned headers: "Pool didn't fill · your {amount} was returned ↗" / "Game postponed · your {amount} was returned ↗" / "Game cancelled · …" / "Pool cancelled by the team · …".
 - Suspended: "Game suspended · prizes split".
 - Sponsor: "Sponsored by {name} · +{amount}"; "Sponsored by {name} and {n} others"; "Add to the prizes"; the three lines "No fee is taken on this. If the pool doesn't play, it comes back to you. Once the first prize is paid it belongs to the winners."; activity "{name} added {amount} to the prizes ↗"; "Returned {amount} to {name} ↗".
-- Abandoned: "Reclaim your share"; explanation "This pool wasn't settled within 30 days of kickoff. You can take back your {amount} directly from the program."
+- Abandoned: "Reclaim your share"; explanation "This pool wasn't settled within 30 days of kickoff. You can take back your {amount} directly from the program." Once the first owner reclaims, the pool reads `Returned`/`Split` on chain; its header is "Not settled within 30 days of kickoff · box owners took their share back from the program" (never the unfilled/suspended line), and every owner still holding an unreturned box keeps the button (§10.2).
 - Empty states: "No boxes yet" / "No pools yet · Create one →" / "We can't find that pool".
 - Paused: as in 10.4.
 - Never in any string: the game's other common name, "refund", "deposit", "claim" (as something a player does), "bet", "wager", "gamble", "odds boost", exclamation marks, emoji.
