@@ -179,6 +179,78 @@
   .shareprev p{font-size:13px;line-height:1.4;color:var(--t1)}
   .shareprev p .t2{font-size:12px}
   .sbtn{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:10px;background:var(--bg2);border:1px solid var(--line);font-size:14px;font-weight:500;margin-top:10px}
+
+  /* profile & thread (DESIGN 4.9) */
+  .pav{width:64px;height:64px;border-radius:50%;background:conic-gradient(from 90deg,#9945FF,#14F195,#00C2FF,#9945FF);flex:none}
+  .pav.empty{background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+  .pav.empty .helm{width:30px;height:30px;--c1:#9945FF;--c2:#14F195}
+  .mav{width:26px;height:26px;border-radius:50%;background:conic-gradient(from 90deg,#9945FF,#14F195,#00C2FF,#9945FF);flex:none}
+  .mav.m2{background:conic-gradient(from 0deg,#FFB020,#FF4D6D,#FFB020)} .mav.m3{background:conic-gradient(from 180deg,#00C2FF,#9945FF,#00C2FF)}
+  .mav.empty{background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+  .mav.empty .helm{width:14px;height:14px;--c1:#9945FF;--c2:#14F195}
+  .stack{display:flex;align-items:center}
+  .stack .mav{width:22px;height:22px;border:2px solid var(--bg0);margin-left:-8px} .stack .mav:first-child{margin-left:0}
+  .stack .more{color:var(--t2);font:600 12px var(--body);margin-left:6px}
+  .thread{margin-top:4px}
+  .msg{display:flex;gap:10px;align-items:flex-start;padding:8px 0}
+  .msg .who{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+  .msg .who .t2{font-weight:400;font-size:12px}
+  .msg .who .ctag{font:600 9px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--purple);border:1px solid rgba(153,69,255,.5);border-radius:4px;padding:1px 5px}
+  .msg p{font-size:14px;line-height:1.4;margin-top:2px}
+  .msg p .at{color:var(--purple);font-weight:500}
+  .sys{display:flex;justify-content:space-between;align-items:center;padding:7px 0 7px 36px;color:var(--t2);font-size:13px}
+  .sys .t1{color:var(--t1)} .sys .win{color:var(--green)}
+  .pinned{display:flex;gap:10px;align-items:flex-start;background:var(--bg1);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0 4px;font-size:13px;line-height:1.4}
+  .pinned .pin{color:var(--t2);font-size:12px;flex:none;margin-top:1px}
+  .pinned b{font-weight:600}
+  .composer{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .composer .in{flex:1;height:44px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;padding:0 14px;color:var(--t2);font-size:14px}
+  .composer .send{width:44px;height:44px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--t2)}
+  .chips{display:flex;gap:8px;margin-top:10px}
+  .chips span{border:1px solid var(--line);background:var(--bg1);border-radius:999px;padding:7px 12px;font-size:13px;color:var(--t1)}
+  .joincard{background:var(--bg1);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px}
+  .joincard .cta{margin-top:12px;height:46px;font-size:15px}
+  .resultcard{background:var(--bg1);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
+  .resultcard .qrow{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .resultcard .qrow:last-of-type{border-bottom:0}
+  .resultcard .qrow .owner{gap:10px}
+  .plist .pr{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .plist .pr:last-child{border-bottom:0}
+  .plist .pr .t2{font-size:12px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.01em}
+  .devrow{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--line);font-size:14px;margin-top:10px}
+
+  /* wide layout (DESIGN 4.11) */
+  .frame.wide{width:1280px;height:800px;border-radius:16px;flex-direction:row}
+  body.single .frame.wide{border-radius:0;height:100vh}
+  .rail{width:280px;flex:none;border-right:1px solid var(--line);padding:28px 16px;display:flex;flex-direction:column;gap:6px}
+  .rail .nav{display:flex;gap:16px;font:600 12px var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin-bottom:14px}
+  .rail .nav b{color:var(--t1)}
+  .rail .wk{font:700 18px var(--num);margin-bottom:10px}
+  .rail .g{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13px}
+  .rail .g.on{background:var(--bg1);border:1px solid var(--line)}
+  .rail .g .pair{display:flex;gap:4px;flex:none}
+  .rail .g .nm{flex:1;font-weight:600}
+  .rail .g .sc{font:600 13px var(--num);color:var(--t2)}
+  .rail .g.live .sc{color:var(--teal)}
+  .rail .g .cnt{color:var(--t2);font-size:12px}
+  .rail .foot{margin-top:auto;color:var(--t2);font-size:14px}
+  .page{flex:1;display:flex;justify-content:center;position:relative}
+  .page .col{width:600px;position:relative;display:flex;flex-direction:column}
+  .page .col .top{padding:28px 0 10px}
+  .page .col .content{padding:0}
+  .page .col .buybar{left:0;right:0;padding-left:0;padding-right:0}
+  .side{width:360px;flex:none;border-left:1px solid var(--line);padding:28px 20px;display:flex;flex-direction:column}
+  .side .sect{margin-top:0}
+  .side .thread{flex:1}
+  .wideboard{display:flex;justify-content:center}
+  .wideboard .gridwrap{width:520px}
+  /* no-wallet sheet (DESIGN 4.10) */
+  .wopt{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;font-size:15px;font-weight:500}
+  .wopt .wl{display:flex;align-items:center;gap:10px}
+  .wopt .wl i{width:28px;height:28px;border-radius:8px;background:#AB9FF2;display:inline-block}
+  .wopt .wl i.sf{background:linear-gradient(135deg,#FC7227,#FFC10B)}
+  .wopt .t2{font-size:12px}
 </style>
 </head>
 <body class="overview">
@@ -626,6 +698,232 @@
       <div class="a"><span>Save image</span><span class="t2">1080 × 1080 · story</span></div>
       <div class="a"><span>Print board</span><span class="t2">Letter · A4</span></div>
     </div>
+  </div>
+</div>
+
+<!-- ============ 12. PROFILE SHEET (DESIGN 4.9) ============ -->
+<div class="frame" id="profile">
+  <div class="label">12 · Profile sheet</div>
+  <div class="top"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="wallet"><i class="avatar"></i>Ana</div></div>
+  <div class="content">
+    <div class="sect" style="margin-top:4px"><b>This week</b><span>Week 7 · 14 games</span></div>
+    <div class="card"><div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="num" style="font-weight:700;font-size:18px">KC 14 · BAL 10</span></div></div>
+    <div class="card"><div class="row"><span class="kick">SUN 1:00</span><span class="num" style="font-weight:700;font-size:18px">PHI – DAL</span></div></div>
+  </div>
+  <div class="tabs"><a class="on"><i class="ic"></i>Games</a><a><i class="ic"></i>My Boxes</a><a><i class="ic"></i>Create</a></div>
+  <div class="scrim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div style="display:flex;gap:14px;align-items:center">
+      <i class="pav"></i>
+      <div><div style="font:700 20px var(--num)">Ana</div><div class="textlink" style="margin-top:4px">Change photo</div></div>
+    </div>
+    <div class="field"><label>Username</label><div class="input" style="height:46px"><span style="font-size:16px;font-weight:500">Ana</span><span class="t2" style="font-size:12px">Sign to save — no fee</span></div><div class="hint">Shown on grids and in chat. Optional</div></div>
+    <div class="field"><label>Wallet</label><div class="row" style="font-size:14px"><span class="mono">7Yx1gAn7…2SNTV</span><span class="t2">⧉ &nbsp;·&nbsp; ana.skr</span></div></div>
+    <div class="sect" style="margin:16px 0 8px"><b>My Boxes</b><span>2 active</span></div>
+    <div class="plist">
+      <div class="pr"><span><span class="pill live" style="margin-right:8px"><i class="dot"></i>Q2</span>KC 14 · BAL 10</span><span class="num" style="font-weight:600">7 boxes</span></div>
+      <div class="pr"><span><span class="pill open" style="margin-right:8px">Open</span>PHI – DAL · Sun 1:00</span><span class="num" style="font-weight:600">1 box</span></div>
+    </div>
+    <div class="textlink" style="margin-top:10px">All my boxes ›</div>
+    <div class="devrow"><span>Devices <span class="t2">· 1 can post as you</span></span><span class="t2">Remove all</span></div>
+    <div class="row" style="padding-top:12px;border-top:1px solid var(--line);font-size:14px"><span class="t2">Disconnect</span><span></span></div>
+  </div>
+</div>
+
+<!-- ============ 13. POOL — LIVE, WITH THE THREAD AS ACTIVITY (DESIGN 4.3, 4.9) ============ -->
+<div class="frame" id="pool-chat">
+  <div class="label">13 · Pool — live, thread</div>
+  <div class="top"><div class="back">‹ KC vs BAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>Ana</div><span class="t2">⇪</span></div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="t2" style="font-size:13px">25/25 · Pot 1.25 SOL</span></div>
+      <div class="scorestrip">
+        <div class="team"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="s">14</span></div>
+        <div class="team"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="s t2">10</span></div>
+        <div class="clk"><i class="dot"></i>Q2 4:12</div>
+      </div>
+    </div>
+    <div class="sect" style="margin-top:14px"><b>Payouts</b><span>Q1 paid · box 3 · <span style="color:var(--green)">YOU</span></span></div>
+
+    <div class="sect" style="margin-top:14px"><b>Activity</b><span class="stack" style="text-transform:none;letter-spacing:0"><i class="mav"></i><i class="mav m2"></i><i class="mav m3"></i><i class="mav empty"><svg class="helm"><use href="#helmet"/></svg></i><span class="more">13 holders</span></span></div>
+    <div class="pinned"><span class="pin">▸ pinned</span><span><b>mike</b> · Payouts hit your wallet on their own, nothing to claim. Drinks on the Q4 winner.</span></div>
+    <div class="thread">
+      <div class="sys"><span>Pool locked · 25/25</span><span>1h</span></div>
+      <div class="sys"><span>Numbers drawn</span><span>1h</span></div>
+      <div class="msg"><i class="mav m2"></i><div><div class="who">mike <span class="ctag">Creator</span><span class="t2">48m</span></div><p>Numbers are in. 7–3 for Q1, who's got it</p></div></div>
+      <div class="msg"><i class="mav"></i><div><div class="who">Ana <span class="t2">47m</span></div><p>box 3, that's me</p></div></div>
+      <div class="sys"><span><span class="win">Q1 · box 3 wins 0.225 SOL</span> · Ana</span><span>12m</span></div>
+      <div class="sys"><span>Fees paid · 0.0625 SOL platform · 0.0625 SOL creator</span><span>12m</span></div>
+      <div class="msg"><i class="mav m3"></i><div><div class="who">jon <span class="t2">9m</span></div><p><span class="at">@Ana</span> congrats. 7 is leading Q2, don't jinx it</p></div></div>
+      <div class="msg"><i class="mav empty"><svg class="helm"><use href="#helmet"/></svg></i><div><div class="who">a3f9…k2Qe <span class="t2">2m</span></div><p>need a safety</p></div></div>
+    </div>
+    <div class="composer"><div class="in">Say something…</div><div class="send">↑</div></div>
+    <div class="chips"><span>Let's go</span><span>Nice box</span><span>GIF</span></div>
+  </div>
+</div>
+
+<!-- ============ 14. POOL — OPEN, FIRST VISIT: THE JOIN CARD (DESIGN 4.9) ============ -->
+<div class="frame" id="join">
+  <div class="label">14 · Pool — join the chat</div>
+  <div class="top"><div class="back">‹ PHI vs DAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar" style="background:var(--bg2);border:1px solid var(--line)"></i>7kq2…9a3f</div><span class="t2">⇪</span></div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill open">Open · locks when full</span><span class="t2 num" style="font-weight:600;font-size:14px">19/25</span></div>
+      <div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="meta"><span>0.05 SOL a box</span><span>Pot 1.25 SOL</span><span>Fee 12%</span><span>Sun 1:00</span></div>
+    </div>
+    <div class="sect" style="margin-top:16px"><b>Boxes</b><span>19 · yours: 14 · tap the grid ▸</span></div>
+    <div class="sect" style="margin-top:14px"><b>Activity</b><span class="stack" style="text-transform:none;letter-spacing:0"><i class="mav m2"></i><i class="mav"></i><i class="mav m3"></i><span class="more">9 holders</span></span></div>
+    <div class="thread">
+      <div class="sys"><span>Pool created by <span class="t1">mike</span> · 0.05 SOL a box</span><span>Tue</span></div>
+      <div class="msg"><i class="mav m2"></i><div><div class="who">mike <span class="ctag">Creator</span><span class="t2">Tue</span></div><p>Murphy's board for Sunday. 6 left</p></div></div>
+      <div class="sys"><span><span class="t1">Ana</span> bought boxes 3, 4, 13</span><span>Wed</span></div>
+      <div class="sys"><span><span class="t1">You</span> bought box 14</span><span>now</span></div>
+    </div>
+    <div class="joincard">
+      <div style="display:flex;gap:12px;align-items:center">
+        <i class="pav empty" style="width:48px;height:48px"><svg class="helm" style="width:24px;height:24px"><use href="#helmet"/></svg></i>
+        <div style="font-size:14px;line-height:1.4">Set a name so people know who's talking</div>
+      </div>
+      <div class="input" style="height:46px;margin-top:12px"><span class="t2" style="font-size:15px">Username</span><span class="t2" style="font-size:12px">optional</span></div>
+      <div class="cta">Join the chat</div>
+      <div class="hint" style="text-align:center;margin-top:8px">One wallet signature, once per device · no fee</div>
+    </div>
+    <div style="height:110px"></div>
+  </div>
+  <div class="buybar"><div class="inner"><div class="step"><span>−</span><b>1</b><span>+</span></div><div class="btn">Buy 1 · <span class="num">0.05 SOL</span></div></div></div>
+</div>
+
+<!-- ============ 15. POOL — SETTLED: THE RESULT CARD (DESIGN 4.9) ============ -->
+<div class="frame" id="pool-settled">
+  <div class="label">15 · Pool — settled</div>
+  <div class="top"><div class="back">‹ KC vs BAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>Ana</div><span class="t2">⇪</span></div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill settled">All quarters paid</span><span class="t2" style="font-size:13px">1.125 SOL paid out</span></div>
+      <div class="scorestrip">
+        <div class="team"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="s">27</span></div>
+        <div class="team"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="s t2">20</span></div>
+        <div class="clk" style="color:var(--t2)">Final</div>
+      </div>
+    </div>
+    <div class="resultcard">
+      <div class="qrow"><span class="t2">Q1 · 7–3</span><span class="owner"><i class="mav"></i>Ana</span><span class="amt num win" style="color:var(--green);font-weight:600">0.225 SOL</span></div>
+      <div class="qrow"><span class="t2">Q2 · 14–10</span><span class="owner"><i class="mav m3"></i>jon</span><span class="amt num" style="color:var(--green);font-weight:600">0.225 SOL</span></div>
+      <div class="qrow"><span class="t2">Q3 · 20–17</span><span class="owner"><i class="mav m2"></i>mike</span><span class="amt num" style="color:var(--green);font-weight:600">0.225 SOL</span></div>
+      <div class="qrow"><span class="t2">Final · 27–20</span><span class="owner"><i class="mav empty"><svg class="helm"><use href="#helmet"/></svg></i>sara</span><span class="amt num" style="color:var(--green);font-weight:600">0.45 SOL</span></div>
+      <div class="actions"><div class="btn ghost">Share</div><div class="btn">Run it back</div></div>
+    </div>
+
+    <div class="sect" style="margin-top:16px"><b>Activity</b><span class="stack" style="text-transform:none;letter-spacing:0"><i class="mav"></i><i class="mav m2"></i><i class="mav m3"></i><span class="more">13 holders · 29 days left</span></span></div>
+    <div class="thread">
+      <div class="sys"><span><span class="win">Final · box 19 wins 0.45 SOL</span> · sara</span><span>3m</span></div>
+      <div class="msg"><i class="mav m2"></i><div><div class="who">mike <span class="ctag">Creator</span><span class="t2">2m</span></div><p>sara with the 7–0, unreal. same time next week</p></div></div>
+      <div class="msg"><i class="mav"></i><div><div class="who">Ana <span class="t2">1m</span></div><p>I'm in. make it 0.1</p></div></div>
+    </div>
+    <div class="composer"><div class="in">Say something…</div><div class="send">↑</div></div>
+    <div class="chips"><span>Congrats sara</span><span>Run it back</span><span>GIF</span></div>
+  </div>
+</div>
+
+<!-- ============ 16. NO WALLET YET (DESIGN 4.10) ============ -->
+<div class="frame" id="nowallet">
+  <div class="label">16 · No wallet yet</div>
+  <div class="top"><div class="back">‹ PHI vs DAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet" style="color:var(--t2)">Connect</div><span class="t2">⇪</span></div></div>
+  <div class="content">
+    <div class="poolhead">
+      <div class="row"><span class="pill open">Open · locks when full</span><span class="t2 num" style="font-weight:600;font-size:14px">19/25</span></div>
+      <div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="meta"><span>0.05 SOL a box</span><span>Pot 1.25 SOL</span><span>Fee 12%</span><span>Sun 1:00</span></div>
+    </div>
+    <div class="gridwrap">
+      <div class="teamlbl top"><svg class="helm sm" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><span class="abbr">PHI</span></div>
+      <div class="axis-top"><span></span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+      <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg><span class="abbr">DAL</span></div>
+        <div class="axis-side"><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+        <div class="boxes">
+          <div class="box o1"><i class="n">1</i>mike</div><div class="box o1"><i class="n">2</i>mike</div><div class="box o3"><i class="n">3</i>Ana</div><div class="box o3"><i class="n">4</i>Ana</div><div class="box"><i class="n">5</i></div>
+          <div class="box o2"><i class="n">6</i>jon</div><div class="box"><i class="n">7</i></div><div class="box o1"><i class="n">8</i>mike</div><div class="box o4"><i class="n">9</i>sara</div><div class="box"><i class="n">10</i></div>
+          <div class="box o4"><i class="n">11</i>sara</div><div class="box o2"><i class="n">12</i>jon</div><div class="box o3"><i class="n">13</i>Ana</div><div class="box o5"><i class="n">14</i>7kq2</div><div class="box"><i class="n">15</i></div>
+          <div class="box o2"><i class="n">16</i>jon</div><div class="box o1"><i class="n">17</i>mike</div><div class="box o4"><i class="n">18</i>sara</div><div class="box"><i class="n">19</i></div><div class="box o5"><i class="n">20</i>7kq2</div>
+          <div class="box o4"><i class="n">21</i>sara</div><div class="box o2"><i class="n">22</i>jon</div><div class="box"><i class="n">23</i></div><div class="box o5"><i class="n">24</i>7kq2</div><div class="box o3"><i class="n">25</i>Ana</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="scrim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>You'll need a wallet</h3>
+    <p class="note" style="margin:8px 0 4px">A wallet holds your SOL and signs your boxes. Free, two minutes.</p>
+    <div class="wopt"><span class="wl"><i></i>Phantom</span><span class="t2">Recommended · App Store</span></div>
+    <div class="wopt"><span class="wl"><i class="sf"></i>Solflare</span><span class="t2">App Store</span></div>
+    <p class="note">Then come back to this page — it'll be right here. You'll need about 0.051 SOL in it.</p>
+    <div class="row" style="font-size:14px;padding-top:4px"><span class="t2">Already have one?</span><span class="textlink">Open in Phantom ›</span></div>
+  </div>
+</div>
+
+<!-- ============ 17. POOL, LIVE, WIDE (DESIGN 4.11) ============ -->
+<div class="frame wide" id="pool-wide">
+  <div class="label">17 · Pool — live, 1280 wide</div>
+  <div class="rail">
+    <div class="nav"><b>Games</b><span>My Boxes</span><span>Create</span></div>
+    <div class="wk">Week 7 ▾</div>
+    <div class="g live on"><span class="pair"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg></span><span class="nm">KC – BAL</span><span class="sc">14–10 · Q2</span></div>
+    <div class="g live"><span class="pair"><svg class="helm sm" style="--c1:#0B2265;--c2:#A71930"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#203731;--c2:#FFB612"><use href="#helmet"/></svg></span><span class="nm">NYG – GB</span><span class="sc">7–3 · Q1</span></div>
+    <div class="g"><span class="pair"><svg class="helm sm" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg></span><span class="nm">PHI – DAL</span><span class="cnt">Sun 1:00 · 3 open</span></div>
+    <div class="g"><span class="pair"><svg class="helm sm" style="--c1:#002244;--c2:#69BE28"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#AA0000;--c2:#B3995D"><use href="#helmet"/></svg></span><span class="nm">SEA – SF</span><span class="cnt">Sun 4:25 · 1 open</span></div>
+    <div class="g"><span class="pair"><svg class="helm sm" style="--c1:#0076B6;--c2:#B0B7BC"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#4F2683;--c2:#FFC62F"><use href="#helmet"/></svg></span><span class="nm">DET – MIN</span><span class="cnt">Sun 4:25</span></div>
+    <div class="g"><span class="pair"><svg class="helm sm" style="--c1:#0085CA;--c2:#101820"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#D50A0A;--c2:#FF7900"><use href="#helmet"/></svg></span><span class="nm">CAR – TB</span><span class="cnt">Sun 8:20</span></div>
+    <div class="foot">‹ &nbsp;Collapse</div>
+  </div>
+  <div class="page"><div class="col">
+    <div class="top"><div class="back">‹ KC vs BAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>Ana</div><span class="t2">⇪</span></div></div>
+    <div class="content">
+      <div class="poolhead">
+        <div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="t2" style="font-size:13px">25/25 · Pot 1.25 SOL · Fee 12% · 20/20/20/40</span></div>
+        <div class="scorestrip">
+          <div class="team"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="s">14</span></div>
+          <div class="team"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="s t2">10</span></div>
+          <div class="clk"><i class="dot"></i>Q2 4:12</div>
+        </div>
+      </div>
+      <div class="wideboard"><div class="gridwrap">
+        <div class="teamlbl top"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="abbr">KC</span></div>
+        <div class="axis-top"><span></span><span class="d">1·9</span><span class="d">5·4</span><span class="d">7·2</span><span class="d">0·6</span><span class="d">8·3</span></div>
+        <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span></div>
+          <div class="axis-side"><span class="d">3·9</span><span class="d">0·6</span><span class="d">7·4</span><span class="d">8·1</span><span class="d">2·5</span></div>
+          <div class="boxes">
+            <div class="box o1"><i class="n">1</i>mike</div><div class="box you"><i class="n">2</i>YOU</div><div class="box you won"><i class="n">3</i><i class="tag">Q1 ✓</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box o2"><i class="n">5</i>jon</div>
+            <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2 lead"><i class="n">7</i><i class="star">★</i>jon</div><div class="box o1"><i class="n">8</i>mike</div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
+            <div class="box o4"><i class="n">11</i>sara</div><div class="box you"><i class="n">12</i>YOU</div><div class="box you"><i class="n">13</i>YOU</div><div class="box o4"><i class="n">14</i>sara</div><div class="box o2"><i class="n">15</i>jon</div>
+            <div class="box o2"><i class="n">16</i>jon</div><div class="box you"><i class="n">17</i>YOU</div><div class="box o4"><i class="n">18</i>sara</div><div class="box o3"><i class="n">19</i>a3f9</div><div class="box o1"><i class="n">20</i>mike</div>
+            <div class="box o4"><i class="n">21</i>sara</div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o3"><i class="n">24</i>a3f9</div><div class="box you"><i class="n">25</i>YOU</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="sect"><b>Payouts</b><span>on-chain</span></div>
+      <table class="tbl">
+        <tr><td class="t2">Q1 · 7–3</td><td class="amt win">0.225 SOL</td><td><span style="color:var(--green)">box 3 · YOU</span> <span class="link"></span></td></tr>
+        <tr><td class="t2">Q2</td><td class="amt">0.225 SOL</td><td><span style="color:var(--teal);font-size:13px"><span style="color:var(--amber)">★</span> Leading · box 7 · jon</span></td></tr>
+        <tr><td class="t2">Q3</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
+        <tr><td class="t2">Q4 · final</td><td class="amt">0.45 SOL</td><td class="t2">—</td></tr>
+      </table>
+    </div>
+  </div></div>
+  <div class="side">
+    <div class="sect"><b>Activity</b><span class="stack" style="text-transform:none;letter-spacing:0"><i class="mav"></i><i class="mav m2"></i><i class="mav m3"></i><span class="more">13 holders</span></span></div>
+    <div class="pinned"><span class="pin">▸ pinned</span><span><b>mike</b> · Payouts hit your wallet on their own, nothing to claim.</span></div>
+    <div class="thread">
+      <div class="sys"><span>Pool locked · 25/25</span><span>1h</span></div>
+      <div class="sys"><span>Numbers drawn</span><span>1h</span></div>
+      <div class="msg"><i class="mav m2"></i><div><div class="who">mike <span class="ctag">Creator</span><span class="t2">48m</span></div><p>Numbers are in. 7–3 for Q1, who's got it</p></div></div>
+      <div class="msg"><i class="mav"></i><div><div class="who">Ana <span class="t2">47m</span></div><p>box 3, that's me</p></div></div>
+      <div class="sys"><span><span class="win">Q1 · box 3 wins 0.225 SOL</span> · Ana</span><span>12m</span></div>
+      <div class="msg"><i class="mav m3"></i><div><div class="who">jon <span class="t2">9m</span></div><p><span class="at">@Ana</span> congrats. 7 is leading Q2</p></div></div>
+    </div>
+    <div class="composer"><div class="in">Say something…</div><div class="send">↑</div></div>
   </div>
 </div>
 

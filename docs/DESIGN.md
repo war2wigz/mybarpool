@@ -64,14 +64,14 @@ The unit is a **box**, in every string the user sees and in every identifier in 
 /p/{code}               Short share link -> /pools/{poolId} (section 4.8)
 ```
 
-Bottom tab bar on mobile: **Games · My Boxes · Create**. Wallet lives in the top-right as a chip (avatar or .skr name), not a tab.
+Bottom tab bar on mobile: **Games · My Boxes · Create**. Wallet lives in the top-right as a chip, not a tab: the avatar and username once set, else the `.skr` name, else the short address. Tapping it opens the profile sheet (section 4.9).
 
 ## 4. Screens
 
 ### Rendered mockups
-High-fidelity mockups of the screens below are built in HTML/CSS with the real palette and type, at [mockups/screens.html](mockups/screens.html), and rendered to PNG at 390×844 (2×) in [mockups/png/](mockups/png/). Open the HTML in a browser to see all frames side by side, or add `?screen=<id>` (`games`, `game`, `pool-open`, `pool-live`, `buy`, `bought`, `create`, `me`, `pool-sponsored`, `sponsor`, `share`) to view one at phone size. Teams in the mockup are drawn as the section 9 team chip (one inline helmet SVG colored from the team table), the same way production draws them; no league or club artwork appears in the mockups or the app.
+High-fidelity mockups of the screens below are built in HTML/CSS with the real palette and type, at [mockups/screens.html](mockups/screens.html), and rendered to PNG at 390×844 (2×) in [mockups/png/](mockups/png/). Open the HTML in a browser to see all frames side by side, or add `?screen=<id>` (`games`, `game`, `pool-open`, `pool-live`, `buy`, `bought`, `create`, `me`, `pool-sponsored`, `sponsor`, `share`, `profile`, `pool-chat`, `join`, `pool-settled`, `nowallet`; `pool-wide` renders at 1280 × 800) to view one at phone size. Teams in the mockup are drawn as the section 9 team chip (one inline helmet SVG colored from the team table), the same way production draws them; no league or club artwork appears in the mockups or the app.
 
-All eleven frames side by side: [overview.png](mockups/png/overview.png) (wide; open it at full size rather than inline).
+All seventeen frames side by side: [overview.png](mockups/png/overview.png) (wide; open it at full size rather than inline).
 
 <table>
 <tr><td align="center"><img src="mockups/png/games.png" width="390" alt="Games"><br><sub>1 · Games (home)</sub></td><td align="center"><img src="mockups/png/game.png" width="390" alt="Game"><br><sub>2 · Game</sub></td></tr>
@@ -79,14 +79,17 @@ All eleven frames side by side: [overview.png](mockups/png/overview.png) (wide; 
 <tr><td align="center"><img src="mockups/png/buy.png" width="390" alt="Buy sheet"><br><sub>5 · Buy sheet</sub></td><td align="center"><img src="mockups/png/bought.png" width="390" alt="Buy result"><br><sub>6 · Buy result</sub></td></tr>
 <tr><td align="center"><img src="mockups/png/create.png" width="390" alt="Create"><br><sub>7 · Create, step 2</sub></td><td align="center"><img src="mockups/png/me.png" width="390" alt="My Boxes"><br><sub>8 · My Boxes</sub></td></tr>
 <tr><td align="center"><img src="mockups/png/pool-sponsored.png" width="390" alt="Pool sponsored"><br><sub>9 · Pool, sponsored</sub></td><td align="center"><img src="mockups/png/sponsor.png" width="390" alt="Sponsor sheet"><br><sub>10 · Sponsor sheet</sub></td></tr>
-<tr><td align="center"><img src="mockups/png/share.png" width="390" alt="Share sheet"><br><sub>11 · Share sheet</sub></td><td></td></tr>
+<tr><td align="center"><img src="mockups/png/share.png" width="390" alt="Share sheet"><br><sub>11 · Share sheet</sub></td><td align="center"><img src="mockups/png/profile.png" width="390" alt="Profile sheet"><br><sub>12 · Profile sheet (4.9)</sub></td></tr>
+<tr><td align="center"><img src="mockups/png/pool-chat.png" width="390" alt="Pool live with the thread"><br><sub>13 · Pool, live, the thread as Activity (4.3, 4.9)</sub></td><td align="center"><img src="mockups/png/join.png" width="390" alt="Join the chat"><br><sub>14 · Pool, open, the join card (4.9)</sub></td></tr>
+<tr><td align="center"><img src="mockups/png/pool-settled.png" width="390" alt="Pool settled"><br><sub>15 · Pool, settled, the result card (4.9)</sub></td><td align="center"><img src="mockups/png/nowallet.png" width="390" alt="No wallet yet"><br><sub>16 · No wallet yet (4.10)</sub></td></tr>
+<tr><td colspan="2" align="center"><img src="mockups/png/pool-wide.png" width="800" alt="Pool, live, wide layout"><br><sub>17 · Pool, live, 1280 wide: rail · page · thread (4.11)</sub></td></tr>
 </table>
 
 To re-render after editing the HTML:
 
 ```bash
 cd docs/mockups
-for s in games game pool-open pool-live buy bought create me pool-sponsored sponsor share; do
+for s in games game pool-open pool-live buy bought create me pool-sponsored sponsor share profile pool-chat join pool-settled nowallet; do
   chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=390,844 \
     --virtual-time-budget=8000 --screenshot=png/$s.png "file://$PWD/screens.html?screen=$s"
 done
@@ -97,7 +100,7 @@ chrome --headless=new --hide-scrollbars --window-size=4690,930 --virtual-time-bu
 The overview is 11 frames × 390 px plus gaps and padding; widen it by 422 px per frame added.
 
 ### Wireframes
-Wireframes are mobile (390px) since that is the primary target. Desktop is the same content in a two-column layout: list on the left, detail on the right.
+Wireframes are mobile (390px) since that is the primary target. Wide screens are the same content in columns, section 4.11.
 
 ### 4.1 Games (home)
 
@@ -218,10 +221,15 @@ The most important screen. Three zones stacked: header, grid, details. The buy b
 │  mike.skr       3 boxes  1,9,22      │
 │  ...                                 │
 │                                      │
-│ Activity                             │
-│  zoe.skr bought 2 boxes   2m  ↗      │
-│  jon bought 1 box        8m  ↗       │
-│  Pool created by mike.skr   1h  ↗    │
+│ Activity · 13 holders   ◎◎◎◎ +9      │
+│  Pool created by mike · 0.05 SOL  1h │
+│  jon bought box 14                8m │
+│  ◎ Ana   Q2 is mine, 10 on KC     5m │
+│  zoe bought boxes 3, 4            2m │
+│  ◎ jon   @Ana we'll see           1m │
+│ ┌──────────────────────────────┐ ↑   │
+│ │ Say something…               │     │
+│ └──────────────────────────────┘     │
 │──────────────────────────────────────│
 │ ┃ [ −  3  + ]   Buy 3 · 0.15 SOL  ┃  │  <- sticky
 └──────────────────────────────────────┘
@@ -232,7 +240,8 @@ Grid rules:
 - Owner shown as the wallet address in the short form `shortAddress` in `packages/shared` produces, the first four characters, an ellipsis and the last four (`7kq2…9a3f`), the form wallets themselves use, or its `.skr` name when one resolves. The connected wallet's boxes say YOU on a purple fill. Multiple boxes by one owner share a subtle owner color (from a fixed 8-color set) so "4 boxes by ana" reads at a glance.
 - Axis digits render as `?` until the draw, then flip in with a short animation. Home team across the top, away down the side, each marked by its team chip (helmet and abbreviation, so "KC" over the columns and "BAL" beside the rows), upright, with no arrows: the chip's position says which way its digits read, and the score strip above the grid shows home first. The two axes are shuffled independently on-chain (see ARCHITECTURE.md, Randomness), so the same pair may appear on both a column and a row; the UI shows whatever the program recorded and never re-derives digits itself.
 - Live: the leading box gets a dotted teal border and a gold star (★, `amber`, 15px) in the top-right corner, with a soft glow and a slow pulse while the game is live. No text inside the box: at grid size a word collided with the box number. The star moves with every score update and disappears when the quarter pays. Won boxes get a solid green fill with the quarter label (Q1) and a checkmark. A box can be both (won Q1, leading Q3): the Q1 ✓ label shifts left to make room and the star keeps the corner. The payouts table carries the word: "★ Leading · box 7 · jon" on the live quarter's row, in teal with the gold star, so the star is explained on the same screen. On Q4 100% pools there is only the final prize, so the row reads "★ Leading · final" from the current score all game.
-- Tapping a box opens a small sheet: the owner's full wallet address (copyable, with an explorer link), digits it covers (after draw), quarters won, and the transaction links for the purchase and every payout to that box.
+- Tapping a box opens a small sheet: the owner's avatar and name (section 4.9) over the full wallet address (copyable), digits it covers (after draw), quarters won, the purchase and every payout to that box as rows that open the on-chain record, and, for a holder, "Say something" which opens the thread with `@name` in the field.
+- ↗ anywhere in this document means "opens the record": a small sheet inside the app with what the chain recorded for that line — the time, the slot, the signature (copyable) and, for a payout, the amount and the wallet it went to. Nothing in the app links out to a block explorer; the app does not send people elsewhere. `/pools/{id}/verify` remains as a standalone public page for auditors and integrators (linked from the README and the docs, never from a screen), the same lines with signatures and one "View in explorer" per row, and it is where the pool's full history lives once the game is over.
 
 Header by status:
 - OPEN: fill bar, "locks when full".
@@ -241,11 +250,11 @@ Header by status:
 - SETTLED: green, "All quarters paid", total paid out.
 - RETURNED: red outline, "Pool didn't fill · your 0.15 SOL was returned ↗".
 
-Payouts table: amount per quarter, then winner + tx link as each one settles. This table is fed only by on-chain events, never by live scores. Quarter amounts are the prize amounts after fees, so the numbers players see add up to what is actually paid.
+Payouts table: amount per quarter, then the winner's avatar and name as each one settles, the row opening the on-chain record. This table is fed only by on-chain events, never by live scores. Quarter amounts are the prize amounts after fees, so the numbers players see add up to what is actually paid.
 
 Fee line: the header shows the total ("Fee 12%" for a pool with a 2% add-on); tapping it, or the pool's details section, shows the breakdown "Platform 5% · Creator 7%" with amounts. Pools created by third-party clients can carry an integrator fee; the MyBarPool app never sets one but must display it when present, as a "Client 2%" line in the same breakdown. To the creator, the same spot reads "You earn 0.0875 SOL with the pool's first prize" and switches to "Earned 0.0875 SOL ↗" once paid.
 
-Activity: purchases, sponsorships, lock, draw, each settlement, returns. The first settlement adds one row alongside the prize: "Fees paid · 0.0625 SOL platform · 0.0875 SOL creator ↗", same transaction link. Every row links to its transaction. This is the "verify on chain" surface; `/pools/{id}/verify` is the same list as a standalone public page.
+Activity is the pool's thread (section 4.9): purchases, sponsorships, lock, draw, each settlement, fees ("Fees paid · 0.0625 SOL platform · 0.0875 SOL creator"), returns, as quiet system lines in time order, every line opening its on-chain record, and, for holders, the messages between them. The system lines are public and the page works without a wallet (section 4.8); the messages are holders' only. `/pools/{id}/verify` is the system lines alone, with signatures, as a standalone public page.
 
 Sponsorship (ARCHITECTURE.md, Sponsorship). Most pools have none and show nothing. When a pool has been sponsored:
 - Header gains one line under the pot: "Sponsored by ORE · +1 ORE", with the sponsor's logo from the directory, or "Sponsored by 7kq2…9a3f" (short address, or `.skr` name if there is one) for a wallet the directory doesn't know. Several sponsors read "Sponsored by ORE and 2 others". The pot line is unchanged, so "Pot 1.25 ORE" is still boxes only and the sponsored amount is always shown as an addition.
@@ -343,7 +352,7 @@ Step 1 · Game                Step 2 · Setup                Step 3 · Review
 └──────────────────────────────────────┘
 ```
 
-- Active first, sorted live → open → locked. Won list is the personal ledger with tx links. Created and returned pools collapse. A wallet that has sponsored a pool gets a "Pools I sponsored" group in the same collapsed style, with the amount and whether it was paid out or returned; it only appears when there is something in it.
+- Active first, sorted live → open → locked. A card carries a small dot when its pool's thread has messages since you last opened it (section 4.9); the pool is the inbox, there is no other. Won list is the personal ledger with tx links. Created and returned pools collapse. A wallet that has sponsored a pool gets a "Pools I sponsored" group in the same collapsed style, with the amount and whether it was paid out or returned; it only appears when there is something in it.
 - Empty state: the unlit helmet mark, "No boxes yet", one button to Games.
 
 ### 4.7 Notifications (Seeker)
@@ -390,6 +399,166 @@ A creator has to sell 24 more boxes after buying their own, and most of that hap
 - No third-party link shorteners; the short form is ours and resolves to ours.
 - No tracking parameters on shared links. The link is the pool address; that is enough analytics.
 
+### 4.9 Profile and pool chat (ARCHITECTURE › Identity, profiles and pool chat; frames 12–15)
+
+Nothing here is required to play. A wallet that never opens the sheet sees the app as it is today, with the short address everywhere.
+
+**The profile sheet**, from the wallet chip:
+
+```
+┌──────────────────────────────────────┐
+│                                   ✕  │
+│            ┌────────┐                │
+│            │  ◎     │  Change photo  │
+│            └────────┘                │
+│  Username                            │
+│  ┌──────────────────────────────┐    │
+│  │ Ana                          │    │
+│  └──────────────────────────────┘    │
+│  Shown on grids and in chat. Optional│
+│                                      │
+│  Wallet   7Yx1…SNTV   ⧉   ana.skr    │
+│                                      │
+│  My Boxes                            │
+│  ┌──────────────────────────────┐    │
+│  │ ● LIVE  KC 14 – BAL 10  Q2   │    │
+│  │ 3 boxes · 6, 10, 19          │    │
+│  └──────────────────────────────┘    │
+│  ┌──────────────────────────────┐    │
+│  │ OPEN  PHI – DAL  Sun 1:00    │    │
+│  │ 1 box · 14 · 19/25 filled    │    │
+│  └──────────────────────────────┘    │
+│  All my boxes ›                      │
+│                                      │
+│  Devices (1) · Disconnect            │
+└──────────────────────────────────────┘
+```
+
+- Avatar: tap to pick from the camera roll (Android) or a file (web); cropped 1:1 in the app, then uploaded. Until one is set, the helmet mark in the brand colors. A wallet's `.skr` name, when it has one, is pre-filled as the username suggestion the first time the sheet opens, and shown beside the address afterwards.
+- Username: saved on blur with one wallet signature (`signMessage`, not a transaction; the sheet says "Sign to save — no fee"). Reserved names are refused inline: "That name is taken by a sponsor" / "Pick another name". Clearing it goes back to the short address.
+- Wallet: the full address with copy, and the `.skr` name if any. Never editable.
+- My Boxes: the same cards as section 4.6, the active ones, two or three, then "All my boxes ›" into the tab. The sheet is where a person checks on their boxes from any screen; the tab is the full ledger.
+- Devices: how many devices may post as this wallet (section below), with "Remove all" which forgets every device key; the next message asks the wallet again.
+- Disconnect at the bottom, quiet.
+
+**The thread** is the pool page's last zone and is also its Activity (section 4.3): one list, the pool's events as system lines and, for holders, the talk between them.
+
+```
+│ Activity · 13 holders   ◎◎◎◎ +9      │
+│ ▸ mike   Payouts hit your wallet on  │
+│   pinned their own, nothing to claim │
+│  Pool created by mike · 0.05 SOL  1h │
+│  Numbers drawn                   20m │
+│  ◎ Ana   Q2 is mine, 10 on KC     5m │
+│  ◎ jon   @Ana we'll see           1m │
+│  Q1 · box 14 wins 0.225 SOL · jon    │
+│ ┌──────────────────────────────┐ ↑   │
+│ │ Say something…               │     │
+│ └──────────────────────────────┘     │
+```
+
+- System lines, from the program events the service already decodes, never typed by anyone: "Pool created by {name} · {price} a box", "{name} bought box 14" / "boxes 3, 4", "{sponsor} added {amount} to the prizes", "Pool locked", "Numbers drawn", "Q1 · box 14 wins {amount} · {name}", "Fees paid · …", "Returned {amount} to {name}". Grey, no avatar, each opening its on-chain record. They are what every pool's thread has before anyone speaks, so a thread is never empty, and what a non-holder sees.
+- Who sees what: everyone sees the system lines, with no wallet. A holder or the creator also sees the messages and the composer; a sponsor reads. A connected wallet without a box sees "Buy a box to join the chat" in place of the composer, never the messages. The thread stays for 30 days after the pool settles or returns, then only the system lines remain (they are the on-chain record, kept as long as the pool).
+- The holders: the header's avatar stack is the people in the pool; tapping it lists them with their boxes, which is also the answer to "who has 14?".
+- Joining: a new holder opening the thread sees one inline card in place of the composer — avatar placeholder, "Set a name so people know who's talking" with the username field pre-filled from `.skr` when there is one, and **Join the chat**. The button does the one wallet signature ("Let MyBarPool post messages as you from this device — no fee") and saves the name in the same statement; the card is gone after that, on every device once the name is set. Nobody has to open the profile sheet to start talking.
+- Sending: enter sends, no sheet after the first. Messages appear in place at once and are marked if they fail ("Not sent · Retry"). Mentions: `@` opens the holders' list filtered as you type; a mention renders as the name in purple and notifies the person. Tapping a box on the grid and choosing "Say something" opens the composer with that holder's `@name`.
+- Quick replies (Seeker): three chips above the keyboard — two short lines that fit the moment ("Let's go", "Nice box"; after a settlement, "Congrats {name}") and the GIF picker. Messages are text, 140 characters, links shown as plain text; the GIF set is the one image allowance, bundled and sent by id; nobody can attach an image. Each message shows the sender's profile picture (the helmet mark if none) beside the name; the creator gets a small "Creator" tag; a sponsor who posts (only if they also hold a box) gets the directory mark, never a profile one.
+- Creator tools, light: the creator can pin one message at the top of the thread (the bar's name, "payouts hit your wallet on their own, nothing to claim") and mute a holder in their own pool, which hides that wallet's messages from the pool for everyone and tells the muted holder quietly ("Muted in this pool by the creator"). Boxes and payouts are never affected. Most moderation ends here, before it reaches us.
+- Report: long-press a message → Copy, Report (and Delete on your own). Reported hides for you at once ("Reported · Hidden") and reaches the team. A removed message shows as "Removed" to everyone, a removed name falls back to the short address, a removed avatar to the helmet mark.
+- Unread: a dot on the pool's card in My Boxes and on its row in the game's pool list when the thread has messages since you last opened it. No inbox screen, no badge on the tab bar.
+- Settled: the thread's header becomes the result card — the four quarter winners with avatars and amounts, the total paid — with **Share** and **Run it back**, which opens Create with this pool's price, token and split on next week's game between the same teams if there is one, else on the week's games. The payout lines and the talk after the final sit below it.
+- Notifications (Seeker): "{n} new messages on your {away}–{home} pool", batched, never more than one per pool per 10 minutes; a mention is its own notification ("Ana mentioned you on your KC–BAL pool"). Off per pool once the pool settles or returns, with a switch per pool in the thread header.
+- Not here, on purpose: reactions, read receipts, typing indicators, edits, threads inside threads. They add noise and none fits the quiet tone the rest of the design keeps.
+- Small things: timestamps on hover (web) or at a day change, not on every line; the composer sits above the sticky Buy button while the pool is open; empty-state copy by state: "Nobody's said anything yet. You're in with box 14" / "Chat opens when you buy a box".
+- Previews, saved images and the printed board never carry an avatar or a message; names only (section 4.8).
+
+### 4.10 No wallet yet (frame 16)
+
+The one moment most of the web audience hits first: a link from the bar's group chat, a Buy button, and no Solana wallet anywhere. Browsing is never blocked (principle 6); this is only what Buy and Create do when connecting finds nothing to connect to. The Seeker never sees it.
+
+```
+┌──────────────────────────────────────┐
+│ ━━━━                                 │
+│ You'll need a wallet                 │
+│ A wallet holds your SOL and signs    │
+│ your boxes. Free, two minutes.       │
+│                                      │
+│ ┌──────────────────────────────┐     │
+│ │ ◎ Phantom        Recommended │     │
+│ └──────────────────────────────┘     │
+│ ┌──────────────────────────────┐     │
+│ │ ◎ Solflare                   │     │
+│ └──────────────────────────────┘     │
+│                                      │
+│ Then come back to this page — it'll  │
+│ be right here.                       │
+│                                      │
+│ Already have one?  Open in Phantom › │
+└──────────────────────────────────────┘
+```
+
+- Detection: on the web, no wallet-standard wallet registered after 1.5 s and Mobile Wallet Adapter not available; on Android, MWA's association fails with no wallet to answer. Only then; a user with a wallet never sees this sheet.
+- Per platform, the two buttons go to the right store or extension page: Android → Play (Phantom, Solflare); iPhone → App Store; desktop → the browser's extension store for the browser in use (Chrome, Firefox, Safari; Brave counts as Chrome). Two wallets, named, in a fixed order; never a list of twelve.
+- iPhone: Safari has no extension wallets, so the sheet leads with **Open in Phantom** / **Open in Solflare** when the app may already be installed (the universal link opens this very page inside the wallet's browser, where Buy works), and the install buttons second. This is the 12d "open-in-wallet" line, promoted to the sheet.
+- Desktop: after an install the page does not need a reload; the sheet keeps listening for the wallet-standard `register` event and the moment the extension appears it connects and continues into Buy where the user left off.
+- Coming back: the URL is the page; nothing to remember. On Android the App Link brings them back to the pool in the browser they left; the `#k=` of a private invite is kept in session storage so the return still carries it.
+- Money: "You'll need about {price + 0.001} SOL in it" under the buttons, with nothing more: the wallets sell SOL themselves and we never embed an on-ramp. On a token pool: "You'll need {amount} SKR and a little SOL for the fee".
+- Copy: no "crypto", no "blockchain", no "web3". A wallet is where your SOL lives, and that is all the sheet says.
+
+### 4.11 Wide layout (web, 900 px and up; frame 17)
+
+The phone frames are the design; wide screens get the same screens in columns, nothing new. A link opened on a laptop (the organizer making the board at the bar's desk) must not look like a stretched phone.
+
+```
+┌──────────┬──────────────────────────────────┬────────────────────────┐
+│ Week 7 ▾ │ ‹ KC vs BAL                 [◎]  │ Activity · 13 holders  │
+│ ● KC–BAL │ ● LIVE  KC 14 · BAL 10 · Q2 4:12 │ ▸ pinned mike …        │
+│   PHI–DAL│                                  │  Pool locked      1h   │
+│   SEA–SF │   [ the grid, 480 px ]           │  Numbers drawn    1h   │
+│   …      │                                  │ ◎ mike  Numbers are in │
+│          │ Payouts   Q1 paid · box 3 · YOU  │ ◎ Ana   box 3, that's  │
+│  ‹       │ Boxes (13)                       │  Q1 · box 3 wins …     │
+│          │ Details   Fee 12% · 20/20/20/40  │ ┌───────────────┐ ↑    │
+│          │ ┃ [ − 3 + ]  Buy 3 · 0.15 SOL ┃  │ │ Say something…│      │
+└──────────┴──────────────────────────────────┴────────────────────────┘
+```
+
+- Three regions. **Rail** (left, 280 px): this week's games as compact rows (chips, score or kickoff, open-pool count), the week selector at its top; the current game highlighted. **Page** (center, 560–640 px): the screen as on the phone. **Side** (right, 360 px, 1200 px and up): on a pool page, the thread; on a game page, the pools' list; elsewhere empty.
+- The rail collapses to a 56 px strip of helmets with a ‹ at its foot; on a pool page it starts collapsed, so the board has the room, and the choice is remembered. Between 900 and 1199 px there is no side column: the thread returns to the page's last zone as on the phone, and the rail is collapsed by default.
+- The grid is at most 480 px square and never scales with the window; the boxes' type stays the phone's. The sticky Buy bar sticks to the page column, not the window.
+- The tab bar goes away above 900 px; Games, My Boxes and Create are the rail's header links, the wallet chip stays top-right of the page.
+- The share sheet, buy sheet and profile sheet become centered dialogs (420 px) over a scrim; on the phone they are bottom sheets. Same content, same order.
+- The 404 ("We can't find that pool") and the landing page are single-column at every width.
+
+### 4.12 The creator's open pool
+
+Selling the last boxes is the hard part of the product, and the creator sees it on the same page as everyone else; these are the few things only they see. Nothing here is a dashboard.
+
+- **The nudge**, a card under the header while the pool is open and the creator is viewing it: "6 left · Sun 1:00 kickoff" with **Share** inline (the share sheet, section 4.8). It changes with time: past a day with no sale, "No sales since Wednesday · share it again"; inside two hours of kickoff with boxes unsold, in amber, "6 left · unsold at kickoff means a full return to everyone"; the hour before, in red. It is gone the moment the pool fills.
+- **Who bought**: the Boxes list (section 4.3) shows every holder to everyone; for the creator each row carries when ("Wed", "2h"), so they can see the board filling or not.
+- **Pinned line**: the creator can pin one message in the thread (section 4.9) — this is where "Murphy's board, 6 left, grab one" lives, and it shows to everyone who opens the link, holder or not, since the pinned line is part of the public Activity.
+- **Notifications (Seeker)** for the creator only, at most one a day: "19/25 · 6 left · kickoff Sunday 1:00" the morning after a day without a sale; "6 left · 2 hours to kickoff" once, before the return becomes certain. Never after the pool fills; never "share now".
+- Nothing to manage: the creator cannot change price, close early, or remove a buyer. A pool that does not fill returns on its own; the creator's only lever is the link.
+
+### 4.13 Finding pools
+
+The app assumes a link, because that is how pools spread; this is the rest, for the person who heard about it. Still nothing to search for by name — a pool has no name — and no feed.
+
+- **Games** stays the home. At its top, beside the week selector, a segment: **This week · Open pools**. "Open pools" is one list across the week's games of every public pool with boxes left, sorted by fill (closest to full first, since those lock soonest), each row the game's chips, price, fill bar and kickoff. It is the whole public market in one scroll, and it is empty between weeks ("Pools open when the week's games are posted").
+- **Game page** (section 4.2) keeps its pools list; it gains the same sort (closest to full first) and a filter chip per token when a game has pools in more than one (SOL · SKR · ORE).
+- **We can't find that pool** (the short-link miss, section 6) keeps its address box and gains "Open pools this week" beneath it, so a dead link still leads somewhere.
+- **Web**: `/pools` is "Open pools" as a page of its own, linkable, the week's open public pools; the landing page can point at it when there is one.
+- Private pools are never listed anywhere; a private pool is its link (section 4.14).
+
+### 4.14 Opening a private pool
+
+The program has gated pools from v1 (ARCHITECTURE › Private pools); the app shows them read-only today and the Create toggle is scheduled later (section 4.5). This is what the pool page does with one, so that the two cases that already happen — an invite link, and a bare link to a private pool — are designed rather than improvised.
+
+- **With the invite** (`/p/{code}#k={key}`, or the canonical URL with the fragment): the page reads the key before anything else, drops it from the address bar, keeps it in memory and in session storage keyed by the pool. The header pill reads **Private · invited**. Everything else is the normal pool page: grid with names, Buy (the key travels in the buy transaction), the thread once you hold a box. Not connected yet: nothing changes, the connect prompt comes on Buy as always and the key survives it. Coming back later on the same device without the fragment still works; a new device needs the link again.
+- **Without the invite** (someone forwarded the bare URL, or a crawler): the header pill reads **Private · invite only**. The grid shows which boxes are sold and which are open, with no names and no YOU; the price, fill, kickoff and sponsor line show; the Boxes list and the thread are absent; the Buy bar is replaced by "This pool is invite only · ask whoever shared it for the invite link". The connected wallet, if it already holds a box, is treated as invited: its boxes show YOU, the thread opens, the names return.
+- **Wrong key** (a stale or mistyped fragment): the program refuses the buy with the gate error, which the app maps to "That invite link isn't valid for this pool" before the wallet opens; the page then behaves as without the invite.
+- Previews and the share image for a private pool omit the grid and the names (section 4.8); the system lines in Activity show for the invited and holders only, since purchases name people.
+
 ## 5. Components
 
 | Component | Notes |
@@ -427,8 +596,8 @@ A creator has to sell 24 more boxes after buying their own, and most of that hap
 - Creator at a limit: "Create pool" on a game where they already have 3 open reads "3 open pools on this game" and is disabled, with a link to those pools. A creator at 5 boxes in their own pool sees the buy bar replaced by "You hold the max 5 boxes in your pool".
 - Wallet disconnected mid-buy, transaction rejected, insufficient balance, RPC timeout: each has copy and a recovery action.
 - Shared link opened after the pool changed: a full pool shows the grid with "Sold out · numbers drawn" and no buy bar; a returned pool shows the red header and why; a settled pool shows the winners. The link never dead-ends on "pool not available".
-- Short link that doesn't resolve (typo, or the indexer is behind): the page says "We can't find that pool" with a search box for the full address, and never a bare 404.
-- Link opened with no app and no wallet on the phone: the web page renders fully; Buy explains what a wallet is in one line with a link to install one. Browsing is never blocked.
+- Short link that doesn't resolve (typo, or the indexer is behind): the page says "We can't find that pool" with a search box for the full address and "Open pools this week" (section 4.13), and never a bare 404.
+- Link opened with no app and no wallet on the phone: the web page renders fully; Buy opens the "You'll need a wallet" sheet (section 4.10). Browsing is never blocked.
 - Slow network on Seeker: skeletons use the unlit sign; grid renders empty boxes immediately.
 
 ## 7. Inspiration and what to take from it
@@ -556,7 +725,7 @@ Results (`won`, payouts, returns) come only from decoded program events or from 
 - Routes as in section 3. Every route renders without a wallet. `/p/{code}` is handled server-side; the app never resolves short codes itself.
 - App Links: `assetlinks.json` served at the well-known path with the release signing certificate's SHA-256; `intent-filter` with `autoVerify` for `https://mybarpool.com/pools/*`, `/games/*`, `/p/*`.
 - Fragment handling: on web, `#k=` is read into memory, removed from the address bar with `history.replaceState`, and never sent anywhere. On Android the App Link delivers the full URL to the app, which does the same.
-- Outbound links (explorer, sponsor site, dApp Store) open externally with `Linking.openURL`, after `canOpenURL` for custom schemes. Explorer defaults to Solscan with the signature; the choice is a setting.
+- Outbound links (sponsor site, dApp Store, wallet stores in section 4.10) open externally with `Linking.openURL`, after `canOpenURL` for custom schemes. No screen in the app links to a block explorer; the record sheet (section 4.3) shows the signature and the standalone `/pools/{id}/verify` page carries the one "View in explorer" per row (Solscan by default).
 
 ### 10.8 Screen data contracts
 
@@ -595,6 +764,8 @@ Strings that appear in more than one place live in one file, `apps/app/src/copy.
 - Sponsor: "Sponsored by {name} · +{amount}"; "Sponsored by {name} and {n} others"; "Add to the prizes"; the three lines "No fee is taken on this. If the pool doesn't play, it comes back to you. Once the first prize is paid it belongs to the winners."; activity "{name} added {amount} to the prizes ↗"; "Returned {amount} to {name} ↗".
 - Abandoned: "Reclaim your share"; explanation "This pool wasn't settled within 30 days of kickoff. You can take back your {amount} directly from the program." Once the first owner reclaims, the pool reads `Returned`/`Split` on chain; its header is "Not settled within 30 days of kickoff · box owners took their share back from the program" (never the unfilled/suspended line), and every owner still holding an unreturned box keeps the button (§10.2).
 - Empty states: "No boxes yet" / "No pools yet · Create one →" / "We can't find that pool".
+- No wallet (section 4.10): "You'll need a wallet"; "A wallet holds your SOL and signs your boxes. Free, two minutes."; "Then come back to this page — it'll be right here."; "Already have one? Open in {wallet} ›"; "You'll need about {amount} SOL in it". Finding pools (section 4.13): "This week" / "Open pools"; "Pools open when the week's games are posted"; "Open pools this week". Creator (section 4.12): "{n} left · {kickoff} kickoff"; "No sales since {day} · share it again"; "{n} left · unsold at kickoff means a full return to everyone". Private (section 4.14): "Private · invited" / "Private · invite only"; "This pool is invite only · ask whoever shared it for the invite link"; "That invite link isn't valid for this pool".
+- Profile and chat (section 4.9): "Shown on grids and in chat. Optional"; "Sign to save — no fee"; "That name is taken by a sponsor" / "Pick another name"; "Set a name so people know who's talking" / "Join the chat"; "Let MyBarPool post messages as you from this device — no fee"; "Buy a box to join the chat"; "Say something…"; "Not sent · Retry"; "Reported · Hidden"; "Removed"; "Muted in this pool by the creator"; "Nobody's said anything yet. You're in with box {n}" / "Chat opens when you buy a box"; "Run it back"; "{n} new messages on your {away}–{home} pool" / "{name} mentioned you on your {away}–{home} pool". System lines: "Pool created by {name} · {price} a box"; "{name} bought box {n}" / "boxes {n}, {m}"; "{sponsor} added {amount} to the prizes"; "Pool locked"; "Numbers drawn"; "Q{q} · box {n} wins {amount} · {name}"; "Returned {amount} to {name}"; "View in explorer" (on `/verify` only, never in the app).
 - Paused: as in 10.4.
 - Never in any string: the game's other common name, "refund", "deposit", "claim" (as something a player does), "bet", "wager", "gamble", "odds boost", exclamation marks, emoji.
 
@@ -612,3 +783,14 @@ Strings that appear in more than one place live in one file, `apps/app/src/copy.
 - Bundle: web initial load under 400 KB gzipped; images lazy.
 - Every screen has a Storybook-style story per state in section 6; every component in section 5 has one per variant. The audit checks stories against the mockups.
 - No analytics SDK, no ads SDK, no third-party fonts at runtime (bundled), no third-party requests from the app except RPC, the MyBarPool API, FCM and the explorer link the user taps.
+
+### 10.13 Identity, profiles and chat (section 4.9; ARCHITECTURE › Identity, profiles and pool chat)
+
+- Signing statements, both through the wallet abstraction's `signMessage` (MWA `sign_messages` on Android, `solana:signMessage` on web), as plain text the wallet shows, one line per field: `mybarpool.com wants you to {action}` / `Wallet: {address}` / `Issued: {ISO time}` / `Nonce: {16 random bytes, base58}` and, for the device statement, `Device key: {device public key}` / `Expires: {ISO time, 90 days}`. The service checks the domain, the wallet, a nonce it has not seen and an `Issued` within five minutes.
+- Profile write: `PUT /v1/profiles/{wallet}` with `{ username?, avatarHash?, statement, signature }`; the avatar bytes go first to `POST /v1/avatars` (multipart, 1 MB cap, the same statement scheme), which answers the hash the profile then references. Read: `GET /v1/profiles?wallets=a,b,c` batched like names (section 10.1), `{ wallet, username?, avatar?: url, skr? }`; the app caches by wallet for an hour and invalidates its own on write.
+- Device key: an Ed25519 keypair generated on first send, kept in the Android Keystore through `expo-secure-store` or in IndexedDB on web, never leaving the device; the authorization (`statement`, `signature`, the wallet) is kept beside it and sent with the first message of each socket session as `{ authorize: { wallet, deviceKey, statement, signature } }`; the service verifies once per session.
+- Chat over the live socket: send `{ chat: { pool, text, nonce, deviceSignature } }` where the signature is the device key's over `pool | nonce | text`; receive `{ type: "chat", pool, id, wallet, text, at, removed?: bool }` for subscribed pools, with history on subscribe (the last 50). The service checks box ownership or creator on the pool as it has it indexed, and rate-limits per wallet (10 per minute, 200 per pool per day).
+- System lines are the client's rendering of the pool's decoded events (`GET /v1/pools/{address}` activity and the socket's `event` messages), merged with `chat` messages by time; nothing is stored for them. Unread is local: the last `at` seen per pool, in the app's storage.
+- Mentions are `@{wallet}` in the text, rendered as the name; the service sends the mentioned wallet's push. The creator's pin and mute: `{ pin: { pool, id | null } }` and `{ mute: { pool, wallet, on } }` over the socket, signed by the creator's device key; the thread carries `pinned` and `muted` on subscribe.
+- Report: `POST /v1/reports` with the same statement scheme; the app hides the item locally at once.
+- Nothing from this section is on the critical path: a failed profile read shows the short address; a failed socket shows the thread as "Chat unavailable" and the pool page as it was.
