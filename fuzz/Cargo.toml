@@ -43,7 +43,7 @@ proptest = "1"
 # Replays the fixtures (`runner` only): `fuzz` for `process_fixture`, `inner-instructions`
 # so the report can name what moved.
 mollusk-svm = { workspace = true, features = ["fuzz", "inner-instructions"], optional = true }
-mollusk-svm-fuzz-fixture = { version = "=0.16.0", optional = true }
+mollusk-svm-fuzz-fixture = { version = "=0.16.2", optional = true }
 mollusk-svm-programs-token = { version = "=0.16.0", optional = true }
 # The Solana crate majors Mollusk 0.16.0 exposes in its public API (as the program's tests).
 solana-account = { version = "4.3", optional = true }
