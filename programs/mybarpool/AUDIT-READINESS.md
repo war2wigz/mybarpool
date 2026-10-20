@@ -40,12 +40,12 @@ green before and after):
 
 | Tool | Version |
 |---|---|
-| Agave / Solana CLI | 4.3.0 |
+| Agave / Solana CLI | 4.3.2 (program bytes identical to the 4.3.0 build; both run platform-tools v1.57) |
 | Anchor | 1.2.0 |
 | platform-tools | v1.57 (SBF rustc 1.95) |
 | Host rustc | `rust-toolchain.toml`; crate `rust-version` 1.89 |
-| Mollusk | 0.16.0 |
-| Surfpool | 1.6.0 |
+| Mollusk | 0.16.2 |
+| Surfpool | 1.6.1 |
 | `solana-verify` | 0.5.2 |
 | cargo-dylint / anchor-lints | 6.1.0 / `otter-sec/anchor-lints@d8116dd`, nightly-2025-09-18 |
 | cargo-audit | 0.22.2 |

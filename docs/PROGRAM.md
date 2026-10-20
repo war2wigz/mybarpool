@@ -176,7 +176,7 @@ One per scheduled game. Created and rent-paid by the platform. Never closed.
 
 `prize_pool`, `quarter_prize` and `unpaid_prize_pool` are meaningful once set in `Drawn`, and in `Settled` and `Split`. A pool whose first settlements moved nothing (a `FinalOnly` preset through Q3) and that was then returned keeps them populated; nothing in the program reads them on a `Returned` pool, and a client or indexer keys off `status`, never off these fields.
 
-Approximate size: 8 (discriminator) + 800 (owners) + ~465 (the other fields: 8 pubkeys, 10 u64s, the arrays and flags) + 128 (reserved) ≈ 1.4 KB. Rent ≈ 0.011 SOL. The vault adds ≈ 0.0009 SOL (system account) or ≈ 0.002 SOL (token account); the counter ≈ 0.001 SOL. Measured values are recorded in the Step 4 `NOTES.md`; the app's "Creation fee" label uses the measured total.
+Size: 8 (discriminator) + 800 (owners) + 538 (the other fields: 8 pubkeys, 10 u64s, the arrays and flags) + 96 (reserved) = 1,442 bytes (`Pool::SIZE`, `getPoolSize()`). Rent ≈ 0.011 SOL. The vault adds ≈ 0.0009 SOL (system account) or ≈ 0.002 SOL (token account); the counter ≈ 0.001 SOL. Measured values are recorded in the Step 4 `NOTES.md`; the app's "Creation fee" label uses the measured total.
 
 ### 3.4 Vault — seeds `["vault", pool]`
 

@@ -16,8 +16,13 @@ import { DEFAULT_ADDRESS } from "./pdas.js";
 /** PROGRAM §1 `RECLAIM_DELAY`: 30 days after the scheduled kickoff a pool can be reclaimed. */
 export const RECLAIM_DELAY_SECONDS = 2_592_000n;
 
-/** Why a pool is `RETURNED` (DESIGN §10.2 header copy). */
-export type ReturnReason = "unfilled" | "postponed" | "cancelled" | "cancelledByAdmin";
+/**
+ * Why a pool is `RETURNED` (DESIGN §10.2 header copy). `suspended` is PROGRAM §4.6's "suspended
+ * before any payout": the game was marked `Suspended` while `fees_paid` was still clear, so the
+ * pool was returned in full rather than split.
+ */
+export type ReturnReason =
+  "unfilled" | "postponed" | "cancelled" | "suspended" | "cancelledByAdmin";
 
 /** The §10.2 rows that chain state alone decides. */
 export type DisplayStatus =
@@ -34,6 +39,7 @@ export type DisplayStatus =
 export function returnReason(pool: Pool, game: GameRecord): ReturnReason {
   if (game.status === GameStatus.Postponed) return "postponed";
   if (game.status === GameStatus.Cancelled) return "cancelled";
+  if (game.status === GameStatus.Suspended) return "suspended";
   if (pool.cancelledByAdmin) return "cancelledByAdmin";
   return "unfilled";
 }

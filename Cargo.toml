@@ -16,9 +16,16 @@ repository = "https://github.com/war2wigz/mybarpool"
 [workspace.dependencies]
 anchor-lang = "=1.2.0"
 anchor-spl = { version = "=1.2.0", default-features = false }
-mollusk-svm = "=0.16.0"
-mollusk-svm-bencher = "=0.16.0"
+mollusk-svm = "=0.16.2"
+mollusk-svm-bencher = "=0.16.2"
 solana-security-txt = "=1.1.3"
+
+# The Docker image `solana-verify` builds in. 0.5.2 infers it from the Solana
+# crates in Cargo.lock (which is why CI passes `--base-image` for the Agave 4.3.0
+# image); the next release reads this line instead, so the Foundation's reusable
+# workflow and OtterSec's remote verifier pick the same image without a flag.
+[workspace.metadata.cli]
+solana = "4.3.0"
 
 [profile.release]
 overflow-checks = true

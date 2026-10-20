@@ -766,7 +766,7 @@ Strings that appear in more than one place live in one file, `apps/app/src/copy.
 - Buy sheet note: "Boxes are assigned at random. All 25 have the same odds until the draw."
 - Create review note: "Pool won't lock until all 25 sell. Unsold at kickoff = full return."
 - Creation fee label: "Creation fee {amount}, covers account rent".
-- Returned headers: "Pool didn't fill · your {amount} was returned ↗" / "Game postponed · your {amount} was returned ↗" / "Game cancelled · …" / "Pool cancelled by the team · …".
+- Returned headers: "Pool didn't fill · your {amount} was returned ↗" / "Game postponed · your {amount} was returned ↗" / "Game cancelled · …" / "Game suspended · …" (suspended before any prize was paid, so returned in full rather than split) / "Pool cancelled by the team · …".
 - Suspended: "Game suspended · prizes split".
 - Sponsor: "Sponsored by {name} · +{amount}"; "Sponsored by {name} and {n} others"; "Add to the prizes"; the three lines "No fee is taken on this. If the pool doesn't play, it comes back to you. Once the first prize is paid it belongs to the winners."; activity "{name} added {amount} to the prizes ↗"; "Returned {amount} to {name} ↗".
 - Abandoned: "Reclaim your share"; explanation "This pool wasn't settled within 30 days of kickoff. You can take back your {amount} directly from the program." Once the first owner reclaims, the pool reads `Returned`/`Split` on chain; its header is "Not settled within 30 days of kickoff · box owners took their share back from the program" (never the unfilled/suspended line), and every owner still holding an unreturned box keeps the button (§10.2).

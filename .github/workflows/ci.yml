@@ -27,9 +27,9 @@ permissions:
   contents: read
 
 env:
-  SOLANA_VERSION: "4.3.0"
+  SOLANA_VERSION: "4.3.2"
   ANCHOR_VERSION: "1.2.0"
-  SURFPOOL_VERSION: "1.6.0"
+  SURFPOOL_VERSION: "1.6.1"
   # The fork commit the Entropy fixture was built from; the same value is in
   # tests/helpers/entropy.ts (ENTROPY_FORK_COMMIT) and names the fixture file.
   ENTROPY_FORK_COMMIT: "5a869c8c1a89842cfbbbb904fa7b61da083f3dae"
@@ -64,16 +64,16 @@ jobs:
         # digests of the release assets on 2026-10-03). A replaced asset fails
         # the build instead of silently changing the toolchain.
         env:
-          AGAVE_INSTALL_INIT_SHA256: 1c2ca01cd33204453fa97762b6fca40772e17e749d58266ea0847d7bc01756e1
+          AGAVE_INSTALL_INIT_SHA256: 924dca1387848a1ff4509b885b02371b78b1bb5843cacf3367ff9342d078ae77
           ANCHOR_SHA256: 0c9c41a3292c281cc6eadb78d6e1c8224d8324a34b0736a89d640fd314db05b7
-          SURFPOOL_SHA256: cb471b00aa3b7d603338eb74ebfec1d23959ecba005b5f1be42ba8d174107fc2
+          SURFPOOL_SHA256: 64cff3fd6bb00bb0d5c7edef2915a491338d14eb19b7130abf9c81ee5357d165
         run: |
           set -euo pipefail
           mkdir -p /tmp/toolchain && cd /tmp/toolchain
           curl -sSfL -o agave-install-init \
             "https://github.com/anza-xyz/agave/releases/download/v${SOLANA_VERSION}/agave-install-init-x86_64-unknown-linux-gnu"
           curl -sSfL -o anchor \
-            "https://github.com/coral-xyz/anchor/releases/download/v${ANCHOR_VERSION}/anchor-${ANCHOR_VERSION}-x86_64-unknown-linux-gnu"
+            "https://github.com/otter-sec/anchor/releases/download/v${ANCHOR_VERSION}/anchor-${ANCHOR_VERSION}-x86_64-unknown-linux-gnu"
           curl -sSfL -o surfpool.tar.gz \
             "https://github.com/solana-foundation/surfpool/releases/download/v${SURFPOOL_VERSION}/surfpool-linux-x64.tar.gz"
           printf '%s  agave-install-init\n%s  anchor\n%s  surfpool.tar.gz\n' \
@@ -208,16 +208,16 @@ jobs:
         # digests of the release assets on 2026-10-03). A replaced asset fails
         # the build instead of silently changing the toolchain.
         env:
-          AGAVE_INSTALL_INIT_SHA256: 1c2ca01cd33204453fa97762b6fca40772e17e749d58266ea0847d7bc01756e1
+          AGAVE_INSTALL_INIT_SHA256: 924dca1387848a1ff4509b885b02371b78b1bb5843cacf3367ff9342d078ae77
           ANCHOR_SHA256: 0c9c41a3292c281cc6eadb78d6e1c8224d8324a34b0736a89d640fd314db05b7
-          SURFPOOL_SHA256: cb471b00aa3b7d603338eb74ebfec1d23959ecba005b5f1be42ba8d174107fc2
+          SURFPOOL_SHA256: 64cff3fd6bb00bb0d5c7edef2915a491338d14eb19b7130abf9c81ee5357d165
         run: |
           set -euo pipefail
           mkdir -p /tmp/toolchain && cd /tmp/toolchain
           curl -sSfL -o agave-install-init \
             "https://github.com/anza-xyz/agave/releases/download/v${SOLANA_VERSION}/agave-install-init-x86_64-unknown-linux-gnu"
           curl -sSfL -o anchor \
-            "https://github.com/coral-xyz/anchor/releases/download/v${ANCHOR_VERSION}/anchor-${ANCHOR_VERSION}-x86_64-unknown-linux-gnu"
+            "https://github.com/otter-sec/anchor/releases/download/v${ANCHOR_VERSION}/anchor-${ANCHOR_VERSION}-x86_64-unknown-linux-gnu"
           curl -sSfL -o surfpool.tar.gz \
             "https://github.com/solana-foundation/surfpool/releases/download/v${SURFPOOL_VERSION}/surfpool-linux-x64.tar.gz"
           printf '%s  agave-install-init\n%s  anchor\n%s  surfpool.tar.gz\n' \

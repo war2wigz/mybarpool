@@ -69,6 +69,11 @@ describe("displayStatus (DESIGN §10.2, the chain-only rows)", () => {
       kind: "RETURNED",
       reason: "cancelled",
     });
+    // PROGRAM §4.6 "suspended before any payout": returned in full, not split.
+    expect(displayStatus(r, game({ status: GameStatus.Suspended }), RECORDED)).toEqual({
+      kind: "RETURNED",
+      reason: "suspended",
+    });
     expect(
       displayStatus(pool({ status: PoolStatus.Returned, cancelledByAdmin: true }), g, RECORDED),
     ).toEqual({ kind: "RETURNED", reason: "cancelledByAdmin" });
