@@ -12,12 +12,12 @@ import {
 } from "../../src/index.js";
 
 describe("program error names (PROGRAM §8)", () => {
-  it("MYBARPOOL_ERROR_NAMES has 65 entries matching idl/mybarpool.json", () => {
+  it("MYBARPOOL_ERROR_NAMES has 66 entries matching idl/mybarpool.json", () => {
     const idl = JSON.parse(
       readFileSync(new URL("../../../../idl/mybarpool.json", import.meta.url), "utf8"),
     ) as { errors: Array<{ code: number; name: string }> };
-    expect(idl.errors).toHaveLength(65);
-    expect(Object.keys(MYBARPOOL_ERROR_NAMES)).toHaveLength(65);
+    expect(idl.errors).toHaveLength(66);
+    expect(Object.keys(MYBARPOOL_ERROR_NAMES)).toHaveLength(66);
     for (const e of idl.errors) expect(MYBARPOOL_ERROR_NAMES[e.code]).toBe(e.name);
   });
 

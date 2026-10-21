@@ -174,8 +174,13 @@ export type Pool = {
    */
   varCommit: ReadonlyUint8Array;
   /**
+   * PROGRAM §3.3 (2026-10-21): the boxes that carry a sponsor's mark (bit `i` = box `i`),
+   * one sponsor per box; set by `sponsor_box`, never cleared. Taken out of `reserved`.
+   */
+  sponsoredBoxes: number;
+  /**
    * PROGRAM §3 preamble: padding so fields can be appended without a migration (128
-   * through Step 5).
+   * through Step 5, 96 from Step 5b to 2026-10-21).
    */
   reserved: ReadonlyUint8Array;
 };
@@ -282,8 +287,13 @@ export type PoolArgs = {
    */
   varCommit: ReadonlyUint8Array;
   /**
+   * PROGRAM §3.3 (2026-10-21): the boxes that carry a sponsor's mark (bit `i` = box `i`),
+   * one sponsor per box; set by `sponsor_box`, never cleared. Taken out of `reserved`.
+   */
+  sponsoredBoxes: number;
+  /**
    * PROGRAM §3 preamble: padding so fields can be appended without a migration (128
-   * through Step 5).
+   * through Step 5, 96 from Step 5b to 2026-10-21).
    */
   reserved: ReadonlyUint8Array;
 };
@@ -341,7 +351,8 @@ export function getPoolEncoder(): FixedSizeEncoder<PoolArgs> {
       ["bump", getU8Encoder()],
       ["vaultBump", getU8Encoder()],
       ["varCommit", fixEncoderSize(getBytesEncoder(), 32)],
-      ["reserved", fixEncoderSize(getBytesEncoder(), 96)],
+      ["sponsoredBoxes", getU32Encoder()],
+      ["reserved", fixEncoderSize(getBytesEncoder(), 92)],
     ]),
     (value) => ({ ...value, discriminator: POOL_DISCRIMINATOR }),
   );
@@ -399,7 +410,8 @@ export function getPoolDecoder(): FixedSizeDecoder<Pool> {
     ["bump", getU8Decoder()],
     ["vaultBump", getU8Decoder()],
     ["varCommit", fixDecoderSize(getBytesDecoder(), 32)],
-    ["reserved", fixDecoderSize(getBytesDecoder(), 96)],
+    ["sponsoredBoxes", getU32Decoder()],
+    ["reserved", fixDecoderSize(getBytesDecoder(), 92)],
   ]);
 }
 

@@ -3,12 +3,16 @@
 
 use anchor_lang::prelude::*;
 
-/// PROGRAM §3.7 `Sponsorship`. 81 bytes = 8 + 73.
+/// PROGRAM §3.7 `Sponsorship`. 85 bytes = 8 + 77.
 ///
-/// Seeds `["sponsorship", pool, wallet]`. Created by the first `sponsor` from that wallet (the
-/// sponsor pays rent), topped up by later ones; closed in Step 7 with rent to `wallet`.
+/// Seeds `["sponsorship", pool, wallet]`. Created by the first `sponsor` or `sponsor_box` from
+/// that wallet (the sponsor pays rent), topped up by later ones; closed in Step 7 with rent to
+/// `wallet`.
 ///
-/// Layout: discriminator 0 (8); `pool` 8 (32); `wallet` 40 (32); `amount` 72 (8); `bump` 80.
+/// Layout: discriminator 0 (8); `pool` 8 (32); `wallet` 40 (32); `amount` 72 (8); `bump` 80;
+/// `boxes` 81 (4). `boxes` was added before the first deployment (2026-10-21), while no account
+/// of this type existed on any cluster; from launch the §3 rule holds and a new field here is a
+/// new account type.
 #[account]
 #[derive(InitSpace, Debug, PartialEq, Eq)]
 pub struct Sponsorship {
@@ -20,9 +24,12 @@ pub struct Sponsorship {
     pub amount: u64,
     /// PDA bump.
     pub bump: u8,
+    /// PROGRAM §3.7: the boxes this sponsor's mark sits on (bit `i` = box `i`, 25 bits used),
+    /// set by `sponsor_box`. The money is in `amount` like any sponsorship; the mark is display.
+    pub boxes: u32,
 }
 
 impl Sponsorship {
-    /// Account size: 8-byte discriminator + 73.
+    /// Account size: 8-byte discriminator + 77.
     pub const SIZE: usize = 8 + Self::INIT_SPACE;
 }

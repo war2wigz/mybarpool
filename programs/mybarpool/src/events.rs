@@ -223,6 +223,24 @@ pub struct Sponsored {
     pub sponsored_total: u64,
 }
 
+/// PROGRAM §7 `BoxSponsored` (2026-10-21): a `sponsor_box` call landed; the box now carries the
+/// sponsor's mark and the amount is in the prize pool like any sponsorship.
+#[event]
+pub struct BoxSponsored {
+    /// Unix time of the write.
+    pub time: i64,
+    /// The pool's address.
+    pub pool: Pubkey,
+    /// The sponsor wallet.
+    pub sponsor: Pubkey,
+    /// The box, 0–24.
+    pub box_index: u8,
+    /// This call's amount, base units.
+    pub amount: u64,
+    /// `pool.sponsored_total` after this call.
+    pub sponsored_total: u64,
+}
+
 /// PROGRAM §7 `GateKeyRotated`: the creator rotated a `Link` pool's gate key. The new key is
 /// public information; only signatures from it matter, so it is not in the event.
 #[event]

@@ -72,7 +72,7 @@ describe("account sizes and offsets (PROGRAM §3)", () => {
       sponsorship: SPONSORSHIP_SIZE,
       gameRecord: GAME_RECORD_SIZE,
     });
-    expect([POOL_SIZE, SPONSORSHIP_SIZE, GAME_RECORD_SIZE]).toEqual([1442, 81, 153]);
+    expect([POOL_SIZE, SPONSORSHIP_SIZE, GAME_RECORD_SIZE]).toEqual([1442, 85, 153]);
     expect([PLATFORM_CONFIG_SIZE, CREATOR_COUNTER_SIZE, WALLET_OVERRIDE_SIZE]).toEqual([
       698, 74, 43,
     ]);
@@ -108,6 +108,7 @@ describe("account sizes and offsets (PROGRAM §3)", () => {
     expect(
       eq(slice(bytes, SPONSORSHIP_OFFSETS.amount, 8), getU64Encoder().encode(0x0102030405060708n)),
     ).toBe(true);
+    expect(eq(slice(bytes, SPONSORSHIP_OFFSETS.boxes, 4), [0x10, 0x00, 0x00, 0x00])).toBe(true);
   });
 
   it("every GAME_RECORD_OFFSETS constant locates its field", () => {
@@ -188,7 +189,7 @@ describe("reads over a mock RPC", () => {
     expect(s[0]!.data.amount).toBe(0x0102030405060708n);
     const [, config] = calls[0]!.params as [string, { filters: unknown[] }];
     expect(config.filters).toEqual([
-      { dataSize: 81n },
+      { dataSize: 85n },
       {
         memcmp: {
           offset: 8n,

@@ -144,11 +144,14 @@ export const MYBARPOOL_ERROR__SAMPLE_TOO_EARLY = 0x17ae; // 6062
 export const MYBARPOOL_ERROR__VAR_ALREADY_SAMPLED = 0x17af; // 6063
 /** VarCommitMismatch: Var seed does not hash to the commit recorded on the pool */
 export const MYBARPOOL_ERROR__VAR_COMMIT_MISMATCH = 0x17b0; // 6064
+/** BoxAlreadySponsored: Box already sponsored or box index out of range */
+export const MYBARPOOL_ERROR__BOX_ALREADY_SPONSORED = 0x17b1; // 6065
 
 export type MybarpoolError =
   | typeof MYBARPOOL_ERROR__ADDON_BUDGET_EXCEEDED
   | typeof MYBARPOOL_ERROR__ALLOWLIST_PROOF_INVALID
   | typeof MYBARPOOL_ERROR__ALREADY_DRAWN
+  | typeof MYBARPOOL_ERROR__BOX_ALREADY_SPONSORED
   | typeof MYBARPOOL_ERROR__BOXES_STILL_OUTSTANDING
   | typeof MYBARPOOL_ERROR__COUNTER_NOT_EMPTY
   | typeof MYBARPOOL_ERROR__FEE_ACCOUNT_MISMATCH
@@ -218,6 +221,7 @@ if (process.env["NODE_ENV"] !== "production") {
     [MYBARPOOL_ERROR__ADDON_BUDGET_EXCEEDED]: `Add-on budget exceeded`,
     [MYBARPOOL_ERROR__ALLOWLIST_PROOF_INVALID]: `Allowlist proof is invalid`,
     [MYBARPOOL_ERROR__ALREADY_DRAWN]: `Digits are already drawn`,
+    [MYBARPOOL_ERROR__BOX_ALREADY_SPONSORED]: `Box already sponsored or box index out of range`,
     [MYBARPOOL_ERROR__BOXES_STILL_OUTSTANDING]: `Boxes still outstanding`,
     [MYBARPOOL_ERROR__COUNTER_NOT_EMPTY]: `Counter is not empty`,
     [MYBARPOOL_ERROR__FEE_ACCOUNT_MISMATCH]: `Fee account does not match`,

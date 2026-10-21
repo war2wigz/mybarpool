@@ -120,13 +120,13 @@ Wireframes are mobile (390px) since that is the primary target. Wide screens are
 │ │ Sun 1:00 PM                      │ │
 │ │ PHI Eagles                       │ │
 │ │ DAL Cowboys                      │ │
-│ │ 3 pools · 3 open                 │ │
+│ │ 3 pools · 3 open        [ Join ] │ │
 │ └──────────────────────────────────┘ │
 │ ┌──────────────────────────────────┐ │
 │ │ Sun 4:25 PM                      │ │
 │ │ SEA Seahawks                     │ │
 │ │ SF  49ers                        │ │
-│ │ No pools yet · Create one →      │ │
+│ │ No pools yet          [ Create ] │ │
 │ └──────────────────────────────────┘ │
 │              ...                     │
 │──────────────────────────────────────│
@@ -140,6 +140,7 @@ Wireframes are mobile (390px) since that is the primary target. Wide screens are
 - Week selector defaults to the current NFL week and covers the whole season: Weeks 1–18, then Wild Card, Divisional, Conference Championships and the Super Bowl. Every game on the schedule gets a page, Thursday night through Monday night, so the home screen has something to play every week from September to February. The Super Bowl is the biggest boxes day of the year and gets the same screen as a Week 4 Sunday afternoon game, not a special mode.
 - Between weeks (Tuesday and Wednesday), the selector already shows the coming week with kickoff times, so creators can open pools days ahead and share them at the bar.
 - Game card shows the team chip (helmet in team colors) with the team name, score if live, kickoff if not, and a one-line pool summary. Tapping anywhere opens the game.
+- An upcoming game's card carries one small button at the right of its summary, so joining is never more than one tap from the home screen: **Join** when the game has an open pool — it goes straight to the pool when there is exactly one, to the game's pool list when there are several — and **Create** (ghost) when it has none, which opens the create sheet (section 4.5) on that game, two steps. A live or finished game shows neither (nothing to buy and nothing to create), and a game listed from the schedule that the program has no record of yet shows neither until the keeper has created it. The button is the card's only nested control; the rest of the card still opens the game.
 - The "in pots" figure is boxes sold × price summed across the game's pools, not the sum of full pots — that is why it isn't a multiple of 25 × price.
 - Live score on the card comes from the scores service and pulses on change.
 
@@ -269,6 +270,7 @@ Sponsorship (ARCHITECTURE.md, Sponsorship). Most pools have none and show nothin
 - Tapping the sponsor line opens the sponsor sheet: logo and name large, the amount and its transaction link, then up to two plain buttons from the directory entry: "Visit ore.com ↗" (opens the browser) and, when the sponsor has a Seeker app listed and the dApp Store is present on the device, "Get ORE on the dApp Store" (opens `solanadappstore://details?id=…`; on web or when the store isn't installed the button is simply absent, never a dead tap). With several sponsors the sheet lists each with their own buttons. A sponsor not in the directory gets the sheet with the shortened address and the transaction link only. Links come from the directory and nowhere else, always open outside the app, never carry anything appended, and never appear on the buy path: a player can't reach a sponsor's site from the buy sheet, only from the sponsor line.
 - Payouts table shows the full quarter amounts (boxes plus sponsorship, after fees); its footer reads "Prizes 2.1 ORE = 1.1 from boxes + 1 sponsored" so the arithmetic is on the page.
 - Activity row: "ORE added 1 ORE to the prizes ↗". On a returned pool: "Returned 1 ORE to ORE ↗".
+- Sponsored boxes (PROGRAM §4.3 `sponsor_box`, ARCHITECTURE › Sponsorship, "Two shapes, one mechanism"): the program also lets a sponsor put their mark on one box while adding to the prizes. The chain gives the client two things to draw from — the pool's mask of marked boxes and each sponsorship's own boxes — and the `BoxSponsored` event for the activity row ("ORE added 1 ORE to the prizes and sponsored box 14 ↗"). What the mark looks like on the grid, how the sponsor is offered the choice between a pool sponsorship and a box, and the amount at which a pool sponsor becomes the headline sponsor are not designed yet; until they are, the app shows a marked box like any other and the sponsor line as above, and nothing in the program needs to change when the design lands.
 - The action lives in the details section as a text link, "Add to the prizes", not as a button and never in the buy bar: sponsoring is for a company or a community that has decided to do it, and nothing in the app should read as a nudge for a player to put in more. It opens `SponsorSheet`: amount input in the pool's token (minimum one box price, the per-token cap shown if reached), then three short lines that are always the same: "No fee is taken on this. If the pool doesn't play, it comes back to you. Once the first prize is paid it belongs to the winners." Confirm, sign, result with the transaction link. Hidden once sales have closed.
 - Mockup frame 9 shows a sponsored pool (locked, ORE) and frame 10 the `SponsorSheet`; the header line, the payouts footer, the "Sponsored" details row and the activity row are the only visible differences from an unsponsored pool. Frame 11 is the share sheet from section 4.8.
 

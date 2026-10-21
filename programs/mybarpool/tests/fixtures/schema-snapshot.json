@@ -434,11 +434,15 @@
           }
         },
         {
+          "name": "sponsored_boxes",
+          "type": "u32"
+        },
+        {
           "name": "reserved",
           "type": {
             "array": [
               "u8",
-              96
+              92
             ]
           }
         }
@@ -446,7 +450,7 @@
     },
     {
       "name": "Sponsorship",
-      "size": 81,
+      "size": 85,
       "fields": [
         {
           "name": "pool",
@@ -463,6 +467,10 @@
         {
           "name": "bump",
           "type": "u8"
+        },
+        {
+          "name": "boxes",
+          "type": "u32"
         }
       ]
     },
@@ -490,6 +498,36 @@
     }
   ],
   "events": [
+    {
+      "name": "BoxSponsored",
+      "discriminator": "8bc711abc6cc7ed7",
+      "fields": [
+        {
+          "name": "time",
+          "type": "i64"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "sponsor",
+          "type": "pubkey"
+        },
+        {
+          "name": "box_index",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "sponsored_total",
+          "type": "u64"
+        }
+      ]
+    },
     {
       "name": "BoxesBought",
       "discriminator": "e83a67d9ca56abb8",
@@ -2790,6 +2828,94 @@
       ]
     },
     {
+      "name": "sponsor_box",
+      "discriminator": "93d78a0b56194a7a",
+      "args": [
+        {
+          "name": "box_index",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ],
+      "accounts": [
+        {
+          "name": "sponsor",
+          "writable": true,
+          "signer": true,
+          "optional": false
+        },
+        {
+          "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "sponsorship",
+          "writable": true,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "mint",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "sponsor_token_account",
+          "writable": true,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "event_authority",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "program",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        }
+      ]
+    },
+    {
       "name": "update_config",
       "discriminator": "1d9efcbf0a53db63",
       "args": [
@@ -3144,6 +3270,10 @@
     {
       "name": "VarCommitMismatch",
       "code": 6064
+    },
+    {
+      "name": "BoxAlreadySponsored",
+      "code": 6065
     }
   ]
 }

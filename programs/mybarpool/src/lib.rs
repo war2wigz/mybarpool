@@ -147,7 +147,14 @@ pub mod mybarpool {
     /// prize pool of an `Open`, `Locked` or `Drawn` pool before kickoff. Signer and payer: the
     /// sponsor. Emits `Sponsored`.
     pub fn sponsor(ctx: Context<Sponsor>, amount: u64) -> Result<()> {
-        instructions::sponsor::handle_sponsor(ctx, amount)
+        instructions::sponsor::handle_sponsor(ctx, amount, None)
+    }
+
+    /// PROGRAM §4.3 `sponsor_box` (2026-10-21): `sponsor`, and the sponsor's mark on box
+    /// `box_index` (0–24), one sponsor per box. The money is a sponsorship like any other; the
+    /// box's owner still takes its prizes. Signer and payer: the sponsor. Emits `BoxSponsored`.
+    pub fn sponsor_box(ctx: Context<Sponsor>, box_index: u8, amount: u64) -> Result<()> {
+        instructions::sponsor::handle_sponsor(ctx, amount, Some(box_index))
     }
 
     /// PROGRAM §4.3 `rotate_gate_key`: set a `Link` pool's gate key. Signer: the creator.

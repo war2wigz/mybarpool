@@ -102,13 +102,21 @@ export function poolArgs(overrides: Partial<PoolArgs> = {}): PoolArgs {
     bump: 254,
     vaultBump: 253,
     varCommit: new Uint8Array(32),
-    reserved: new Uint8Array(96),
+    sponsoredBoxes: 0,
+    reserved: new Uint8Array(92),
     ...overrides,
   };
 }
 
 export function sponsorshipArgs(overrides: Partial<SponsorshipArgs> = {}): SponsorshipArgs {
-  return { pool: POOL, wallet: BUYER, amount: 0x0102030405060708n, bump: 251, ...overrides };
+  return {
+    pool: POOL,
+    wallet: BUYER,
+    amount: 0x0102030405060708n,
+    bump: 251,
+    boxes: 1 << 4,
+    ...overrides,
+  };
 }
 
 export function gameRecordArgs(overrides: Partial<GameRecordArgs> = {}): GameRecordArgs {

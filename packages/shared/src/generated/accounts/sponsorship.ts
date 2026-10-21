@@ -21,6 +21,8 @@ import {
   getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -57,6 +59,11 @@ export type Sponsorship = {
   amount: bigint;
   /** PDA bump. */
   bump: number;
+  /**
+   * PROGRAM §3.7: the boxes this sponsor's mark sits on (bit `i` = box `i`, 25 bits used),
+   * set by `sponsor_box`. The money is in `amount` like any sponsorship; the mark is display.
+   */
+  boxes: number;
 };
 
 export type SponsorshipArgs = {
@@ -68,6 +75,11 @@ export type SponsorshipArgs = {
   amount: number | bigint;
   /** PDA bump. */
   bump: number;
+  /**
+   * PROGRAM §3.7: the boxes this sponsor's mark sits on (bit `i` = box `i`, 25 bits used),
+   * set by `sponsor_box`. The money is in `amount` like any sponsorship; the mark is display.
+   */
+  boxes: number;
 };
 
 /** Gets the encoder for {@link SponsorshipArgs} account data. */
@@ -79,6 +91,7 @@ export function getSponsorshipEncoder(): FixedSizeEncoder<SponsorshipArgs> {
       ["wallet", getAddressEncoder()],
       ["amount", getU64Encoder()],
       ["bump", getU8Encoder()],
+      ["boxes", getU32Encoder()],
     ]),
     (value) => ({ ...value, discriminator: SPONSORSHIP_DISCRIMINATOR }),
   );
@@ -92,6 +105,7 @@ export function getSponsorshipDecoder(): FixedSizeDecoder<Sponsorship> {
     ["wallet", getAddressDecoder()],
     ["amount", getU64Decoder()],
     ["bump", getU8Decoder()],
+    ["boxes", getU32Decoder()],
   ]);
 }
 
@@ -151,5 +165,5 @@ export async function fetchAllMaybeSponsorship(
 }
 
 export function getSponsorshipSize(): number {
-  return 81;
+  return 85;
 }

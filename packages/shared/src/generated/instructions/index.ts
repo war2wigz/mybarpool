@@ -30,5 +30,6 @@ export * from "./setVar.js";
 export * from "./setWalletOverride.js";
 export * from "./split.js";
 export * from "./sponsor.js";
+export * from "./sponsorBox.js";
 export * from "./updateConfig.js";
 export * from "./updateKickoff.js";

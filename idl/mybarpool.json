@@ -3426,6 +3426,202 @@
       ]
     },
     {
+      "name": "sponsor_box",
+      "docs": [
+        "PROGRAM §4.3 `sponsor_box` (2026-10-21): `sponsor`, and the sponsor's mark on box",
+        "`box_index` (0–24), one sponsor per box. The money is a sponsorship like any other; the",
+        "box's owner still takes its prizes. Signer and payer: the sponsor. Emits `BoxSponsored`."
+      ],
+      "discriminator": [
+        147,
+        215,
+        138,
+        11,
+        86,
+        25,
+        74,
+        122
+      ],
+      "accounts": [
+        {
+          "name": "sponsor",
+          "docs": [
+            "The sponsor; pays `amount`, the `Sponsorship` rent on first call, and the transaction fee."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "docs": [
+            "PROGRAM §3.1 `PlatformConfig`; read for `paused` and the token's `max_sponsorship`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for status and kickoff."
+          ],
+          "relations": [
+            "pool"
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "PROGRAM §3.3 `Pool`, re-derived from its own fields."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.game",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.creator",
+                "account": "Pool"
+              },
+              {
+                "kind": "account",
+                "path": "pool.nonce",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PROGRAM §3.4 vault at `[\"vault\", pool]` with the stored bump; `pool.vault` is the",
+            "only address `sponsor` accepts for it."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "sponsorship",
+          "docs": [
+            "PROGRAM §3.7 `Sponsorship` at `[\"sponsorship\", pool, sponsor]`; created on first call."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  112,
+                  111,
+                  110,
+                  115,
+                  111,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "sponsor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's mint (`address = pool.mint`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "sponsor_token_account",
+          "docs": [
+            "The sponsor's token account for the mint; SPL pools only."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The pool's token program (checked against `pool.token_program`); SPL pools only."
+          ],
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "box_index",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "update_config",
       "docs": [
         "PROGRAM §4.1 `update_config`: any subset of config fields; §3.1 invariants judged on the",
@@ -3659,6 +3855,19 @@
     }
   ],
   "events": [
+    {
+      "name": "BoxSponsored",
+      "discriminator": [
+        139,
+        199,
+        17,
+        171,
+        198,
+        204,
+        126,
+        215
+      ]
+    },
     {
       "name": "BoxesBought",
       "discriminator": [
@@ -4297,6 +4506,11 @@
       "code": 6064,
       "name": "VarCommitMismatch",
       "msg": "Var seed does not hash to the commit recorded on the pool"
+    },
+    {
+      "code": 6065,
+      "name": "BoxAlreadySponsored",
+      "msg": "Box already sponsored or box index out of range"
     }
   ],
   "types": [
@@ -4320,6 +4534,60 @@
           },
           {
             "name": "Allowlist"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BoxSponsored",
+      "docs": [
+        "PROGRAM §7 `BoxSponsored` (2026-10-21): a `sponsor_box` call landed; the box now carries the",
+        "sponsor's mark and the amount is in the prize pool like any sponsorship."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "time",
+            "docs": [
+              "Unix time of the write."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool's address."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "sponsor",
+            "docs": [
+              "The sponsor wallet."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "box_index",
+            "docs": [
+              "The box, 0–24."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "This call's amount, base units."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "sponsored_total",
+            "docs": [
+              "`pool.sponsored_total` after this call."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -5559,7 +5827,7 @@
         "(4 × 8); `quarters_settled` 1268; `winning_box` 1269; `fees_paid` 1273;",
         "`unpaid_prize_pool` 1274; `returned` 1282; `split_amount` 1286; `cancelled_by_admin` 1294;",
         "`abandoned` 1295; `created_at` 1296; `locked_at` 1304; `bump` 1312; `vault_bump` 1313;",
-        "`var_commit` 1314; `reserved` 1346 (96)."
+        "`var_commit` 1314; `sponsored_boxes` 1346; `reserved` 1350 (92)."
       ],
       "type": {
         "kind": "struct",
@@ -5955,15 +6223,23 @@
             }
           },
           {
+            "name": "sponsored_boxes",
+            "docs": [
+              "PROGRAM §3.3 (2026-10-21): the boxes that carry a sponsor's mark (bit `i` = box `i`),",
+              "one sponsor per box; set by `sponsor_box`, never cleared. Taken out of `reserved`."
+            ],
+            "type": "u32"
+          },
+          {
             "name": "reserved",
             "docs": [
               "PROGRAM §3 preamble: padding so fields can be appended without a migration (128",
-              "through Step 5)."
+              "through Step 5, 96 from Step 5b to 2026-10-21)."
             ],
             "type": {
               "array": [
                 "u8",
-                96
+                92
               ]
             }
           }
@@ -6435,12 +6711,16 @@
     {
       "name": "Sponsorship",
       "docs": [
-        "PROGRAM §3.7 `Sponsorship`. 81 bytes = 8 + 73.",
+        "PROGRAM §3.7 `Sponsorship`. 85 bytes = 8 + 77.",
         "",
-        "Seeds `[\"sponsorship\", pool, wallet]`. Created by the first `sponsor` from that wallet (the",
-        "sponsor pays rent), topped up by later ones; closed in Step 7 with rent to `wallet`.",
+        "Seeds `[\"sponsorship\", pool, wallet]`. Created by the first `sponsor` or `sponsor_box` from",
+        "that wallet (the sponsor pays rent), topped up by later ones; closed in Step 7 with rent to",
+        "`wallet`.",
         "",
-        "Layout: discriminator 0 (8); `pool` 8 (32); `wallet` 40 (32); `amount` 72 (8); `bump` 80."
+        "Layout: discriminator 0 (8); `pool` 8 (32); `wallet` 40 (32); `amount` 72 (8); `bump` 80;",
+        "`boxes` 81 (4). `boxes` was added before the first deployment (2026-10-21), while no account",
+        "of this type existed on any cluster; from launch the §3 rule holds and a new field here is a",
+        "new account type."
       ],
       "type": {
         "kind": "struct",
@@ -6472,6 +6752,14 @@
               "PDA bump."
             ],
             "type": "u8"
+          },
+          {
+            "name": "boxes",
+            "docs": [
+              "PROGRAM §3.7: the boxes this sponsor's mark sits on (bit `i` = box `i`, 25 bits used),",
+              "set by `sponsor_box`. The money is in `amount` like any sponsorship; the mark is display."
+            ],
+            "type": "u32"
           }
         ]
       }

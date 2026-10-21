@@ -78,6 +78,7 @@ import {
   getSetVarInstructionAsync,
   getSetWalletOverrideInstructionAsync,
   getSplitInstructionAsync,
+  getSponsorBoxInstructionAsync,
   getSponsorInstructionAsync,
   getUpdateConfigInstructionAsync,
   getUpdateKickoffInstructionAsync,
@@ -104,6 +105,7 @@ import {
   parseSetVarInstruction,
   parseSetWalletOverrideInstruction,
   parseSplitInstruction,
+  parseSponsorBoxInstruction,
   parseSponsorInstruction,
   parseUpdateConfigInstruction,
   parseUpdateKickoffInstruction,
@@ -141,6 +143,7 @@ import {
   type ParsedSetVarInstruction,
   type ParsedSetWalletOverrideInstruction,
   type ParsedSplitInstruction,
+  type ParsedSponsorBoxInstruction,
   type ParsedSponsorInstruction,
   type ParsedUpdateConfigInstruction,
   type ParsedUpdateKickoffInstruction,
@@ -157,6 +160,7 @@ import {
   type SetWalletOverrideAsyncInput,
   type SplitAsyncInput,
   type SponsorAsyncInput,
+  type SponsorBoxAsyncInput,
   type UpdateConfigAsyncInput,
   type UpdateKickoffAsyncInput,
 } from "../instructions/index.js";
@@ -258,6 +262,7 @@ export function identifyMybarpoolAccount(
 }
 
 export enum MybarpoolEvent {
+  BoxSponsored,
   BoxesBought,
   BoxesReclaimed,
   BoxesReturned,
@@ -288,6 +293,17 @@ export function identifyMybarpoolEvent(
   event: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
 ): MybarpoolEvent {
   const data = "data" in event ? event.data : event;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([139, 199, 17, 171, 198, 204, 126, 215]),
+      ),
+      0,
+    )
+  ) {
+    return MybarpoolEvent.BoxSponsored;
+  }
   if (
     containsBytes(
       data,
@@ -580,6 +596,7 @@ export enum MybarpoolInstruction {
   Settle,
   Split,
   Sponsor,
+  SponsorBox,
   UpdateConfig,
   UpdateKickoff,
 }
@@ -854,6 +871,17 @@ export function identifyMybarpoolInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([147, 215, 138, 11, 86, 25, 74, 122]),
+      ),
+      0,
+    )
+  ) {
+    return MybarpoolInstruction.SponsorBox;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([29, 158, 252, 191, 10, 83, 219, 99]),
       ),
       0,
@@ -919,6 +947,7 @@ export type ParsedMybarpoolInstruction<
   | ({ instructionType: MybarpoolInstruction.Settle } & ParsedSettleInstruction<TProgram>)
   | ({ instructionType: MybarpoolInstruction.Split } & ParsedSplitInstruction<TProgram>)
   | ({ instructionType: MybarpoolInstruction.Sponsor } & ParsedSponsorInstruction<TProgram>)
+  | ({ instructionType: MybarpoolInstruction.SponsorBox } & ParsedSponsorBoxInstruction<TProgram>)
   | ({
       instructionType: MybarpoolInstruction.UpdateConfig;
     } & ParsedUpdateConfigInstruction<TProgram>)
@@ -1090,6 +1119,13 @@ export function parseMybarpoolInstruction<TProgram extends string>(
         ...parseSponsorInstruction(instruction),
       };
     }
+    case MybarpoolInstruction.SponsorBox: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: MybarpoolInstruction.SponsorBox,
+        ...parseSponsorBoxInstruction(instruction),
+      };
+    }
     case MybarpoolInstruction.UpdateConfig: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -1208,6 +1244,9 @@ export type MybarpoolPluginInstructions = {
   sponsor: (
     input: SponsorAsyncInput,
   ) => ReturnType<typeof getSponsorInstructionAsync> & SelfPlanAndSendFunctions;
+  sponsorBox: (
+    input: SponsorBoxAsyncInput,
+  ) => ReturnType<typeof getSponsorBoxInstructionAsync> & SelfPlanAndSendFunctions;
   updateConfig: (
     input: UpdateConfigAsyncInput,
   ) => ReturnType<typeof getUpdateConfigInstructionAsync> & SelfPlanAndSendFunctions;
@@ -1293,6 +1332,8 @@ export function mybarpoolProgram() {
           split: (input) => addSelfPlanAndSendFunctions(client, getSplitInstructionAsync(input)),
           sponsor: (input) =>
             addSelfPlanAndSendFunctions(client, getSponsorInstructionAsync(input)),
+          sponsorBox: (input) =>
+            addSelfPlanAndSendFunctions(client, getSponsorBoxInstructionAsync(input)),
           updateConfig: (input) =>
             addSelfPlanAndSendFunctions(client, getUpdateConfigInstructionAsync(input)),
           updateKickoff: (input) =>

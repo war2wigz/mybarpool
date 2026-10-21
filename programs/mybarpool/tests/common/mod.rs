@@ -960,7 +960,8 @@ pub fn fresh_pool(f: &Fixture, config: &PlatformConfig, params: &CreatePoolParam
         bump,
         vault_bump,
         var_commit: [0u8; 32],
-        reserved: [0u8; 96],
+        sponsored_boxes: 0,
+        reserved: [0u8; 92],
     }
 }
 
@@ -1288,6 +1289,34 @@ pub fn sponsor_ix(sponsor: &Pubkey, pool: &Pool, amount: u64, token: TokenPath) 
     )
 }
 
+/// `sponsor_box` (PROGRAM §4.3, 2026-10-21): the `Sponsor` accounts with `box_index` and `amount`.
+pub fn sponsor_box_ix(
+    sponsor: &Pubkey,
+    pool: &Pool,
+    box_index: u8,
+    amount: u64,
+    token: TokenPath,
+) -> Instruction {
+    let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
+    instruction(
+        mybarpool::accounts::Sponsor {
+            sponsor: to_a(sponsor),
+            config: to_a(&config_pda().0),
+            game: pool.game,
+            pool: to_a(&pool_key),
+            vault: to_a(&vault_pda(&pool_key).0),
+            sponsorship: to_a(&sponsorship_pda(&pool_key, sponsor).0),
+            mint: token.mint.map(|k| to_a(&k)),
+            sponsor_token_account: token.token_account.map(|k| to_a(&k)),
+            token_program: token.token_program.map(|k| to_a(&k)),
+            system_program: anchor_lang::system_program::ID,
+            event_authority: to_a(&event_authority_pda()),
+            program: mybarpool::ID,
+        },
+        mybarpool::instruction::SponsorBox { box_index, amount },
+    )
+}
+
 pub fn rotate_gate_key_ix(creator: &Pubkey, pool: &Pool, new_key: &Pubkey) -> Instruction {
     let pool_key = pool_pda(&to_m(&pool.game), &to_m(&pool.creator), pool.nonce).0;
     instruction(
@@ -1329,6 +1358,8 @@ pub fn event_names(result: &InstructionResult) -> Vec<&'static str> {
                 "PoolLocked"
             } else if d == mybarpool::Sponsored::DISCRIMINATOR {
                 "Sponsored"
+            } else if d == mybarpool::BoxSponsored::DISCRIMINATOR {
+                "BoxSponsored"
             } else if d == mybarpool::GateKeyRotated::DISCRIMINATOR {
                 "GateKeyRotated"
             } else if d == mybarpool::VarSet::DISCRIMINATOR {
@@ -2211,13 +2242,14 @@ pub fn sponsored(mut pool: Pool, amount: u64) -> Pool {
     pool
 }
 
-/// A `Sponsorship { pool, wallet, amount, bump }` at `rent_for(Sponsorship::SIZE)`.
+/// A `Sponsorship { pool, wallet, amount, bump, boxes: 0 }` at `rent_for(Sponsorship::SIZE)`.
 pub fn sponsorship_account(pool_key: &Pubkey, wallet: &Pubkey, amount: u64) -> Account {
     let value = Sponsorship {
         pool: to_a(pool_key),
         wallet: to_a(wallet),
         amount,
         bump: sponsorship_pda(pool_key, wallet).1,
+        boxes: 0,
     };
     let mut a = account_for(&value, &program_id(), Sponsorship::SIZE);
     a.lamports = rent_for(Sponsorship::SIZE);

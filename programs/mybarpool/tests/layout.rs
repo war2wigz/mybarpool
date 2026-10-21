@@ -421,7 +421,8 @@ fn pool_is_1442_bytes_at_the_documented_offsets() {
         bump: 0x3E,
         vault_bump: 0x3F,
         var_commit: [0x40; 32],
-        reserved: [0xEE; 96],
+        sponsored_boxes: 0x4141_4141,
+        reserved: [0xEE; 92],
     };
     let data = serialize(&pool);
     assert_eq!(data.len(), 1442);
@@ -488,7 +489,8 @@ fn pool_is_1442_bytes_at_the_documented_offsets() {
     assert_eq!(data[1312], 0x3E); // bump
     assert_eq!(data[1313], 0x3F); // vault_bump
     assert_eq!(&data[1314..1346], &[0x40u8; 32]); // var_commit (Step 5b, out of reserved)
-    assert_eq!(&data[1346..1442], &[0xEEu8; 96]); // reserved (128 through Step 5)
+    assert_eq!(&data[1346..1350], &0x4141_4141u32.to_le_bytes()); // sponsored_boxes (2026-10-21, out of reserved)
+    assert_eq!(&data[1350..1442], &[0xEEu8; 92]); // reserved (128 through Step 5, 96 through 14a)
 }
 
 #[test]
@@ -510,21 +512,23 @@ fn creator_counter_is_74_bytes_at_the_documented_offsets() {
 }
 
 #[test]
-fn sponsorship_is_81_bytes_at_the_documented_offsets() {
-    assert_eq!(Sponsorship::SIZE, 81); // PROGRAM §3.7: 8 + 73
+fn sponsorship_is_85_bytes_at_the_documented_offsets() {
+    assert_eq!(Sponsorship::SIZE, 85); // PROGRAM §3.7: 8 + 77
     let value = Sponsorship {
         pool: key(0xD1),
         wallet: key(0xD2),
         amount: 0xD3D3_D3D3_D3D3_D3D3,
         bump: 0xD4,
+        boxes: 0xD5D5_D5D5,
     };
     let data = serialize(&value);
-    assert_eq!(data.len(), 81);
+    assert_eq!(data.len(), 85);
     assert_eq!(&data[0..8], Sponsorship::DISCRIMINATOR);
     assert_eq!(&data[8..40], &[0xD1u8; 32]); // pool
     assert_eq!(&data[40..72], &[0xD2u8; 32]); // wallet
     assert_eq!(&data[72..80], &0xD3D3_D3D3_D3D3_D3D3u64.to_le_bytes()); // amount
     assert_eq!(data[80], 0xD4); // bump
+    assert_eq!(&data[81..85], &0xD5D5_D5D5u32.to_le_bytes()); // boxes (2026-10-21)
 }
 
 #[test]

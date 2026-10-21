@@ -57,6 +57,8 @@ export type QuarterSettledEvent = g.QuarterSettledEvent;
 export type ScoresPostedEvent = g.ScoresPostedEvent;
 /** PROGRAM §7 `Sponsored`: a `sponsor` call landed. */
 export type SponsoredEvent = g.SponsoredEvent;
+/** PROGRAM §7 `BoxSponsored`: a `sponsor_box` call landed; the sponsor's mark is on `boxIndex`. */
+export type BoxSponsoredEvent = g.BoxSponsoredEvent;
 /** PROGRAM §7 `SponsorshipClosed`: a committed sponsorship's account closed on a terminal pool (`close_sponsorship`, §4.6); the amount stays in the pool. */
 export type SponsorshipClosedEvent = g.SponsorshipClosedEvent;
 /** PROGRAM §7 `SponsorshipReturned`: a sponsorship paid back in full to its wallet and its account closed (`return_sponsorship` or `reclaim_sponsorship`, §4.6). */

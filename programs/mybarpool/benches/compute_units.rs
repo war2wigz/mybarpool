@@ -159,6 +159,7 @@ fn main() {
     ));
 
     let sponsor_new = sponsor_ix(&f.sponsor, &open, PRICE, TokenPath::default());
+    let sponsor_box_new = sponsor_box_ix(&f.sponsor, &open, 12, PRICE, TokenPath::default());
     let mut sponsored = fresh_pool(&f, &config, &sol_params(0));
     sponsored.sponsored_total = PRICE;
     sponsored.sponsor_count = 1;
@@ -174,6 +175,7 @@ fn main() {
                 wallet: to_a(&f.sponsor),
                 amount: PRICE,
                 bump: sponsorship_pda(&pool_key, &f.sponsor).1,
+                boxes: 0,
             },
             &program_id(),
             mybarpool::Sponsorship::SIZE,
@@ -782,6 +784,7 @@ fn main() {
         .bench(("buy_25th_locks", &buy_25th, &almost_accounts))
         .bench(("buy_spl_1", &buy_spl_1, &ore_accounts))
         .bench(("sponsor_new", &sponsor_new, &open_accounts))
+        .bench(("sponsor_box_new", &sponsor_box_new, &open_accounts))
         .bench(("sponsor_top_up", &sponsor_top_up, &top_up_accounts))
         .bench(("rotate_gate_key", &rotate, &link_accounts))
         .bench(("buy_link_sol", &buy_link, &buy_link_accounts))

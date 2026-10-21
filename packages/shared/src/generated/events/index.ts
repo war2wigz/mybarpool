@@ -10,6 +10,7 @@ export * from "./boxesBought.js";
 export * from "./boxesReclaimed.js";
 export * from "./boxesReturned.js";
 export * from "./boxesSplit.js";
+export * from "./boxSponsored.js";
 export * from "./configUpdated.js";
 export * from "./digitsDrawn.js";
 export * from "./gameCreated.js";

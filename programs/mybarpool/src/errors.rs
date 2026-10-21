@@ -244,4 +244,8 @@ pub enum MybarpoolError {
     /// `set_var` / `replace_var` recorded on the pool (PROGRAM §4.4, §8).
     #[msg("Var seed does not hash to the commit recorded on the pool")]
     VarCommitMismatch,
+    /// 6065 (2026-10-21): `sponsor_box` on a box that already carries a sponsor's mark, or a
+    /// `box_index` of 25 or more (PROGRAM §4.3).
+    #[msg("Box already sponsored or box index out of range")]
+    BoxAlreadySponsored,
 }

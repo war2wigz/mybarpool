@@ -62,10 +62,10 @@ export const POOL_OFFSETS = Object.freeze({
   /** `owners[i]` is at `owners + 32 i` for `i` in 0–24. */
   owners: 313,
 });
-/** `Sponsorship` is 81 bytes (PROGRAM §3.7). */
-export const SPONSORSHIP_SIZE = 81;
+/** `Sponsorship` is 85 bytes (PROGRAM §3.7). */
+export const SPONSORSHIP_SIZE = 85;
 /** Byte offsets into a `Sponsorship` account. */
-export const SPONSORSHIP_OFFSETS = Object.freeze({ pool: 8, wallet: 40, amount: 72 });
+export const SPONSORSHIP_OFFSETS = Object.freeze({ pool: 8, wallet: 40, amount: 72, boxes: 81 });
 /** `GameRecord` is 153 bytes (PROGRAM §3.2). */
 export const GAME_RECORD_SIZE = 153;
 /** Byte offsets into a `GameRecord` account. */

@@ -30,6 +30,7 @@ import {
   getReclaimSponsorshipInstructionAsync,
   getRotateGateKeyInstructionAsync,
   getSampleVarInstructionAsync,
+  getSponsorBoxInstructionAsync,
   getSponsorInstructionAsync,
   PayoutPreset,
   PoolStatus,
@@ -57,6 +58,7 @@ import {
   rotateGateKeyInstruction,
   sampleVarInstruction,
   SPONSORSHIP_SIZE,
+  sponsorBoxInstruction,
   sponsorInstruction,
   sponsorshipPda,
   TOKEN_ACCOUNT_BYTES,
@@ -407,7 +409,7 @@ describe("buyInstruction", () => {
 });
 
 describe("sponsorInstruction", () => {
-  it("derives the sponsorship, counts 81 bytes only for a first sponsorship", async () => {
+  it("derives the sponsorship, counts 85 bytes only for a first sponsorship", async () => {
     const sponsorship = await sponsorshipPda(chain({}).client, POOL, buyer.address);
     const { client } = chain({ [POOL]: encodePool({}) });
     const r = await sponsorInstruction(client, { sponsor: buyer, pool: POOL, amount: 5n });
@@ -426,7 +428,7 @@ describe("sponsorInstruction", () => {
     );
     expect(metas(r.instruction)).toEqual(metas(expected));
     const again = await sponsorInstruction(
-      chain({ [POOL]: encodePool({}), [sponsorship]: new Uint8Array(81) }).client,
+      chain({ [POOL]: encodePool({}), [sponsorship]: new Uint8Array(85) }).client,
       { sponsor: buyer, pool: POOL, amount: 5n },
     );
     expect(again.createdAccountBytes).toBe(0);
@@ -446,6 +448,41 @@ describe("sponsorInstruction", () => {
       amount: 5n,
     }).catch((x) => x);
     expect(isSdkError(e, "TokenAccountMissing")).toBe(true);
+  });
+});
+
+describe("sponsorBoxInstruction", () => {
+  it("is sponsorInstruction's accounts with the box index in the data, 0–24 only", async () => {
+    const { client } = chain({ [POOL]: encodePool({}) });
+    const plain = await sponsorInstruction(client, { sponsor: buyer, pool: POOL, amount: 5n });
+    const boxed = await sponsorBoxInstruction(client, {
+      sponsor: buyer,
+      pool: POOL,
+      amount: 5n,
+      boxIndex: 24,
+    });
+    expect(metas(boxed.instruction)).toEqual(metas(plain.instruction));
+    expect(boxed.sponsorship).toBe(plain.sponsorship);
+    expect(boxed.createdAccountBytes).toBe(SPONSORSHIP_SIZE);
+    const expected = await getSponsorBoxInstructionAsync(
+      {
+        sponsor: buyer,
+        game: GAME,
+        pool: POOL,
+        vault: await vaultPda(client, POOL),
+        sponsorship: plain.sponsorship,
+        boxIndex: 24,
+        amount: 5n,
+      },
+      { programAddress: client.programAddress },
+    );
+    expect(boxed.instruction.data).toEqual(expected.data);
+    expect(boxed.instruction.data).not.toEqual(plain.instruction.data);
+    for (const boxIndex of [-1, 25, 1.5]) {
+      await expect(
+        sponsorBoxInstruction(client, { sponsor: buyer, pool: POOL, amount: 5n, boxIndex }),
+      ).rejects.toThrow(RangeError);
+    }
   });
 });
 

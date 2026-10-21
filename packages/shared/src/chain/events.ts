@@ -16,6 +16,8 @@ import {
 } from "@solana/kit";
 
 import {
+  getBoxSponsoredEventDecoder,
+  type BoxSponsoredEvent,
   getBoxesBoughtEventDecoder,
   type BoxesBoughtEvent,
   getBoxesReclaimedEventDecoder,
@@ -77,6 +79,7 @@ export const EVENT_IX_TAG: ReadonlyUint8Array = new Uint8Array([
 
 /** One decoded event: its PROGRAM §7 name and typed body. */
 export type MyBarPoolEvent =
+  | { name: "BoxSponsored"; data: BoxSponsoredEvent }
   | { name: "BoxesBought"; data: BoxesBoughtEvent }
   | { name: "BoxesReclaimed"; data: BoxesReclaimedEvent }
   | { name: "BoxesReturned"; data: BoxesReturnedEvent }
@@ -106,6 +109,10 @@ export type MyBarPoolEvent =
 export type MyBarPoolEventName = MyBarPoolEvent["name"];
 
 const decoders: Record<MybarpoolEvent, (b: ReadonlyUint8Array) => MyBarPoolEvent> = {
+  [MybarpoolEvent.BoxSponsored]: (b) => ({
+    name: "BoxSponsored",
+    data: getBoxSponsoredEventDecoder().decode(b),
+  }),
   [MybarpoolEvent.BoxesBought]: (b) => ({
     name: "BoxesBought",
     data: getBoxesBoughtEventDecoder().decode(b),

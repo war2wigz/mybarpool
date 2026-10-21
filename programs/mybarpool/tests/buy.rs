@@ -1091,16 +1091,17 @@ fn buy_gated_is_composable() {
 #[test]
 fn gating_events_and_layout_are_unchanged() {
     // PROGRAM §3.3: Pool::SIZE 1,442, access_type 186, gate_key 187, allowlist_root 219;
-    // §8: 65 errors (6000–6064); the IDL stays 26 / 6 / 24 / 65 (layout.rs and errors.rs
-    // hold the per-field and per-code assertions).
+    // §8: 66 errors (6000–6065); the IDL is 27 / 6 / 25 / 66 after the 2026-10-21 `sponsor_box`
+    // (layout.rs and errors.rs hold the per-field and per-code assertions).
     assert_eq!(Pool::SIZE, 1_442);
     assert_eq!(err(E::VarCommitMismatch), 6064);
+    assert_eq!(err(E::BoxAlreadySponsored), 6065);
     let idl: serde_json::Value =
         serde_json::from_str(include_str!("../../../idl/mybarpool.json")).unwrap();
     let n = |k: &str| idl[k].as_array().unwrap().len();
     assert_eq!(
         (n("instructions"), n("accounts"), n("events"), n("errors")),
-        (26, 6, 24, 65)
+        (27, 6, 25, 66)
     );
     let buy = idl["instructions"]
         .as_array()

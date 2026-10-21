@@ -307,7 +307,8 @@ pub fn handle_create_pool(ctx: Context<CreatePool>, params: CreatePoolParams) ->
     pool.bump = pool_bump;
     pool.vault_bump = vault_bump;
     pool.var_commit = [0u8; 32];
-    pool.reserved = [0u8; 96];
+    pool.sponsored_boxes = 0;
+    pool.reserved = [0u8; 92];
 
     emit_cpi!(PoolCreated {
         time: now,

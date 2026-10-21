@@ -60,7 +60,7 @@ pub enum AccessType {
 /// (4 × 8); `quarters_settled` 1268; `winning_box` 1269; `fees_paid` 1273;
 /// `unpaid_prize_pool` 1274; `returned` 1282; `split_amount` 1286; `cancelled_by_admin` 1294;
 /// `abandoned` 1295; `created_at` 1296; `locked_at` 1304; `bump` 1312; `vault_bump` 1313;
-/// `var_commit` 1314; `reserved` 1346 (96).
+/// `var_commit` 1314; `sponsored_boxes` 1346; `reserved` 1350 (92).
 #[account]
 #[derive(InitSpace, Debug, PartialEq, Eq)]
 pub struct Pool {
@@ -162,9 +162,12 @@ pub struct Pool {
     /// `draw` requires `keccak(var.seed)` to equal it. Taken out of `reserved` so no earlier
     /// offset moves. Zero on an unbound pool.
     pub var_commit: [u8; 32],
+    /// PROGRAM §3.3 (2026-10-21): the boxes that carry a sponsor's mark (bit `i` = box `i`),
+    /// one sponsor per box; set by `sponsor_box`, never cleared. Taken out of `reserved`.
+    pub sponsored_boxes: u32,
     /// PROGRAM §3 preamble: padding so fields can be appended without a migration (128
-    /// through Step 5).
-    pub reserved: [u8; 96],
+    /// through Step 5, 96 from Step 5b to 2026-10-21).
+    pub reserved: [u8; 92],
 }
 
 impl Pool {

@@ -1,5 +1,5 @@
 /**
- * Every one of the 24 events round-trips through `decodeEvent`: encoded with its generated
+ * Every one of the 25 events round-trips through `decodeEvent`: encoded with its generated
  * encoder (discriminator included), identified and decoded to `{ name, data }`. Pins the
  * discriminator → decoder table in `events.ts`.
  */
@@ -203,6 +203,18 @@ const cases: Array<[string, ArrayLike<number>, Record<string, unknown>]> = [
     { sponsoredTotal: 9n },
   ],
   [
+    "BoxSponsored",
+    g.getBoxSponsoredEventEncoder().encode({
+      time: T,
+      pool: POOL,
+      sponsor: BUYER,
+      boxIndex: 7,
+      amount: 3n,
+      sponsoredTotal: 9n,
+    }),
+    { boxIndex: 7 },
+  ],
+  [
     "SponsorshipClosed",
     g
       .getSponsorshipClosedEventEncoder()
@@ -250,9 +262,9 @@ const cases: Array<[string, ArrayLike<number>, Record<string, unknown>]> = [
 ];
 
 describe("every event round-trips through decodeEvent", () => {
-  it("24 events, 24 names", () => {
-    expect(cases).toHaveLength(24);
-    expect(new Set(cases.map((c) => c[0])).size).toBe(24);
+  it("25 events, 25 names", () => {
+    expect(cases).toHaveLength(25);
+    expect(new Set(cases.map((c) => c[0])).size).toBe(25);
   });
   for (const [name, bytes, field] of cases) {
     it(name, () => {

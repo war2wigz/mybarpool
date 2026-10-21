@@ -1,14 +1,15 @@
-//! `sponsor`, PROGRAM §4.3 and ARCHITECTURE › Sponsorship: any wallet adds to
-//! a pool's prize pool before kickoff. Never a box, never a fee base: this
-//! handler touches none of `owners`, `sold`, `creator_boxes`, the fee fields
-//! or the counter.
+//! `sponsor` and `sponsor_box`, PROGRAM §4.3 and ARCHITECTURE › Sponsorship: any
+//! wallet adds to a pool's prize pool before kickoff; `sponsor_box` also puts
+//! the sponsor's mark on one box (2026-10-21). Never a purchase, never a fee
+//! base: this handler touches none of `owners`, `sold`, `creator_boxes`, the
+//! fee fields or the counter — a sponsored box still pays its owner.
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::constants::{CONFIG_SEED, POOL_SEED, SPONSORSHIP_SEED, VAULT_SEED};
+use crate::constants::{BOXES, CONFIG_SEED, POOL_SEED, SPONSORSHIP_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
-use crate::events::Sponsored;
+use crate::events::{BoxSponsored, Sponsored};
 use crate::state::{GameRecord, PlatformConfig, Pool, Sponsorship};
 use crate::vault::{transfer_in_sol, transfer_in_spl};
 
@@ -61,7 +62,7 @@ pub struct Sponsor<'info> {
 /// Shown by `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace -- --lib` without
 /// this line.
 #[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
-pub fn handle_sponsor(ctx: Context<Sponsor>, amount: u64) -> Result<()> {
+pub fn handle_sponsor(ctx: Context<Sponsor>, amount: u64, box_index: Option<u8>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let sponsorship_bump = ctx.bumps.sponsorship;
     let Sponsor {
@@ -99,6 +100,19 @@ pub fn handle_sponsor(ctx: Context<Sponsor>, amount: u64) -> Result<()> {
     };
 
     require!(amount >= pool.price, MybarpoolError::SponsorshipTooSmall);
+    // `sponsor_box`: the box exists and nobody's mark is on it yet (one sponsor per box).
+    let box_bit = match box_index {
+        None => None,
+        Some(i) => {
+            require!(i < BOXES, MybarpoolError::BoxAlreadySponsored);
+            let bit = 1u32 << i;
+            require!(
+                pool.sponsored_boxes & bit == 0,
+                MybarpoolError::BoxAlreadySponsored
+            );
+            Some(bit)
+        }
+    };
     // The cap as configured now (PROGRAM §3.1 "adjustable"), not as it was at creation.
     let cap = config
         .tokens
@@ -130,6 +144,7 @@ pub fn handle_sponsor(ctx: Context<Sponsor>, amount: u64) -> Result<()> {
         sponsorship.wallet = sponsor_key;
         sponsorship.bump = sponsorship_bump;
         sponsorship.amount = 0;
+        sponsorship.boxes = 0;
         pool.sponsor_count = pool
             .sponsor_count
             .checked_add(1)
@@ -145,12 +160,26 @@ pub fn handle_sponsor(ctx: Context<Sponsor>, amount: u64) -> Result<()> {
         .ok_or(MybarpoolError::MathOverflow)?;
     pool.sponsored_total = sponsored_total;
 
-    emit_cpi!(Sponsored {
-        time: now,
-        pool: pool_key,
-        sponsor: sponsor_key,
-        amount,
-        sponsored_total,
-    });
+    match (box_index, box_bit) {
+        (Some(i), Some(bit)) => {
+            pool.sponsored_boxes |= bit;
+            sponsorship.boxes |= bit;
+            emit_cpi!(BoxSponsored {
+                time: now,
+                pool: pool_key,
+                sponsor: sponsor_key,
+                box_index: i,
+                amount,
+                sponsored_total,
+            });
+        }
+        _ => emit_cpi!(Sponsored {
+            time: now,
+            pool: pool_key,
+            sponsor: sponsor_key,
+            amount,
+            sponsored_total,
+        }),
+    }
     Ok(())
 }

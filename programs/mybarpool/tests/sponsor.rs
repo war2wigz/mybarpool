@@ -1,4 +1,4 @@
-//! `sponsor`, `rotate_gate_key` and `close_counter`, PROGRAM §4.3 and §3.5,
+//! `sponsor`, `sponsor_box`, `rotate_gate_key` and `close_counter`, PROGRAM §4.3 and §3.5,
 //! under Mollusk. Every spec number cites its line. Run after
 //! `anchor build --arch v3`.
 
@@ -7,7 +7,9 @@ mod common;
 use anchor_lang::error::ErrorCode;
 use common::*;
 use mollusk_svm::result::Check;
-use mybarpool::{AccessType, GateKeyRotated, MybarpoolError as E, Pool, PoolStatus, Sponsored};
+use mybarpool::{
+    AccessType, BoxSponsored, GateKeyRotated, MybarpoolError as E, Pool, PoolStatus, Sponsored,
+};
 use solana_pubkey::Pubkey;
 
 fn custom(code: u32) -> solana_program_error::ProgramError {
@@ -70,12 +72,13 @@ fn sponsor_creates_the_account_adds_to_the_vault_and_touches_nothing_else() {
     let key = pool_key(&f);
     let s_key = sponsorship_pda(&key, &f.sponsor).0;
     let account = account_of(&result, &s_key);
-    assert_eq!(account.data.len(), 81); // PROGRAM §3.7: 8 + 73
+    assert_eq!(account.data.len(), 85); // PROGRAM §3.7: 8 + 77
     let s = decode_sponsorship(account);
     assert_eq!(s.pool, to_a(&key));
     assert_eq!(s.wallet, to_a(&f.sponsor));
     assert_eq!(s.amount, PRICE);
     assert_eq!(s.bump, sponsorship_pda(&key, &f.sponsor).1);
+    assert_eq!(s.boxes, 0);
 
     let after = decode_pool(account_of(&result, &key));
     assert_eq!(after.sponsored_total, PRICE);
@@ -155,6 +158,119 @@ fn a_second_sponsor_call_tops_up_and_another_wallet_is_a_new_account() {
     assert_eq!(
         account_of(&third, &vault_pda(&key).0).lamports,
         rent_for(0) + 4 * PRICE
+    );
+}
+
+// ---------------------------------------------------------------------------
+// sponsor_box (2026-10-21)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn sponsor_box_is_a_sponsorship_plus_a_mark_on_one_box() {
+    // PROGRAM §3.3 sponsored_boxes, §3.7 boxes, §4.3 sponsor_box: the money is an ordinary
+    // sponsorship (same account, same total, same vault); only the two bitmasks and the event differ.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let pool = open_pool(&f);
+    let accounts = pool_accounts(&f, &m, &f.expected_config(), &pool, rent_for(0), 1);
+    let result = m.process_and_validate_instruction(
+        &sponsor_box_ix(&f.sponsor, &pool, 7, PRICE, TokenPath::default()),
+        &accounts,
+        &[Check::success()],
+    );
+    let key = pool_key(&f);
+    let s = decode_sponsorship(account_of(&result, &sponsorship_pda(&key, &f.sponsor).0));
+    assert_eq!((s.amount, s.boxes), (PRICE, 1 << 7));
+    let after = decode_pool(account_of(&result, &key));
+    assert_eq!(after.sponsored_boxes, 1 << 7);
+    assert_eq!(
+        (
+            after.sponsored_total,
+            after.sponsor_count,
+            after.sponsorships_open
+        ),
+        (PRICE, 1, 1)
+    );
+    assert_eq!(after.owners, pool.owners, "a sponsored box keeps its owner");
+    assert_eq!(after.sold, pool.sold);
+    assert_eq!(
+        account_of(&result, &vault_pda(&key).0).lamports,
+        rent_for(0) + PRICE
+    );
+    assert_eq!(event_names(&result), ["BoxSponsored"]);
+    let event: BoxSponsored = emitted_event(&result).expect("BoxSponsored");
+    assert_eq!(
+        (
+            event.sponsor,
+            event.box_index,
+            event.amount,
+            event.sponsored_total
+        ),
+        (to_a(&f.sponsor), 7, PRICE, PRICE)
+    );
+
+    // The same wallet marks a second box: one account, two bits, the total adds up.
+    let second = m.process_and_validate_instruction(
+        &sponsor_box_ix(&f.sponsor, &pool, 24, 2 * PRICE, TokenPath::default()),
+        &result.resulting_accounts,
+        &[Check::success()],
+    );
+    let s = decode_sponsorship(account_of(&second, &sponsorship_pda(&key, &f.sponsor).0));
+    assert_eq!((s.amount, s.boxes), (3 * PRICE, (1 << 7) | (1 << 24)));
+    let after = decode_pool(account_of(&second, &key));
+    assert_eq!(after.sponsored_boxes, (1 << 7) | (1 << 24));
+    assert_eq!((after.sponsor_count, after.sponsored_total), (1, 3 * PRICE));
+
+    // A plain `sponsor` from the same wallet afterwards adds money and no mark.
+    let third = m.process_and_validate_instruction(
+        &sponsor_ix(&f.sponsor, &pool, PRICE, TokenPath::default()),
+        &second.resulting_accounts,
+        &[Check::success()],
+    );
+    let s = decode_sponsorship(account_of(&third, &sponsorship_pda(&key, &f.sponsor).0));
+    assert_eq!((s.amount, s.boxes), (4 * PRICE, (1 << 7) | (1 << 24)));
+    assert_eq!(event_names(&third), ["Sponsored"]);
+}
+
+#[test]
+fn one_sponsor_per_box_and_the_index_is_0_to_24() {
+    // PROGRAM §4.3 sponsor_box: a marked box is refused to everyone, the sponsor included;
+    // index 25 is out of range. Nothing moves on refusal.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let pool = open_pool(&f);
+    let accounts = pool_accounts(&f, &m, &f.expected_config(), &pool, rent_for(0), 1);
+    let first = m.process_and_validate_instruction(
+        &sponsor_box_ix(&f.sponsor, &pool, 3, PRICE, TokenPath::default()),
+        &accounts,
+        &[Check::success()],
+    );
+    m.process_and_validate_instruction(
+        &sponsor_box_ix(&f.buyer, &pool, 3, PRICE, TokenPath::default()),
+        &first.resulting_accounts,
+        &[Check::err(custom(err(E::BoxAlreadySponsored)))],
+    );
+    m.process_and_validate_instruction(
+        &sponsor_box_ix(&f.sponsor, &pool, 3, PRICE, TokenPath::default()),
+        &first.resulting_accounts,
+        &[Check::err(custom(err(E::BoxAlreadySponsored)))],
+    );
+    m.process_and_validate_instruction(
+        &sponsor_box_ix(&f.buyer, &pool, 25, PRICE, TokenPath::default()),
+        &first.resulting_accounts,
+        &[Check::err(custom(err(E::BoxAlreadySponsored)))],
+    );
+    // The same floor and cap as `sponsor`.
+    m.process_and_validate_instruction(
+        &sponsor_box_ix(&f.buyer, &pool, 4, PRICE - 1, TokenPath::default()),
+        &first.resulting_accounts,
+        &[Check::err(custom(err(E::SponsorshipTooSmall)))],
+    );
+    let key = pool_key(&f);
+    let after = decode_pool(account_of(&first, &key));
+    assert_eq!(
+        (after.sponsored_boxes, after.sponsored_total),
+        (1 << 3, PRICE)
     );
 }
 

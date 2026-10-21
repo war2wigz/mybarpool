@@ -54,7 +54,7 @@ The mapping from each source's IDs to a `GameKey` lives in `packages/shared` and
 
 ## 3. Accounts
 
-Every account has an 8-byte Anchor discriminator and the fields below in order. The long-lived accounts (`PlatformConfig`, `GameRecord`, `Pool`) end with `reserved` padding so fields can be appended without a migration; the small accounts (`CreatorCounter`, `WalletOverride`, `Sponsorship`) have none, and a new field on one of them is a new account type. Sizes are the serialized sizes; rent follows from them.
+Every account has an 8-byte Anchor discriminator and the fields below in order. The long-lived accounts (`PlatformConfig`, `GameRecord`, `Pool`) end with `reserved` padding so fields can be appended without a migration; the small accounts (`CreatorCounter`, `WalletOverride`, `Sponsorship`) have none, and a new field on one of them is a new account type. Sizes are the serialized sizes; rent follows from them. One exception on the record: `Sponsorship.boxes` (§3.7) was added on 2026-10-21, before the first deployment, while no account of any type existed on any cluster; the rule holds from launch.
 
 ### 3.1 `PlatformConfig` — seeds `["config"]`
 
@@ -170,13 +170,14 @@ One per scheduled game. Created and rent-paid by the platform. Never closed.
 | `bump` | u8 | |
 | `vault_bump` | u8 | |
 | `var_commit` | [u8; 32] | The `Var`'s `commit` as recorded by `set_var` / `replace_var`; `draw` requires `keccak(var.seed)` to equal it. Added in Step 5b out of `reserved`, here, after `vault_bump`, so no earlier offset moves |
-| `reserved` | [u8; 96] | 128 through Step 5 |
+| `sponsored_boxes` | u32 | Bit `i` set when box `i` carries a sponsor's mark (`sponsor_box`, §4.3); one sponsor per box; never cleared. Added 2026-10-21 out of `reserved`, after `var_commit` |
+| `reserved` | [u8; 92] | 128 through Step 5, 96 through 2026-10-21 |
 
 `PoolStatus`: `Open = 0`, `Locked = 1`, `Drawn = 2`, `Settled = 3`, `Returned = 4`, `Split = 5`. "Live" is not a program state: clients derive it as `Drawn` with `now ≥ game.recorded_kickoff`.
 
 `prize_pool`, `quarter_prize` and `unpaid_prize_pool` are meaningful once set in `Drawn`, and in `Settled` and `Split`. A pool whose first settlements moved nothing (a `FinalOnly` preset through Q3) and that was then returned keeps them populated; nothing in the program reads them on a `Returned` pool, and a client or indexer keys off `status`, never off these fields.
 
-Size: 8 (discriminator) + 800 (owners) + 538 (the other fields: 8 pubkeys, 10 u64s, the arrays and flags) + 96 (reserved) = 1,442 bytes (`Pool::SIZE`, `getPoolSize()`). Rent ≈ 0.011 SOL. The vault adds ≈ 0.0009 SOL (system account) or ≈ 0.002 SOL (token account); the counter ≈ 0.001 SOL. Measured values are recorded in the Step 4 `NOTES.md`; the app's "Creation fee" label uses the measured total.
+Size: 8 (discriminator) + 800 (owners) + 542 (the other fields: 8 pubkeys, 10 u64s, the arrays and flags) + 92 (reserved) = 1,442 bytes (`Pool::SIZE`, `getPoolSize()`). Rent ≈ 0.011 SOL. The vault adds ≈ 0.0009 SOL (system account) or ≈ 0.002 SOL (token account); the counter ≈ 0.001 SOL. Measured values are recorded in the Step 4 `NOTES.md`; the app's "Creation fee" label uses the measured total.
 
 ### 3.4 Vault — seeds `["vault", pool]`
 
@@ -215,8 +216,9 @@ Admin-created. When present it replaces both config values for that wallet. The 
 | `wallet` | Pubkey | The sponsor; the only possible return destination |
 | `amount` | u64 | Cumulative |
 | `bump` | u8 | |
+| `boxes` | u32 | Bit `i` set when this sponsor's mark is on box `i` (`sponsor_box`, §4.3); 25 bits used. Display only: the money is `amount` |
 
-Created by the first `sponsor` from that wallet (sponsor pays rent), topped up by later ones, closed by `return_sponsorship` (return path) or `close_sponsorship` (committed path), rent to `wallet` in both cases.
+85 bytes. Created by the first `sponsor` or `sponsor_box` from that wallet (sponsor pays rent), topped up by later ones, closed by `return_sponsorship` (return path) or `close_sponsorship` (committed path), rent to `wallet` in both cases. A sponsored box is not a purchase: the box keeps its owner and its prizes, and the sponsor's amount is in the prize pool like any sponsorship. Pool sponsorship (`sponsor`, no mark) and box sponsorship (`sponsor_box`, a mark on one box) are the same account and the same money; the mark is the only difference.
 
 ## 4. Instructions
 
@@ -261,6 +263,8 @@ Effects: transfers `count × price` from buyer to vault; assigns boxes (§6.1); 
 **`sponsor(amount)`** — signer: sponsor; payer: sponsor. Accounts: config, game, pool, vault, sponsorship (init if needed), system program; for an SPL pool also the pool's mint, the token program and the sponsor's token account.
 Checks: `!config.paused`; `status ∈ {Open, Locked, Drawn}` (a full pool is usually drawn well before kickoff and can still be sponsored), else `PoolNotOpen`; `now < game.recorded_kickoff`; `game.status == Scheduled`; `amount ≥ price`; `sponsored_total + amount ≤ tokens[token].max_sponsorship` (the cap as configured now, not as it was at creation).
 Effects: transfers `amount` to the vault; creates `Sponsorship` (increment `sponsor_count`, `sponsorships_open`) or adds to it; `sponsored_total += amount`. Emits `Sponsored { sponsor, amount, sponsored_total }`.
+
+**`sponsor_box(box_index, amount)`** — signer: sponsor; payer: sponsor. The same accounts as `sponsor`. Checks: every `sponsor` check, then `box_index < 25` and bit `box_index` of `pool.sponsored_boxes` clear, else `BoxAlreadySponsored` (one sponsor per box; the box need not be sold). Effects: every `sponsor` effect, then sets bit `box_index` in `pool.sponsored_boxes` and in `sponsorship.boxes`. Emits `BoxSponsored { sponsor, box_index, amount, sponsored_total }` instead of `Sponsored`. The box's owner is untouched and takes its prizes as before; a `Sponsorship` can hold marks on several boxes through several calls, and the marks are never cleared (a returned pool returns the money, §4.6, and closes the account). Added 2026-10-21.
 
 **`rotate_gate_key(new_key)`** — signer: creator (`Unauthorized` otherwise). Checks `access_type == Link` (`InvalidAccessType`), `new_key != default` (`GateKeyMissing`). Emits `GateKeyRotated` (the new key is public information; only signatures from it matter).
 
@@ -470,6 +474,7 @@ Events are emitted with Anchor's `emit_cpi!` (a self-CPI whose instruction data 
 | `BoxesBought` | pool, buyer, boxes (0-based indices), count, sold_after |
 | `PoolLocked` | pool, locked_at |
 | `Sponsored` | pool, sponsor, amount, sponsored_total |
+| `BoxSponsored` | pool, sponsor, box_index, amount, sponsored_total (2026-10-21) |
 | `GateKeyRotated` | pool |
 | `VarSet` | pool, var, end_at, commit (Step 5b) |
 | `VarReplaced` | pool, old_var, new_var, end_at, replacements, commit (Step 5b) |
@@ -487,13 +492,13 @@ Clients show a box as **won** only on `QuarterSettled`; nothing else is a result
 
 Numbered from 6000 (Anchor custom errors). Names are the contract; numbers follow declaration order and are frozen once the program ships.
 
-`Unauthorized`, `Paused`, `GameNotScheduled`, `GameAlreadyMarked`, `SalesClosed`, `KickoffInPast`, `KickoffOutOfBounds`, `KickoffUpdateTooLate`, `QuarterOutOfOrder`, `QuarterTooSoon`, `ScoreDecreased`, `FinalFlagMismatch`, `TokenDisabled`, `PriceOffLadder`, `InvalidPreset`, `InvalidAccessType`, `GateKeyMissing`, `GateKeyNotSigner`, `AllowlistProofInvalid`, `AddonBudgetExceeded`, `IntegratorMismatch`, `OpenPoolLimit`, `OwnBoxLimit`, `OverrideRequired`, `NothingToBuy`, `TooManyBoxes`, `PoolNotOpen`, `PoolNotLocked`, `PoolNotDrawn`, `SponsorshipTooSmall`, `SponsorshipCapExceeded`, `VarAlreadySet`, `VarNotSet`, `VarMismatch`, `VarNotEntropy`, `VarProviderMismatch`, `VarNotFresh`, `VarNotRevealed`, `VarNotSampledHere`, `SampleWindowMissed`, `VarFallbackHash`, `TooManyVarReplacements`, `AlreadyDrawn`, `ScoresNotPosted`, `WinnerMismatch`, `FeeAccountMismatch`, `NotReturnable`, `FeesAlreadyPaid`, `NotSuspended`, `NotSplittable`, `ReclaimTooEarly`, `NotOwner`, `NothingToReturn`, `SponsorshipsStillOpen`, `BoxesStillOutstanding`, `PoolNotTerminal`, `CounterNotEmpty`, `UnsupportedMintExtension`, `MathOverflow`, `InvalidConfig`, `InvalidGameKey`, `InvalidGameStatus`, `SampleTooEarly`, `VarAlreadySampled`, `VarCommitMismatch`.
+`Unauthorized`, `Paused`, `GameNotScheduled`, `GameAlreadyMarked`, `SalesClosed`, `KickoffInPast`, `KickoffOutOfBounds`, `KickoffUpdateTooLate`, `QuarterOutOfOrder`, `QuarterTooSoon`, `ScoreDecreased`, `FinalFlagMismatch`, `TokenDisabled`, `PriceOffLadder`, `InvalidPreset`, `InvalidAccessType`, `GateKeyMissing`, `GateKeyNotSigner`, `AllowlistProofInvalid`, `AddonBudgetExceeded`, `IntegratorMismatch`, `OpenPoolLimit`, `OwnBoxLimit`, `OverrideRequired`, `NothingToBuy`, `TooManyBoxes`, `PoolNotOpen`, `PoolNotLocked`, `PoolNotDrawn`, `SponsorshipTooSmall`, `SponsorshipCapExceeded`, `VarAlreadySet`, `VarNotSet`, `VarMismatch`, `VarNotEntropy`, `VarProviderMismatch`, `VarNotFresh`, `VarNotRevealed`, `VarNotSampledHere`, `SampleWindowMissed`, `VarFallbackHash`, `TooManyVarReplacements`, `AlreadyDrawn`, `ScoresNotPosted`, `WinnerMismatch`, `FeeAccountMismatch`, `NotReturnable`, `FeesAlreadyPaid`, `NotSuspended`, `NotSplittable`, `ReclaimTooEarly`, `NotOwner`, `NothingToReturn`, `SponsorshipsStillOpen`, `BoxesStillOutstanding`, `PoolNotTerminal`, `CounterNotEmpty`, `UnsupportedMintExtension`, `MathOverflow`, `InvalidConfig`, `InvalidGameKey`, `InvalidGameStatus`, `SampleTooEarly`, `VarAlreadySampled`, `VarCommitMismatch`, `BoxAlreadySponsored`.
 
 `InvalidConfig` (6059) is the error for a violated §3.1 or §3.6 invariant on any write (`initialize`, `update_config`, `set_wallet_override`), and for a `TokenRule` whose shape does not fit its index (index 0 is native SOL with the default mint and program; a rule with the default mint elsewhere is a disabled placeholder; a rule with a mint needs that mint account passed, matching key, owner and decimals). `default_preset` outside 0–2 is `InvalidPreset`; a mint carrying any of the six Token-2022 extensions §5.4 lists (`TransferFeeConfig`, `TransferHook`, `PermanentDelegate`, `NonTransferable`, `DefaultAccountState`, `Pausable`) is `UnsupportedMintExtension`. It was added in Step 2, after the list above had been written and before anything shipped, so every other number is unchanged.
 
 `InvalidGameKey` (6060) is the error for a `create_game` key that breaks the §2 rules (`week` outside 1–22 and not a preseason week with `preseason_enabled`; a team index of 32 or more; `home == away`). `InvalidGameStatus` (6061) is the error for a `mark_game` whose `new_status` is not a mark (`Scheduled`, `Final`) or is `Postponed`/`Cancelled` once a quarter has been posted. Both were added in Step 3, the same way, before anything shipped.
 
-`SampleTooEarly` (6062) is `sample_var` before `var.end_at`, and `VarAlreadySampled` (6063) is a second `sample_var` on a pool with a sample recorded, or `replace_var` on one (§4.4). Both added in Step 5. `VarCommitMismatch` (6064) is `draw` on a `Var` whose revealed `seed` does not hash to the commit `set_var` recorded on the pool; added in Step 5b with the `var_commit` field.
+`SampleTooEarly` (6062) is `sample_var` before `var.end_at`, and `VarAlreadySampled` (6063) is a second `sample_var` on a pool with a sample recorded, or `replace_var` on one (§4.4). Both added in Step 5. `VarCommitMismatch` (6064) is `draw` on a `Var` whose revealed `seed` does not hash to the commit `set_var` recorded on the pool; added in Step 5b with the `var_commit` field. `BoxAlreadySponsored` (6065) is `sponsor_box` on a box that already carries a mark, or a `box_index` of 25 or more; added 2026-10-21 with `sponsor_box`.
 
 `OverrideRequired` (6023) is reserved and never raised: the override slot is a required account of `create_pool` and `buy` (§3.6), so there is no way to omit it; the number stays because the list is frozen in declaration order. `FeesAlreadyPaid` (6047) was reserved the same way through Step 6 (`settle` moves the fees exactly when `!fees_paid` and the quarter's prize is non-zero, and there is no separate fee instruction to repeat) and is raised from Step 7 on by `cancel_pool`, `return_sponsorship` and `reclaim_sponsorship` on a pool whose fees have been paid (§4.6): the pool can only be split, and the sponsorship is committed.
 
