@@ -289,6 +289,38 @@ fn update_kickoff_bound_is_72_hours_after_the_scheduled_kickoff() {
 }
 
 #[test]
+fn update_kickoff_bound_is_symmetric() {
+    // 2026-10-23 audit F4 / accounts F2: new_time ≥ scheduled_kickoff − bound as well, so the
+    // keeper cannot pull a game days away to "now + 1" and stop its sales, make its Open pools
+    // returnable and post scores for a game not yet played. ARCHITECTURE › Trust model: kickoff
+    // updates "must stay within 72 hours of the scheduled kickoff".
+    let f = Fixture::new();
+    let now = SCHEDULED - KICKOFF_UPDATE_BOUND - 7_200;
+    expect_update(
+        &f,
+        now,
+        &standard_record(),
+        SCHEDULED - KICKOFF_UPDATE_BOUND,
+        Ok(()),
+    );
+    expect_update(
+        &f,
+        now,
+        &standard_record(),
+        SCHEDULED - KICKOFF_UPDATE_BOUND - 1,
+        Err(err(E::KickoffOutOfBounds)),
+    );
+    // "now + 1" for a game four days out is out of bounds, not KickoffInPast.
+    expect_update(
+        &f,
+        now,
+        &standard_record(),
+        now + 1,
+        Err(err(E::KickoffOutOfBounds)),
+    );
+}
+
+#[test]
 fn update_kickoff_bound_does_not_follow_a_prior_move() {
     // Audit focus: the bound is measured from scheduled_kickoff, not from the moved recorded one.
     let f = Fixture::new();

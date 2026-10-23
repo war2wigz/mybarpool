@@ -96,6 +96,7 @@ fn main() {
     // The ATA program is loaded too (Step 6's SPL settlement rows); the earlier rows ignore it.
     let mut m = mollusk_for_pools(T0, SLOT_HASH);
     mollusk_svm_programs_token::associated_token::add_program(&mut m);
+    mollusk_svm_programs_memo::memo::add_program(&mut m);
     let m = m;
     let config = f.expected_config();
     let pool_key = pool_pda(&standard_game(), &f.creator, NONCE).0;
@@ -297,8 +298,11 @@ fn main() {
         Some((&var, &f.revealed_var(end_b, END_HASH, &SEED))),
     );
 
-    let replace_var = replace_var_ix(&f.admin, &bound, &var_b);
-    let mut replace_var_accounts = draw_accounts(&f, &m, &bound, Some((&var, &f.fresh_var(end_b))));
+    // A missed window: the bound end slot is older than anything the sysvar still holds.
+    let missed = locked_pool_with_var(&f, &var, end_b - 600);
+    let replace_var = replace_var_ix(&f.admin, &missed, &var_b);
+    let mut replace_var_accounts =
+        draw_accounts(&f, &m, &missed, Some((&var, &f.fresh_var(end_b - 600))));
     replace_var_accounts.push((
         var_b,
         var_account(&VarFields {

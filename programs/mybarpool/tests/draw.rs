@@ -13,10 +13,10 @@ use anchor_lang::error::ErrorCode;
 use common::*;
 use mollusk_svm::result::Check;
 use mybarpool::axes::axis;
-use mybarpool::constants::{AXIS_LABEL_AWAY, AXIS_LABEL_HOME};
+use mybarpool::constants::{AXIS_LABEL_AWAY, AXIS_LABEL_HOME, VAR_END_AT_MAX_LEAD};
 use mybarpool::entropy::fallback_hash;
 use mybarpool::{
-    DigitsDrawn, MybarpoolError as E, Pool, PoolStatus, VarReplaced, VarSampled, VarSet,
+    DigitsDrawn, GameKey, MybarpoolError as E, Pool, PoolStatus, VarReplaced, VarSampled, VarSet,
 };
 use solana_pubkey::Pubkey;
 
@@ -1121,18 +1121,301 @@ fn replace_var_is_capped_at_two() {
         &[Check::success()],
     );
     let p1 = decode_pool(account_of(&r1, &pool_key(&f)));
-    let r2 = m.process_and_validate_instruction(
+    // Each replacement needs the previous Var's window to be gone (2026-10-23 audit F2), so
+    // the clock moves past each end slot before the next call.
+    let m2 = mollusk_for_draw(END_AT + 1_600, &[]);
+    let r2 = m2.process_and_validate_instruction(
         &replace_var_ix(&f.admin, &p1, &c),
-        &r1.resulting_accounts,
+        &at_sysvars(&m2, &r1.resulting_accounts),
         &[Check::success()],
     );
     let p2 = decode_pool(account_of(&r2, &pool_key(&f)));
     assert_eq!(p2.var_replacements, 2);
     assert_eq!(p2.var, to_a(&c));
-    m.process_and_validate_instruction(
+    let m3 = mollusk_for_draw(END_AT + 2_600, &[]);
+    m3.process_and_validate_instruction(
         &replace_var_ix(&f.admin, &p2, &d),
-        &r2.resulting_accounts,
+        &at_sysvars(&m3, &r2.resulting_accounts),
         &[Check::err(custom(err(E::TooManyVarReplacements)))],
+    );
+}
+
+/// `accounts` with the Clock and SlotHashes entries replaced by `m`'s, for a chain of calls
+/// that moves between slots.
+fn at_sysvars(
+    m: &mollusk_svm::Mollusk,
+    accounts: &[(Pubkey, solana_account::Account)],
+) -> Vec<(Pubkey, solana_account::Account)> {
+    let mut accounts = accounts.to_vec();
+    set_account(
+        &mut accounts,
+        to_m(&solana_sdk_ids::sysvar::slot_hashes::ID),
+        m.sysvars.keyed_account_for_slot_hashes_sysvar().1,
+    );
+    set_account(
+        &mut accounts,
+        to_m(&solana_sdk_ids::sysvar::clock::ID),
+        m.sysvars.keyed_account_for_clock_sysvar().1,
+    );
+    accounts
+}
+
+// ---------------------------------------------------------------------------
+// 2026-10-23 internal audit: the draw's time and binding checks
+// ---------------------------------------------------------------------------
+
+#[test]
+fn keeper_cannot_rebind_by_closing_and_reopening_the_var() {
+    // Audit F1 (Blocker). The keeper is the Var's authority: Entropy lets it Close the bound Var
+    // and re-Open the same PDA with the same commit and a later end slot after seeing the first
+    // slot's hash. `sample_var` compares the Var's `end_at` with the one the pool recorded at
+    // `set_var`, so the swapped Var is refused and the pool keeps its original window.
+    const SECOND_END_AT: u64 = END_AT + 200;
+    let f = Fixture::new();
+    let var = f.var_key();
+    let pool = pool_with(&f, PoolStatus::Locked, 25, &f.buyer_2);
+
+    let mut m = mollusk_for_draw(900, &[]);
+    with_entropy(&mut m);
+    let mut accounts = draw_accounts(&f, &m, &pool, None);
+    set_account(&mut accounts, var, system_account(0));
+    set_account(&mut accounts, f.entropy_provider, system_account(0));
+    accounts.push(mollusk_svm::program::keyed_account_for_system_program());
+    let open = open_ix(
+        &f.keeper,
+        &f.keeper,
+        &f.entropy_provider,
+        VAR_ID,
+        commit_of(&SEED),
+        false,
+        1,
+        END_AT,
+    );
+    let r = m.process_and_validate_instruction(&open, &accounts, &[Check::success()]);
+    let r = m.process_and_validate_instruction(
+        &set_var_ix(&f.keeper, &pool, &var),
+        &r.resulting_accounts,
+        &[Check::success()],
+    );
+    let p = decode_pool(account_of(&r, &pool_key(&f)));
+    assert_eq!((p.var, p.var_end_at), (to_a(&var), END_AT));
+
+    // END_AT's hash is public; the keeper closes and re-opens with a later end slot.
+    let mut m2 = mollusk_for_draw(END_AT + 3, &standard_window());
+    with_entropy(&mut m2);
+    let accounts = at_sysvars(&m2, &r.resulting_accounts);
+    let r = m2.process_and_validate_instruction(
+        &close_ix(&f.keeper, &var),
+        &accounts,
+        &[Check::success()],
+    );
+    let reopen = open_ix(
+        &f.keeper,
+        &f.keeper,
+        &f.entropy_provider,
+        VAR_ID,
+        commit_of(&SEED),
+        false,
+        1,
+        SECOND_END_AT,
+    );
+    let r =
+        m2.process_and_validate_instruction(&reopen, &r.resulting_accounts, &[Check::success()]);
+
+    // The second window: the swapped Var is refused before any CPI, and the pool is unchanged.
+    let window = vec![
+        (SECOND_END_AT + 2, [0xA2; 32]),
+        (SECOND_END_AT + 1, [0xA1; 32]),
+        (SECOND_END_AT, [0x77; 32]),
+    ];
+    let mut m3 = mollusk_for_draw(SECOND_END_AT + 3, &window);
+    with_entropy(&mut m3);
+    let accounts = at_sysvars(&m3, &r.resulting_accounts);
+    let r3 = m3.process_and_validate_instruction(
+        &sample_var_ix(&f.keeper, &p, &var),
+        &accounts,
+        &[Check::err(custom(err(E::VarEndAtMismatch)))],
+    );
+    assert_eq!(decode_pool(account_of(&r3, &pool_key(&f))), p);
+    for sampler in [f.stranger, f.admin] {
+        m3.process_and_validate_instruction(
+            &sample_var_ix(&sampler, &p, &var),
+            &accounts,
+            &[Check::err(custom(err(E::VarEndAtMismatch)))],
+        );
+    }
+}
+
+#[test]
+fn draw_refuses_a_var_whose_end_slot_is_not_the_recorded_one() {
+    // Audit F1, the planted variant: a pool whose sample was recorded through this program but
+    // whose Var now carries a different `end_at` (closed and re-opened after the sample, with a
+    // reveal that matches the commit) is refused at `draw` too.
+    let f = Fixture::new();
+    let m = draw_mollusk(false);
+    let var = f.var_key();
+    let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
+    let fields = VarFields {
+        end_at: END_AT + 200,
+        ..f.revealed_var(END_AT, END_HASH, &SEED)
+    };
+    let accounts = draw_accounts(&f, &m, &pool, Some((&var, &fields)));
+    let r = m.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::err(custom(err(E::VarEndAtMismatch)))],
+    );
+    assert_eq!(decode_pool(account_of(&r, &pool_key(&f))), pool);
+}
+
+#[test]
+fn set_var_refuses_an_end_slot_more_than_the_lead_ahead() {
+    // Audit F2: `end_at <= Clock.slot + VAR_END_AT_MAX_LEAD`, so a keeper cannot park a pool
+    // behind an end slot days away that the admin could not replace until it passed.
+    let f = Fixture::new();
+    let m = mollusk_for_draw(900, &[]);
+    let var = f.var_key();
+    let pool = pool_with(&f, PoolStatus::Locked, 25, &f.buyer_2);
+    let too_far = f.fresh_var(900 + VAR_END_AT_MAX_LEAD + 1);
+    let accounts = draw_accounts(&f, &m, &pool, Some((&var, &too_far)));
+    m.process_and_validate_instruction(
+        &set_var_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::err(custom(err(E::VarNotFresh)))],
+    );
+    let at_the_bound = f.fresh_var(900 + VAR_END_AT_MAX_LEAD);
+    let accounts = draw_accounts(&f, &m, &pool, Some((&var, &at_the_bound)));
+    let r = m.process_and_validate_instruction(
+        &set_var_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::success()],
+    );
+    assert_eq!(
+        decode_pool(account_of(&r, &pool_key(&f))).var_end_at,
+        900 + VAR_END_AT_MAX_LEAD
+    );
+    // The same clause in replace_var, through `require_fresh`.
+    let bound = locked_pool_with_var(&f, &var, 100);
+    let b = var_pda(&f.keeper, VAR_ID + 1).0;
+    let b_fields = VarFields {
+        id: VAR_ID + 1,
+        ..f.fresh_var(900 + VAR_END_AT_MAX_LEAD + 1)
+    };
+    let mut accounts = draw_accounts(&f, &m, &bound, Some((&var, &f.fresh_var(100))));
+    set_account(&mut accounts, b, var_account(&b_fields));
+    m.process_and_validate_instruction(
+        &replace_var_ix(&f.admin, &bound, &b),
+        &accounts,
+        &[Check::err(custom(err(E::VarNotFresh)))],
+    );
+}
+
+#[test]
+fn replace_var_only_after_the_window_is_gone() {
+    // Audit F2: while the recorded end slot is still ahead, or its hash is still in SlotHashes
+    // (anyone can still `sample_var`), a replacement would be a choice between two outcomes and
+    // is refused with SampleWindowOpen. Once the slot is behind the clock and the entry is gone
+    // (aged out, or skipped and never produced) the replacement goes through.
+    let f = Fixture::new();
+    let a = f.var_key();
+    let (b, b_fields) = var_b(&f);
+    let pool = locked_pool_with_var(&f, &a, END_AT);
+    let cases: [(u64, Vec<(u64, [u8; 32])>); 3] = [
+        // (a) before end_at, nothing in the sysvar yet
+        (900, vec![]),
+        // (b) the live window: END_AT's hash is in SlotHashes right now
+        (END_AT + 3, standard_window()),
+        // (c) the slot is behind the clock but its entry is still there
+        (END_AT + 500, standard_window()),
+    ];
+    for (slot, window) in cases {
+        let m = mollusk_for_draw(slot, &window);
+        let mut accounts = draw_accounts(&f, &m, &pool, Some((&a, &f.fresh_var(END_AT))));
+        set_account(&mut accounts, b, var_account(&b_fields));
+        let r = m.process_and_validate_instruction(
+            &replace_var_ix(&f.admin, &pool, &b),
+            &accounts,
+            &[Check::err(custom(err(E::SampleWindowOpen)))],
+        );
+        assert_eq!(
+            decode_pool(account_of(&r, &pool_key(&f))),
+            pool,
+            "slot {slot}"
+        );
+    }
+    // (d) aged out: entries only for later slots; (e) skipped: neighbours present, END_AT absent.
+    let later: Vec<(u64, [u8; 32])> = vec![(END_AT + 600, [0xC6; 32]), (END_AT + 599, [0xC5; 32])];
+    let skipped: Vec<(u64, [u8; 32])> = vec![
+        (END_AT + 2, [0xE3; 32]),
+        (END_AT + 1, [0xE2; 32]),
+        (END_AT - 1, [0xE0; 32]),
+    ];
+    for (slot, window) in [(END_AT + 601, later), (END_AT + 3, skipped)] {
+        let m = mollusk_for_draw(slot, &window);
+        let mut accounts = draw_accounts(&f, &m, &pool, Some((&a, &f.fresh_var(END_AT))));
+        set_account(&mut accounts, b, var_account(&b_fields));
+        let r = m.process_and_validate_instruction(
+            &replace_var_ix(&f.admin, &pool, &b),
+            &accounts,
+            &[Check::success()],
+        );
+        assert_eq!(
+            decode_pool(account_of(&r, &pool_key(&f))).var,
+            to_a(&b),
+            "slot {slot}"
+        );
+    }
+}
+
+#[test]
+fn draw_after_the_first_score_post_is_refused() {
+    // Audit F3: once a quarter's scores are on the record every winning box is a function of the
+    // axes alone, so a draw after the first post is refused (DrawAfterScores) and the pool goes
+    // to a return. Checked after AlreadyDrawn and before the Var is read.
+    let f = Fixture::new();
+    let m = draw_mollusk(false);
+    let var = f.var_key();
+    let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
+    let mut accounts = draw_accounts(
+        &f,
+        &m,
+        &pool,
+        Some((&var, &f.revealed_var(END_AT, END_HASH, &SEED))),
+    );
+    set_account(
+        &mut accounts,
+        standard_game(),
+        game_record_account(&record_with_quarters(1)),
+    );
+    let r = m.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::err(custom(err(E::DrawAfterScores)))],
+    );
+    assert_eq!(decode_pool(account_of(&r, &pool_key(&f))), pool);
+    // The game record must be the pool's own.
+    let other_key = GameKey {
+        week: standard_key().week + 1,
+        ..standard_key()
+    };
+    let (other_game, _) = game_pda(&other_key, SCHEDULED);
+    let mut accounts = draw_accounts(
+        &f,
+        &m,
+        &pool,
+        Some((&var, &f.revealed_var(END_AT, END_HASH, &SEED))),
+    );
+    accounts.push((
+        other_game,
+        game_record_account(&fresh_record(other_key, SCHEDULED)),
+    ));
+    let mut ix = draw_ix(&f.keeper, &pool, &var);
+    assert_eq!(ix.accounts[2].pubkey, to_a(&standard_game()));
+    ix.accounts[2].pubkey = to_a(&other_game);
+    m.process_and_validate_instruction(
+        &ix,
+        &accounts,
+        &[Check::err(custom(anchor(ErrorCode::ConstraintHasOne)))],
     );
 }
 

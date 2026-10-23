@@ -10,7 +10,7 @@ use crate::constants::{CONFIG_SEED, ENTROPY_PROGRAM, POOL_SEED};
 use crate::entropy::{expected_value, fallback_hash, Var};
 use crate::errors::MybarpoolError;
 use crate::events::DigitsDrawn;
-use crate::state::{PlatformConfig, Pool, PoolStatus};
+use crate::state::{GameRecord, PlatformConfig, Pool, PoolStatus};
 
 #[derive(Accounts)]
 #[event_cpi]
@@ -24,11 +24,15 @@ pub struct Draw<'info> {
         has_one = score_authority @ MybarpoolError::Unauthorized,
     )]
     pub config: Box<Account<'info, PlatformConfig>>,
+    /// PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for `quarters_posted`: a
+    /// draw after the first score post is refused (2026-10-23 audit F3).
+    pub game: Account<'info, GameRecord>,
     /// PROGRAM §3.3 `Pool`, re-derived from its own fields.
     #[account(
         mut,
         seeds = [POOL_SEED, pool.game.as_ref(), pool.creator.as_ref(), &pool.nonce.to_le_bytes()],
         bump = pool.bump,
+        has_one = game,
     )]
     pub pool: Box<Account<'info, Pool>>,
     /// CHECK: owner `ENTROPY_PROGRAM` by constraint, `== pool.var` and every field by the handler.
@@ -43,11 +47,16 @@ pub struct Draw<'info> {
 #[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_draw(ctx: Context<Draw>) -> Result<()> {
     let clock = Clock::get()?;
-    let Draw { pool, var, .. } = ctx.accounts;
+    let Draw {
+        game, pool, var, ..
+    } = ctx.accounts;
 
     // PROGRAM §4.4 checks, in order: the value binding to the recorded Var.
     pool.require_locked()?;
     require!(!pool.drawn, MybarpoolError::AlreadyDrawn);
+    // Once a score is on the record no axes may be chosen against it; a pool still Locked at
+    // the first post is the admin's to cancel (ARCHITECTURE › Randomness).
+    require!(game.quarters_posted == 0, MybarpoolError::DrawAfterScores);
     require_keys_neq!(pool.var, Pubkey::default(), MybarpoolError::VarNotSet);
     require_keys_eq!(var.key(), pool.var, MybarpoolError::VarMismatch);
     require!(pool.sampled_slot != 0, MybarpoolError::VarNotSampledHere);
@@ -56,6 +65,11 @@ pub fn handle_draw(ctx: Context<Draw>) -> Result<()> {
     require!(
         v.slot_hash == pool.sampled_hash,
         MybarpoolError::VarNotSampledHere
+    );
+    // Closed and re-opened at the same address for a later slot (2026-10-23 audit F1).
+    require!(
+        v.end_at == pool.var_end_at,
+        MybarpoolError::VarEndAtMismatch
     );
     // Defence in depth behind sample_var: the predictable fallback is refused by formula.
     require!(

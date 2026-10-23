@@ -4,7 +4,7 @@
 
 use anchor_lang::prelude::*;
 
-use crate::constants::{CONFIG_SEED, ENTROPY_PROGRAM, POOL_SEED};
+use crate::constants::{CONFIG_SEED, ENTROPY_PROGRAM, POOL_SEED, VAR_END_AT_MAX_LEAD};
 use crate::entropy::Var;
 use crate::errors::MybarpoolError;
 use crate::events::VarSet;
@@ -52,6 +52,12 @@ pub fn require_fresh(v: &Var, config: &PlatformConfig, slot: u64) -> Result<()> 
     require!(v.samples == 1, MybarpoolError::VarNotFresh);
     require!(v.is_auto == 0, MybarpoolError::VarNotFresh);
     require!(v.end_at > slot, MybarpoolError::VarNotFresh);
+    // PROGRAM §1 `VAR_END_AT_MAX_LEAD`: an end slot too far ahead would hold the pool behind a
+    // window nobody can sample or replace until it passes (2026-10-23 audit F2).
+    let latest = slot
+        .checked_add(VAR_END_AT_MAX_LEAD)
+        .ok_or(MybarpoolError::MathOverflow)?;
+    require!(v.end_at <= latest, MybarpoolError::VarNotFresh);
     Ok(())
 }
 

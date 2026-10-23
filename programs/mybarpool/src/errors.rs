@@ -248,4 +248,17 @@ pub enum MybarpoolError {
     /// `box_index` of 25 or more (PROGRAM §4.3).
     #[msg("Box already sponsored or box index out of range")]
     BoxAlreadySponsored,
+    /// 6066 (2026-10-23 audit F1): `sample_var` or `draw` on a `Var` whose `end_at` is not the
+    /// one `set_var` / `replace_var` recorded on the pool — the account was closed and re-opened
+    /// at the same address for a later slot (PROGRAM §4.4).
+    #[msg("Var end slot is not the one recorded on the pool")]
+    VarEndAtMismatch,
+    /// 6067 (2026-10-23 audit F2): `replace_var` while the recorded `Var`'s window is still
+    /// open — the end slot has not passed, or `SlotHashes` still carries its entry so anyone can
+    /// still sample it (PROGRAM §4.4).
+    #[msg("Var sample window is still open")]
+    SampleWindowOpen,
+    /// 6068 (2026-10-23 audit F3): `draw` after the game's first score post (PROGRAM §4.4).
+    #[msg("Draw refused after the first score post")]
+    DrawAfterScores,
 }

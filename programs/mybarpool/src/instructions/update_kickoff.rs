@@ -58,6 +58,13 @@ pub fn handle_update_kickoff(ctx: Context<UpdateKickoff>, new_time: i64) -> Resu
         .checked_add(KICKOFF_UPDATE_BOUND)
         .ok_or(MybarpoolError::MathOverflow)?;
     require!(new_time <= latest, MybarpoolError::KickoffOutOfBounds);
+    // Symmetric: a kickoff pulled days early would open the score window early (2026-10-23
+    // audit F4; ARCHITECTURE › Trust model "within 72 hours of the scheduled kickoff").
+    let earliest = game
+        .scheduled_kickoff
+        .checked_sub(KICKOFF_UPDATE_BOUND)
+        .ok_or(MybarpoolError::MathOverflow)?;
+    require!(new_time >= earliest, MybarpoolError::KickoffOutOfBounds);
 
     let old = game.recorded_kickoff;
     game.recorded_kickoff = new_time;

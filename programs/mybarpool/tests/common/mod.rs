@@ -1686,6 +1686,7 @@ pub fn draw_ix(signer: &Pubkey, pool: &Pool, var: &Pubkey) -> Instruction {
         mybarpool::accounts::Draw {
             score_authority: to_a(signer),
             config: to_a(&config_pda().0),
+            game: to_a(&to_m(&pool.game)),
             pool: to_a(&pool_key),
             var: to_a(var),
             event_authority: to_a(&event_authority_pda()),
@@ -1703,6 +1704,7 @@ pub fn replace_var_ix(signer: &Pubkey, pool: &Pool, new_var: &Pubkey) -> Instruc
             config: to_a(&config_pda().0),
             pool: to_a(&pool_key),
             new_var: to_a(new_var),
+            slot_hashes: to_a(&solana_sdk_ids::sysvar::slot_hashes::ID),
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,
         },
@@ -1815,11 +1817,17 @@ pub fn mollusk_for_settlement(unix_timestamp: i64) -> Mollusk {
     mollusk_svm_programs_token::token::add_program(&mut m);
     mollusk_svm_programs_token::token2022::add_program(&mut m);
     mollusk_svm_programs_token::associated_token::add_program(&mut m);
+    mollusk_svm_programs_memo::memo::add_program(&mut m);
     m
 }
 
 pub fn associated_token_program_id() -> Pubkey {
     mollusk_svm_programs_token::associated_token::ID
+}
+
+/// The SPL Memo program (PROGRAM §1 `MEMO_PROGRAM`), loaded for the Token-2022 payout tests.
+pub fn memo_program_id() -> Pubkey {
+    mollusk_svm_programs_memo::memo::ID
 }
 
 /// `get_associated_token_address_with_program_id`, crossed by bytes.
@@ -2038,6 +2046,7 @@ pub fn settle_ix(
             integrator_token_account: spl.and_then(|s| s.integrator_ata).map(|k| to_a(&k)),
             token_program: spl.map(|s| to_a(&s.token_program)),
             associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            memo_program: spl.map(|_| to_a(&memo_program_id())),
             system_program: APubkey::default(),
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,
@@ -2073,6 +2082,7 @@ pub fn close_pool_ix(
             destination_token_account: spl.map(|s| to_a(&s.destination_ata)),
             token_program: spl.map(|s| to_a(&s.token_program)),
             associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            memo_program: spl.map(|_| to_a(&memo_program_id())),
             system_program: APubkey::default(),
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,
@@ -2109,6 +2119,7 @@ pub fn settlement_accounts(
     // The pool at its real rent, so a close pays out exactly rent_for(Pool::SIZE).
     set_account(&mut accounts, pool_key, pool_account_at_rent(pool));
     accounts.push(mollusk_svm_programs_token::associated_token::keyed_account());
+    accounts.push(mollusk_svm_programs_memo::memo::keyed_account());
     // The fee wallet is a payout destination the base fixtures never needed before Step 6.
     set_account(
         &mut accounts,
@@ -2363,6 +2374,7 @@ pub fn return_boxes_ix(
             mint: spl.map(|s| to_a(&s.mint)),
             token_program: spl.map(|s| to_a(&s.token_program)),
             associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            memo_program: spl.map(|_| to_a(&memo_program_id())),
             system_program: APubkey::default(),
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,
@@ -2392,6 +2404,7 @@ pub fn split_ix(
             mint: spl.map(|s| to_a(&s.mint)),
             token_program: spl.map(|s| to_a(&s.token_program)),
             associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            memo_program: spl.map(|_| to_a(&memo_program_id())),
             system_program: APubkey::default(),
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,
@@ -2424,6 +2437,7 @@ pub fn return_sponsorship_ix(
             sponsor_token_account: spl.map(|s| to_a(&s.ata)),
             token_program: spl.map(|s| to_a(&s.token_program)),
             associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            memo_program: spl.map(|_| to_a(&memo_program_id())),
             system_program: APubkey::default(),
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,
@@ -2468,6 +2482,7 @@ pub fn reclaim_ix(
             box_owner_token_account: spl.map(|s| to_a(&s.ata)),
             token_program: spl.map(|s| to_a(&s.token_program)),
             associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            memo_program: spl.map(|_| to_a(&memo_program_id())),
             system_program: APubkey::default(),
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,
@@ -2497,6 +2512,7 @@ pub fn reclaim_sponsorship_ix(
             sponsor_token_account: spl.map(|s| to_a(&s.ata)),
             token_program: spl.map(|s| to_a(&s.token_program)),
             associated_token_program: spl.map(|_| to_a(&associated_token_program_id())),
+            memo_program: spl.map(|_| to_a(&memo_program_id())),
             system_program: APubkey::default(),
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,

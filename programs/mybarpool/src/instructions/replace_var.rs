@@ -4,12 +4,14 @@
 //! verified sample is never re-rolled.
 
 use anchor_lang::prelude::*;
+use solana_sdk_ids::sysvar;
 
 use crate::constants::{CONFIG_SEED, ENTROPY_PROGRAM, POOL_SEED, VAR_REPLACEMENTS_MAX};
 use crate::entropy::Var;
 use crate::errors::MybarpoolError;
 use crate::events::VarReplaced;
 use crate::instructions::set_var::require_fresh;
+use crate::slot_hashes::hash_for_slot;
 use crate::state::{PlatformConfig, Pool};
 
 #[derive(Accounts)]
@@ -35,6 +37,10 @@ pub struct ReplaceVar<'info> {
     /// The fresh `Var` bound in place of `pool.var`.
     #[account(owner = ENTROPY_PROGRAM @ MybarpoolError::VarNotEntropy)]
     pub new_var: UncheckedAccount<'info>,
+    /// CHECK: the SlotHashes sysvar by address; the proof that the recorded `Var`'s window is
+    /// gone (2026-10-23 audit F2).
+    #[account(address = sysvar::slot_hashes::ID)]
+    pub slot_hashes: UncheckedAccount<'info>,
 }
 
 pub fn handle_replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
@@ -43,6 +49,7 @@ pub fn handle_replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
         config,
         pool,
         new_var,
+        slot_hashes,
         ..
     } = ctx.accounts;
 
@@ -59,6 +66,15 @@ pub fn handle_replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
     // A Var with a verified sample is never abandoned: its value is fixed and only the reveal
     // is outstanding. The only replacement case left is a missed window.
     require!(pool.sampled_slot == 0, MybarpoolError::VarAlreadySampled);
+    // "Only one that missed its sampling window" (ARCHITECTURE › Trust model), proved from the
+    // chain: the end slot is behind the current slot and SlotHashes holds no entry for it —
+    // aged out of the 512-slot window, or skipped and never produced. While the entry is there
+    // anyone can still sample it, and this program's own check in `sample_var` would accept it;
+    // a replacement then would be a choice between two outcomes (2026-10-23 audit F2).
+    require!(
+        clock.slot > pool.var_end_at && hash_for_slot(slot_hashes, pool.var_end_at)?.is_none(),
+        MybarpoolError::SampleWindowOpen
+    );
     require_keys_neq!(new_var.key(), pool.var, MybarpoolError::VarAlreadySet);
     let v = Var::try_from_account(new_var)?;
     require_fresh(&v, config, clock.slot)?;

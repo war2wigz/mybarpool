@@ -58,6 +58,12 @@ pub fn handle_sample_var(ctx: Context<SampleVar>) -> Result<()> {
     require_keys_eq!(var.key(), pool.var, MybarpoolError::VarMismatch);
     require!(pool.sampled_slot == 0, MybarpoolError::VarAlreadySampled);
     let before = Var::try_from_account(var)?;
+    // The binding is by address, commit and end slot: a `Var` closed and re-opened at the same
+    // address for a later slot is not the one `set_var` recorded (2026-10-23 audit F1).
+    require!(
+        before.end_at == pool.var_end_at,
+        MybarpoolError::VarEndAtMismatch
+    );
     require!(clock.slot >= before.end_at, MybarpoolError::SampleTooEarly);
 
     if before.slot_hash == [0u8; 32] {
@@ -74,10 +80,15 @@ pub fn handle_sample_var(ctx: Context<SampleVar>) -> Result<()> {
     // decoded again from the account's live buffer. Without this the program would read a zero
     // `slot_hash` and fail the check below against fresh data (the Mollusk reload test).
     let v = Var::try_from_account(var)?;
+    require!(
+        v.end_at == pool.var_end_at,
+        MybarpoolError::VarEndAtMismatch
+    );
     require!(v.slot_hash != [0u8; 32], MybarpoolError::SampleWindowMissed);
-    // Our own proof: the sysvar still holds end_at and its entry is the hash the Var carries.
-    // Absent, or present and different (the keccak(end_at) fallback included), is a missed window.
-    let entry = hash_for_slot(slot_hashes, v.end_at)?;
+    // Our own proof: the sysvar still holds the recorded end_at and its entry is the hash the
+    // Var carries. Absent, or present and different (the keccak(end_at) fallback included), is
+    // a missed window.
+    let entry = hash_for_slot(slot_hashes, pool.var_end_at)?;
     require!(
         entry == Some(v.slot_hash),
         MybarpoolError::SampleWindowMissed

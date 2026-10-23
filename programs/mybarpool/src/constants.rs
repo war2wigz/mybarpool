@@ -98,6 +98,22 @@ pub const NO_WINNING_BOX: u8 = 255;
 #[constant]
 pub const VAR_REPLACEMENTS_MAX: u8 = 2;
 
+/// PROGRAM §1 `VAR_END_AT_MAX_LEAD`: how far ahead of the current slot a bound `Var`'s `end_at`
+/// may be (1,500 slots, about ten minutes). Without it a keeper could park a pool behind an end
+/// slot the admin cannot replace until it passes (2026-10-23 audit F2).
+#[constant]
+pub const VAR_END_AT_MAX_LEAD: u64 = 1_500;
+
+/// PROGRAM §1 `MEMO_PROGRAM`: the SPL Memo program (v2). Token-2022 lets an account's owner
+/// require a Memo as the instruction before every incoming transfer (`MemoTransfer`); an SPL
+/// payout writes one through this program when the destination asks for it, so a recipient
+/// cannot hold a pool's settlement by configuring their own account (2026-10-23 audit, F1).
+#[constant]
+pub const MEMO_PROGRAM: Pubkey = pubkey!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+
+/// PROGRAM §5.4: the memo written before a transfer into an account that requires one.
+pub const PAYOUT_MEMO: &[u8] = b"MyBarPool";
+
 /// PROGRAM §6.2: the home (column) axis label.
 #[constant]
 pub const AXIS_LABEL_HOME: &[u8] = b"home";
