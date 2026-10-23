@@ -19,6 +19,7 @@ import {
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
+  COMMITMENT,
   computeUnitLimitFor,
   createMyBarPoolClient,
   CU_MAX,
@@ -277,7 +278,7 @@ describe("prepareTransaction (DESIGN §10.4, in order)", () => {
     expect(ok.sizeBytes).toBeLessThanOrEqual(4096);
   });
 
-  it("the blockhash commitment is confirmed by default, finalized on request, and kept by refreshBlockhash", async () => {
+  it("the blockhash commitment is finalized by default (COMMITMENT), confirmed on request, and kept by refreshBlockhash", async () => {
     const { rpc, calls } = rpcFor({});
     const client = createMyBarPoolClient({ rpc, programAddress: PROGRAM });
     const p = await prepareTransaction(client, {
@@ -285,26 +286,26 @@ describe("prepareTransaction (DESIGN §10.4, in order)", () => {
       instructions: [memo("x")],
       format: "v1",
     });
-    expect(p.blockhashCommitment).toBe("confirmed");
+    expect(p.blockhashCommitment).toBe(COMMITMENT);
     expect(calls.at(-1)).toMatchObject({
       method: "getLatestBlockhash",
-      params: [{ commitment: "confirmed" }],
+      params: [{ commitment: "finalized" }],
     });
     const f = await prepareTransaction(client, {
       feePayer: payer,
       instructions: [memo("x")],
       format: "v1",
-      blockhashCommitment: "finalized",
+      blockhashCommitment: "confirmed",
     });
-    expect(f.blockhashCommitment).toBe("finalized");
+    expect(f.blockhashCommitment).toBe("confirmed");
     expect(calls.at(-1)).toMatchObject({
       method: "getLatestBlockhash",
-      params: [{ commitment: "finalized" }],
+      params: [{ commitment: "confirmed" }],
     });
     await refreshBlockhash(client, f);
     expect(calls.at(-1)).toMatchObject({
       method: "getLatestBlockhash",
-      params: [{ commitment: "finalized" }],
+      params: [{ commitment: "confirmed" }],
     });
   });
 
@@ -362,19 +363,27 @@ describe("signAndSend", () => {
     };
   }
 
-  it("a wallet fee payer: signs and sends through the wallet, then polls to confirmed", async () => {
+  it("a wallet fee payer: signs and sends through the wallet, then polls to finalized; a confirmed status is not yet done", async () => {
     let statuses = 0;
     const { rpc, calls } = rpcFor(
       {},
       {
-        getSignatureStatuses: () => ({
-          context: { slot: 1n },
-          value: [
-            statuses++ === 0
-              ? null
-              : { confirmationStatus: "confirmed", err: null, slot: 5n, confirmations: 1n },
-          ],
-        }),
+        getSignatureStatuses: () => {
+          const n = statuses++;
+          return {
+            context: { slot: 1n },
+            value: [
+              n === 0
+                ? null
+                : {
+                    confirmationStatus: n === 1 ? "confirmed" : "finalized",
+                    err: null,
+                    slot: 5n,
+                    confirmations: n === 1 ? 1n : null,
+                  },
+            ],
+          };
+        },
         getEpochInfo: () => ({
           blockHeight: 10n,
           epoch: 0n,
@@ -393,7 +402,17 @@ describe("signAndSend", () => {
     const methods = calls
       .map((c) => c.method)
       .filter((m) => m !== "simulateTransaction" && m !== "getLatestBlockhash");
-    expect(methods).toEqual(["getSignatureStatuses", "getEpochInfo", "getSignatureStatuses"]);
+    expect(methods).toEqual([
+      "getSignatureStatuses",
+      "getEpochInfo",
+      "getSignatureStatuses",
+      "getEpochInfo",
+      "getSignatureStatuses",
+    ]);
+    expect(calls.filter((c) => c.method === "getEpochInfo").map((c) => c.params)).toEqual([
+      [{ commitment: "finalized" }],
+      [{ commitment: "finalized" }],
+    ]);
   });
 
   it("a wallet fee payer: past lastValidBlockHeight with no status (the ledger's history read too) is BlockhashExpired, never a second send", async () => {
@@ -419,7 +438,7 @@ describe("signAndSend", () => {
     expect(isSdkError(e, "BlockhashExpired")).toBe(true);
     expect((e as SdkError).details.lastValidBlockHeight).toBe(1_000n);
     expect(sends).toBe(1);
-    // The ledger was asked before "expired" was said.
+    // The height was judged at finalized and the ledger was asked before "expired" was said.
     const statuses = calls.filter((c) => c.method === "getSignatureStatuses");
     expect(statuses.map((c) => c.params)).toEqual([
       [[expect.any(String)]],
@@ -468,7 +487,7 @@ describe("signAndSend", () => {
           context: { slot: 1n },
           value: [
             {
-              confirmationStatus: "confirmed",
+              confirmationStatus: "finalized",
               err: { InstructionError: [0, { Custom: 6017 }] },
               slot: 5n,
               confirmations: 1n,

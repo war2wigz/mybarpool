@@ -145,7 +145,7 @@ describe("events from inner instructions (PROGRAM §7)", () => {
     expect(calls[0]!.params[1]).toEqual({
       maxSupportedTransactionVersion: 1,
       encoding: "base64",
-      commitment: "confirmed",
+      commitment: "finalized",
     });
     await expect(eventsOf(client, "missing" as Signature)).rejects.toSatisfy((e) =>
       isSdkError(e, "NotFound"),
@@ -227,7 +227,7 @@ describe("watch* (DESIGN §10.1)", () => {
     expect(recorded[0]).toEqual([
       "accountNotifications",
       POOL,
-      { encoding: "base64", commitment: "confirmed" },
+      { encoding: "base64", commitment: "finalized" },
     ]);
   });
 
@@ -278,7 +278,7 @@ describe("watch* (DESIGN §10.1)", () => {
     expect(recorded[0]).toEqual([
       "logsNotifications",
       { mentions: [POOL] },
-      { commitment: "confirmed" },
+      { commitment: "finalized" },
     ]);
 
     const settled: number[] = [];

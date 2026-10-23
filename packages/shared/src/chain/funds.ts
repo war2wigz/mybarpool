@@ -5,7 +5,7 @@
 import { getBase64Encoder, type Address } from "@solana/kit";
 
 import { getConfig } from "./accounts.js";
-import type { MyBarPoolClient } from "./client.js";
+import { COMMITMENT, type MyBarPoolClient } from "./client.js";
 import { SdkError } from "./errors.js";
 import { associatedTokenAddress, configPda } from "./pdas.js";
 
@@ -37,7 +37,7 @@ export type FundsCheck =
 /** Lamports at `address`, 0 when it does not exist. */
 async function lamportsOf(client: MyBarPoolClient, address: Address): Promise<bigint> {
   const { value } = await client.rpc
-    .getAccountInfo(address, { commitment: "confirmed", encoding: "base64" })
+    .getAccountInfo(address, { commitment: COMMITMENT, encoding: "base64" })
     .send();
   return value?.lamports ?? 0n;
 }
@@ -45,7 +45,7 @@ async function lamportsOf(client: MyBarPoolClient, address: Address): Promise<bi
 /** The SPL token account's `amount` (u64 LE at offset 64), 0 when it does not exist. */
 async function tokenBalanceOf(client: MyBarPoolClient, address: Address): Promise<bigint> {
   const { value } = await client.rpc
-    .getAccountInfo(address, { commitment: "confirmed", encoding: "base64" })
+    .getAccountInfo(address, { commitment: COMMITMENT, encoding: "base64" })
     .send();
   if (!value) return 0n;
   // Kit's codec, never a Node-only global: the SDK runs in the browser and on the phone too.

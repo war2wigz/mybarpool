@@ -112,7 +112,9 @@ converts the priority fee, asserts the size against the format's limit and fetch
 blockhash last. A wallet signs only the transaction versions it lists; `transactionFormatFor`
 returns `"v1"` when the list includes `1` and `"legacy"` otherwise — a v1 message carries its
 limits in the message itself (4,096 bytes), a legacy one as ComputeBudget instructions
-(1,232 bytes). `signAndSend` confirms at `confirmed`, never resends, and classifies failures as
+(1,232 bytes). `signAndSend` confirms at `finalized` (`COMMITMENT`, the one commitment the chain
+layer reads, simulates, subscribes and confirms at; under Alpenglow it is the confirmed slot, a
+slot behind the tip), never resends, and classifies failures as
 `SdkError` codes: `SimulationFailed` and `ProgramError` carry the PROGRAM §8 error name,
 `BlockhashExpired` means nothing landed (once the block height passes `lastValidBlockHeight`
 the ledger's history is read once, so a transaction the status cache missed is found rather

@@ -2,7 +2,7 @@
  * The DESIGN §10.4 transaction helper, in the order the spec gives: build, simulate, set the
  * compute-unit and loaded-accounts-data-size limits with headroom, set the priority fee, assert
  * the size against the chosen format, fetch the blockhash last. `signAndSend` is what the app
- * calls when the wallet opens; it confirms at `confirmed` and never sends twice.
+ * calls when the wallet opens; it confirms at `finalized` (`COMMITMENT`) and never sends twice.
  */
 import {
   appendTransactionMessageInstructions,
@@ -38,7 +38,7 @@ import {
   type TransactionSigner,
 } from "@solana/kit";
 
-import type { MyBarPoolClient } from "./client.js";
+import { COMMITMENT, type Commitment, type MyBarPoolClient } from "./client.js";
 import { customErrorCode, programErrorName, SdkError } from "./errors.js";
 import {
   computeUnitLimitFor,
@@ -78,10 +78,10 @@ export interface PrepareOptions {
   /** Bytes of accounts the instruction may create (the instruction helpers know; see each). */
   createdAccountBytes?: number;
   /**
-   * Commitment of the blockhash fetched last (DESIGN §10.4: `confirmed`). A keeper that would
-   * rather never see "Blockhash not found" from a node behind the tip passes `finalized`.
+   * Commitment of the blockhash fetched last: `COMMITMENT` (`finalized`) unless the caller says
+   * otherwise. Under Alpenglow the two are one slot and the same blockhash.
    */
-  blockhashCommitment?: "confirmed" | "finalized";
+  blockhashCommitment?: Commitment;
 }
 
 /** A transaction ready for the wallet: the message with its lifetime and the numbers set on it. */
@@ -105,7 +105,7 @@ export interface PreparedTransaction {
   readonly blockhash: Blockhash;
   readonly lastValidBlockHeight: bigint;
   /** The commitment the blockhash was fetched at; `refreshBlockhash` reuses it. */
-  readonly blockhashCommitment: "confirmed" | "finalized";
+  readonly blockhashCommitment: Commitment;
 }
 
 type Message = TransactionMessage & TransactionMessageWithFeePayerSigner;
@@ -140,7 +140,7 @@ export async function prepareTransaction(
   let estimate: { computeUnitLimit: number; loadedAccountsDataSizeLimit?: number };
   try {
     estimate = await estimateResourceLimitsFactory({ rpc: client.rpc })(base, {
-      commitment: "confirmed",
+      commitment: COMMITMENT,
     });
   } catch (cause) {
     const code = customErrorCode(cause);
@@ -198,7 +198,7 @@ export async function prepareTransaction(
   }
 
   // 6. Blockhash last.
-  const blockhashCommitment = options.blockhashCommitment ?? "confirmed";
+  const blockhashCommitment = options.blockhashCommitment ?? COMMITMENT;
   const { value } = await client.rpc.getLatestBlockhash({ commitment: blockhashCommitment }).send();
   const withLifetime = setTransactionMessageLifetimeUsingBlockhash(value, message);
   const signatureCount = signerCount(withLifetime);
@@ -242,11 +242,13 @@ export interface SignAndSendOptions {
 }
 
 /**
- * Sign and send a prepared transaction, confirming at `confirmed`. A wallet fee payer
- * (`TransactionSendingSigner`) signs with every partial signer first (a gate key) and then
- * sends; confirmation polls `getSignatureStatuses` bounded by `lastValidBlockHeight` — past it
- * with no status the transaction was never processed and `SdkError("BlockhashExpired")` is
- * thrown, never a second send. Any other fee payer (a keypair, or a wallet signer that only
+ * Sign and send a prepared transaction, confirming at `finalized` (`COMMITMENT`). A wallet fee
+ * payer (`TransactionSendingSigner`) signs with every partial signer first (a gate key) and
+ * then sends; confirmation polls `getSignatureStatuses` bounded by `lastValidBlockHeight` —
+ * once the finalized height is past it and the ledger's history has no status either, the
+ * transaction was never processed and `SdkError("BlockhashExpired")` is thrown, never a second
+ * send (the height and the status are read from a pool of nodes that can disagree, so the
+ * expiry is judged at `finalized` with a history read, 2026-10-22). Any other fee payer (a keypair, or a wallet signer that only
  * signs) is signed here and sent through `sendAndConfirmTransactionFactory` (needs
  * `client.rpcSubscriptions`). A program custom code
  * is rethrown as `SdkError("ProgramError", { programError })`.
@@ -273,7 +275,7 @@ export async function signAndSend(
       rpcSubscriptions: client.rpcSubscriptions as never,
     });
     await send(signed as never, {
-      commitment: "confirmed",
+      commitment: COMMITMENT,
       ...(options.abortSignal ? { abortSignal: options.abortSignal } : {}),
     });
     return getSignatureFromTransaction(signed as never);
@@ -299,13 +301,13 @@ async function confirmByPolling(
   ): boolean => {
     if (!status) return false;
     if (status.err) throw getSolanaErrorFromTransactionError(status.err as never);
-    return status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized";
+    return status.confirmationStatus === COMMITMENT;
   };
   for (;;) {
     options.abortSignal?.throwIfAborted();
     const { value } = await client.rpc.getSignatureStatuses([signature]).send();
     if (landed(value[0])) return;
-    const epoch = await client.rpc.getEpochInfo({ commitment: "confirmed" }).send();
+    const epoch = await client.rpc.getEpochInfo({ commitment: COMMITMENT }).send();
     if (epoch.blockHeight > lastValidBlockHeight) {
       // The status cache is recent slots only and, behind a load balancer, one node's. A
       // transaction that landed but is not in this node's cache would read as never processed

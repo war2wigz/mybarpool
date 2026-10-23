@@ -38,7 +38,7 @@ import {
   type Sponsorship,
   type WalletOverride,
 } from "../generated/index.js";
-import type { MyBarPoolClient } from "./client.js";
+import { COMMITMENT, type MyBarPoolClient } from "./client.js";
 import { DEFAULT_ADDRESS } from "./pdas.js";
 
 /** An account read from the chain: its address and decoded data. */
@@ -83,8 +83,6 @@ export const PLATFORM_CONFIG_SIZE = 698;
 export const CREATOR_COUNTER_SIZE = 74;
 /** `WalletOverride` is 43 bytes (PROGRAM §3.6). */
 export const WALLET_OVERRIDE_SIZE = 43;
-
-const COMMITMENT = "confirmed" as const;
 
 function orNull<T>(
   m: { exists: false } | { exists: true; address: Address; data: T },

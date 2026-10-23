@@ -148,10 +148,10 @@ async function run(
     instructions,
     format,
     createdAccountBytes,
-    // Surfpool answers `confirmed` with the hash of the slot it is still producing and then
-    // asks mainnet about it at preflight ("Blockhash not found" after a 40 s stall); the
-    // finalized hash is a few slots older and always known. Agave does not behave this way.
-    blockhashCommitment: "finalized",
+    // The blockhash comes at the SDK's default, `finalized` (`COMMITMENT`, 2026-10-23). It is
+    // also the one that works here: Surfpool answers `confirmed` with the hash of the slot it is
+    // still producing and then asks mainnet about it at preflight ("Blockhash not found" after
+    // a 40 s stall); the finalized hash is older and always known. Agave does not behave this way.
   });
   rows.push({
     label,

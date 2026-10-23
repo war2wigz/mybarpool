@@ -7,7 +7,7 @@
 import { getBase64Encoder, type Address } from "@solana/kit";
 
 import { getPoolDecoder, type Pool, type QuarterSettledEvent } from "../generated/index.js";
-import type { MyBarPoolClient } from "./client.js";
+import { COMMITMENT, type MyBarPoolClient } from "./client.js";
 import { SdkError } from "./errors.js";
 import { eventsOf, type EmittedEvent } from "./events.js";
 
@@ -51,7 +51,7 @@ function isAbort(e: unknown): boolean {
 }
 
 /**
- * The `Pool` at `pool` on every change (`accountNotifications`, base64, confirmed); `null` once
+ * The `Pool` at `pool` on every change (`accountNotifications`, base64, finalized); `null` once
  * the account is closed. The current value is not fetched first — read it with `getPool`.
  */
 export function watchPool(
@@ -67,7 +67,7 @@ export function watchPool(
   void (async () => {
     try {
       const notifications = await subs
-        .accountNotifications(pool, { encoding: "base64", commitment: "confirmed" })
+        .accountNotifications(pool, { encoding: "base64", commitment: COMMITMENT })
         .subscribe({ abortSignal: abort.signal });
       for await (const n of notifications) {
         const data = n.value.data[0];
@@ -118,7 +118,7 @@ async function eventsOfAnnounced(
 }
 
 /**
- * Every event of every confirmed, successful transaction mentioning `mentions`
+ * Every event of every finalized, successful transaction mentioning `mentions`
  * (`logsNotifications({ mentions })` for the signatures, `eventsOf` for the bodies).
  */
 export function watchEvents(
@@ -132,7 +132,7 @@ export function watchEvents(
   void (async () => {
     try {
       const notifications = await subs
-        .logsNotifications({ mentions: [filter.mentions] }, { commitment: "confirmed" })
+        .logsNotifications({ mentions: [filter.mentions] }, { commitment: COMMITMENT })
         .subscribe({ abortSignal: abort.signal });
       for await (const n of notifications) {
         if (n.value.err !== null) continue;

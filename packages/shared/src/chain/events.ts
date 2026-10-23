@@ -69,7 +69,7 @@ import {
   identifyMybarpoolEvent,
   MybarpoolEvent,
 } from "../generated/index.js";
-import type { MyBarPoolClient } from "./client.js";
+import { COMMITMENT, type MyBarPoolClient } from "./client.js";
 import { SdkError } from "./errors.js";
 
 /** `anchor_lang::event::EVENT_IX_TAG` (0x1d9acb512ea545e4) little-endian. */
@@ -299,7 +299,7 @@ export interface EmittedEvent {
 }
 
 /**
- * The events of a confirmed transaction: fetched with `maxSupportedTransactionVersion: 1` and
+ * The events of a finalized transaction: fetched with `maxSupportedTransactionVersion: 1` and
  * `encoding: "base64"` (the runtime refuses base58 for a v1 transaction), then decoded from the
  * inner instructions. `SdkError("NotFound")` when the transaction is unknown.
  */
@@ -311,7 +311,7 @@ export async function eventsOf(
     .getTransaction(signature, {
       maxSupportedTransactionVersion: 1,
       encoding: "base64",
-      commitment: "confirmed",
+      commitment: COMMITMENT,
     })
     .send();
   if (!tx) throw new SdkError("NotFound", { address: signature });
