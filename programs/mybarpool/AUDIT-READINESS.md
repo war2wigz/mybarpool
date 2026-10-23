@@ -6,8 +6,13 @@ who has read nothing else in this repository; the specification it refers to is
 algorithms, errors, invariants) and [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md)
 (the why). Section references like §4.3 are to PROGRAM.md unless marked otherwise.
 
-The program is **frozen** at this commit for the external audit: no instruction, account,
-event or error changes until the findings come back.
+The program was reviewed by the internal security audit of 2026-10-23
+([`docs/audits/2026-10-23-internal-audit.md`](../../docs/audits/2026-10-23-internal-audit.md)):
+four independent reviewers, one slice each, reporting in the fixed audit format. Its
+findings are fixed and tested, and the program is **frozen** at this commit for the first
+mainnet deployment: no instruction, account, event or error changes without a CHANGELOG
+entry and a new review of the change. This document was refreshed for that audit's fixes;
+the numbers below are from the commit the report names.
 
 ## 1. Scope and build
 
@@ -26,10 +31,10 @@ Solana Foundation's image pinned by digest and compares the hash with the plain 
 
 | Suite | Command | What it covers |
 |---|---|---|
-| Mollusk unit tests | `cargo test -p mybarpool --locked` | 346 tests over every instruction in isolation and in chains, with the `Clock` and `SlotHashes` sysvars set directly; the Entropy fork's verified bytecode loaded as a second program; the shared vector files cross-checked against the SDK |
-| Compute-unit table | `cargo bench -p mybarpool --locked` | Rewrites `compute_units.md` (53 rows); a changed row is a review item, not a failure |
-| Localnet | `anchor test` (Surfpool 1.6.0 forking mainnet) | 16 files, 119 tests: the per-step suites and eight lifecycle scripts under `tests/lifecycle/`, one per path from creation to `close_pool`, against the real SKR and ORE mints |
-| Fuzzer | `fuzz/` — see its [README](../../fuzz/README.md) | Mollusk fixtures ejected from every unit-test instruction (772), replayed and mutated under proptest for a fixed budget, checked against the §10 Money oracle; CI runs 600 s. At this commit: 2,906,583 cases in 600 s (seed 215118630108621193) and 7,007,087 in 1,800 s (seed 16355487222879973167), both clean |
+| Mollusk unit tests | `cargo test -p mybarpool --locked` | 372 tests over every instruction in isolation and in chains, with the `Clock` and `SlotHashes` sysvars set directly; the Entropy fork's verified bytecode loaded as a second program; the shared vector files cross-checked against the SDK |
+| Compute-unit table | `cargo bench -p mybarpool --locked` | Rewrites `compute_units.md` (54 rows); a changed row is a review item, not a failure |
+| Localnet | `anchor test` (Surfpool 1.6.1 forking mainnet) | 17 files, 130 tests: the per-step suites and eight lifecycle scripts under `tests/lifecycle/`, one per path from creation to `close_pool`, against the real SKR and ORE mints |
+| Fuzzer | `fuzz/` — see its [README](../../fuzz/README.md) | Mollusk fixtures ejected from every unit-test instruction (807), replayed and mutated under proptest for a fixed budget, checked against the §10 Money oracle; CI runs 600 s. At this commit: 2,820,630 cases in 600 s (seed 2114127522115581660) and 4,271,419 in 900 s on the bytecode one doc-comment change earlier (seed 9023521409103873441), both clean; before the audit's fixes, 6,193,692 in 1,200 s (seed 16502337001721866570) |
 | Schema snapshot | `cargo test -p mybarpool --test schema` | `tests/fixtures/schema-snapshot.json` against the committed IDL: additive changes only (§10 Layout) |
 | Lints | `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace -- --lib` | OtterSec anchor-lints at a pinned commit; see §5 |
 | Dependency audit | `cargo audit --deny warnings` | RustSec against `Cargo.lock`, with the ignores in `.cargo/audit.toml`; see §6 |
@@ -73,8 +78,8 @@ platform's fee wallet, or to the creator when the pool was abandoned.
 
 | Key | Can do | Held in |
 |---|---|---|
-| Admin | `update_config` within hard-coded ceilings (`platform_bps ≤ 500`, `creator_bps ≤ 500`, add-on budget ≤ 500, total ≤ 1500); pause inflows; per-wallet limit overrides; `mark_game`; `cancel_pool`; `replace_var` on a `Var` that missed its window | Squads multisig |
-| Score authority (keeper) | `create_game`, `update_kickoff`, `post_scores`, `settle`; `set_var`; `return_boxes`, `return_sponsorship`, `split` | Cloud KMS |
+| Admin | `update_config` within hard-coded ceilings (`platform_bps ≤ 500`, `creator_bps ≤ 500`, add-on budget ≤ 500, total ≤ 1500); pause inflows; per-wallet limit overrides; `mark_game`; `cancel_pool`; `replace_var` on a `Var` whose window is gone from `SlotHashes` (never one with a sample; at most two per pool) | Squads multisig |
+| Score authority (keeper) | `create_game`, `update_kickoff` (within 72 hours each side of the scheduled kickoff), `post_scores`, `settle`; `set_var`, `draw` (applies the value the commit and the slot hash fix; it chooses nothing); `return_boxes`, `return_sponsorship`, `split` | Cloud KMS |
 | Upgrade authority | Deploy new versions; `initialize` (it becomes the first admin) | Squads multisig |
 | Anyone | `buy`, `create_pool`, `sponsor`, `rotate_gate_key` (own pools), `sample_var`, `reclaim` / `reclaim_sponsorship` (own boxes / sponsorship), `close_pool`, `close_sponsorship`, `close_counter` | Their wallets |
 
@@ -83,7 +88,9 @@ winner is recomputed from the stored axes and scores (`WinnerMismatch`), fee des
 are `config.fee_wallet`, `pool.creator`, `pool.integrator` by `address` constraint, returns
 go to the owners recorded on the pool and the wallet recorded on each `Sponsorship`. It cannot
 settle out of order, without a draw, before a score is posted, or twice; cannot replace a `Var`
-once sampled; cannot touch `config`. **What a pause does:** blocks `create_pool`, `buy`,
+at all (admin only, and only once the window is gone), nor re-point the bound one at a later end
+slot by closing and re-opening it (`VarEndAtMismatch`); cannot draw once a quarter is posted
+(`DrawAfterScores`); cannot touch `config`. **What a pause does:** blocks `create_pool`, `buy`,
 `sponsor` — the three inflows — and nothing else; every outflow (settle, return, split,
 reclaim, close) runs while paused, so a pause can never trap funds.
 
@@ -109,7 +116,8 @@ box owner, a sponsor's recorded wallet, `fee_wallet`, `creator`, `integrator`.
 
 **Ordering** — quarters settle in order; scores post in order and never decrease; no
 settlement without a draw; no draw without a sampled, revealed `Var` whose seed hashes to the
-recorded commit; no `Var` replaced once sampled.
+recorded commit, carrying the end slot the pool recorded; no `Var` replaced once sampled, nor
+while its window is still in `SlotHashes`; no draw once a quarter is posted.
 - Mollusk: `settle::settle_out_of_order_is_quarter_out_of_order`,
   `games::post_scores_out_of_order_is_quarter_out_of_order`,
   `games::post_scores_lower_than_the_previous_post_is_score_decreased`,
@@ -120,9 +128,15 @@ recorded commit; no `Var` replaced once sampled.
   `draw::draw_refuses_a_var_whose_commit_field_matches_but_whose_seed_does_not_hash_to_it`,
   `draw::draw_refuses_a_self_consistent_var_whose_seed_matches_a_different_commit`,
   `draw::replace_var_on_a_sampled_pool_is_var_already_sampled`,
-  `draw::sample_var_binding_errors_var_not_set_var_mismatch_var_already_sampled`.
-- Localnet: `settlement.test.ts` items 1, 4, 6; `draw.test.ts`; lifecycle 01–02, 05–07 (the
-  full order), 04 and 08 (no settlement without the game / the draw).
+  `draw::sample_var_binding_errors_var_not_set_var_mismatch_var_already_sampled`,
+  `draw::keeper_cannot_rebind_by_closing_and_reopening_the_var`,
+  `draw::draw_refuses_a_var_whose_end_slot_is_not_the_recorded_one`,
+  `draw::set_var_refuses_an_end_slot_more_than_the_lead_ahead`,
+  `draw::replace_var_only_after_the_window_is_gone`,
+  `draw::draw_after_the_first_score_post_is_refused` (2026-10-23 audit).
+- Localnet: `settlement.test.ts` items 1, 4, 6; `draw.test.ts` (including `SampleWindowOpen`
+  and the lead bound); lifecycle 01–02, 05–07 (the full order), 04 and 08 (no settlement
+  without the game / the draw).
 
 **Timing** — no `buy`/`sponsor` at or after `recorded_kickoff`; no unfilled `return_boxes`
 before it; no `update_kickoff` once passed; no `reclaim` before `scheduled_kickoff + 30 d`
@@ -262,6 +276,7 @@ pins it):
 | `reclaim_sponsorship.rs` | `vault` | seeds + the stored `vault_bump` pin it to `pool.vault`. | `mut, seeds = [VAULT_SEED, pool.key().as_ref()], bump = pool.vault_bump` |
 | `reclaim_sponsorship.rs` | `sponsor_token_account?` | compared to the sponsor's derived associated token account in the handler. SPL | `mut` |
 | `replace_var.rs` | `new_var` | owner `ENTROPY_PROGRAM` by constraint; every `set_var` check by the handler. | `owner = ENTROPY_PROGRAM @ MybarpoolError::VarNotEntropy` |
+| `replace_var.rs` | `slot_hashes` | the SlotHashes sysvar by address; the handler requires no entry for `pool.var_end_at` (`SampleWindowOpen`). 2026-10-23. | `address = sysvar::slot_hashes::ID` |
 | `return_boxes.rs` | `vault` | seeds + the stored `vault_bump` pin it to `pool.vault`. | `mut, seeds = [VAULT_SEED, pool.key().as_ref()], bump = pool.vault_bump` |
 | `return_sponsorship.rs` | `vault` | seeds + the stored `vault_bump` pin it to `pool.vault`. | `mut, seeds = [VAULT_SEED, pool.key().as_ref()], bump = pool.vault_bump` |
 | `return_sponsorship.rs` | `sponsor` | `address = sponsorship.wallet`, the only destination a return can use. | `mut, address = sponsorship.wallet` |
@@ -281,6 +296,7 @@ pins it):
 | `settle.rs` | `integrator_token_account?` | compared in the handler to the integrator's ATA when the pool has an integrator. | `mut` |
 | `split.rs` | `vault` | seeds + the stored `vault_bump` pin it to `pool.vault`. | `mut, seeds = [VAULT_SEED, pool.key().as_ref()], bump = pool.vault_bump` |
 | `sponsor.rs` | `vault` | seeds + the stored `vault_bump` pin it to `pool.vault`. | `mut, seeds = [VAULT_SEED, pool.key().as_ref()], bump = pool.vault_bump` |
+| `settle.rs`, `close_pool.rs`, `return_boxes.rs`, `return_sponsorship.rs`, `split.rs`, `reclaim.rs`, `reclaim_sponsorship.rs` | `memo_program?` | the SPL Memo program by address, and executable; `None` on SOL pools, required on SPL pools by the handler (`ConstraintAccountIsNone`); CPI'd with no accounts before a transfer to a Token-2022 account whose `MemoTransfer` extension requires one (§5.4). 2026-10-23. | `address = MEMO_PROGRAM, executable` |
 
 The handler-checked ones, in detail: `gate_key?` in `buy` is compared to `pool.gate_key` and
 required to sign, inside `gate()` after the count and cap checks (§4.3; `GateKeyNotSigner`
@@ -987,71 +1003,72 @@ pins are deliberate and a major is never merged without a toolchain decision).
 
 Every row of `compute_units.md` with the client-side limit DESIGN §10.4 prescribes
 (`measured × 1.2 + 30,000` for the instructions a wallet may append). A row above 1,000,000
-after the rule would be a finding; the worst is 365,596, a quarter of the 1.4 M transaction
+after the rule would be a finding; the worst is 367,737, a quarter of the 1.4 M transaction
 maximum.
 
 | Row | CU | Limit to set |
 |---|---|---|
-| `initialize` | 20,281 | 54,337 |
-| `update_config_full` | 15,218 | 48,261 |
+| `initialize` | 20,277 | 54,332 |
+| `update_config_full` | 15,214 | 48,256 |
 | `set_wallet_override_create` | 13,160 | 45,792 |
 | `set_wallet_override_update` | 10,820 | 42,984 |
 | `close_wallet_override` | 9,391 | 41,269 |
-| `create_game` | 18,058 | 51,669 |
-| `update_kickoff` | 10,936 | 43,123 |
-| `post_scores_q1` | 10,955 | 43,146 |
-| `post_scores_final` | 10,967 | 43,160 |
-| `mark_game` | 10,401 | 42,481 |
-| `create_pool_sol` | 41,562 | 79,874 |
-| `create_pool_sol_5_boxes` | 47,654 | 87,184 |
-| `create_pool_spl` | 51,317 | 91,580 |
-| `buy_1` | 29,419 | 65,302 |
-| `buy_3` | 29,797 | 65,756 |
-| `buy_25th_locks` | 31,389 | 67,666 |
-| `buy_spl_1` | 31,537 | 67,844 |
-| `sponsor_new` | 26,380 | 61,656 |
-| `sponsor_top_up` | 23,985 | 58,782 |
-| `rotate_gate_key` | 11,204 | 43,444 |
-| `buy_link_sol` | 29,621 | 65,545 |
-| `buy_allowlist_sol_depth_1` | 29,819 | 65,782 |
-| `buy_allowlist_sol_depth_10` | 31,671 | 68,005 |
-| `buy_allowlist_sol_depth_32` | 36,179 | 73,414 |
-| `close_counter` | 6,570 | 37,884 |
-| `set_var` | 16,086 | 49,303 |
-| `sample_var` | 29,691 | 65,629 |
-| `sample_var_already_sampled` | 14,429 | 47,314 |
-| `draw` | 19,173 | 53,007 |
-| `replace_var` | 16,359 | 49,630 |
-| `settle_q1_sol` | 26,525 | 61,830 |
-| `settle_q2_sol` | 22,033 | 56,439 |
-| `settle_q4_sol` | 22,034 | 56,440 |
-| `settle_q1_final_only` | 21,019 | 55,222 |
-| `settle_q1_sol_integrator` | 28,425 | 64,110 |
-| `settle_q1_ore` | 105,084 | 156,100 |
-| `settle_q1_ore_atas_exist` | 77,841 | 123,409 |
-| `close_pool_sol` | 17,436 | 50,923 |
-| `close_pool_ore` | 48,987 | 88,784 |
-| `return_boxes_first_sol_2_owners` | 29,352 | 65,222 |
-| `return_boxes_25_owners_sol` | 135,270 | 192,324 |
-| `return_boxes_ore_3_owners_atas_missing` | 106,171 | 157,405 |
-| `return_boxes_ore_9_owners_atas_missing` | 279,664 | 365,596 |
-| `return_boxes_ore_11_owners_atas_exist` | 251,579 | 331,894 |
-| `return_sponsorship_sol` | 22,778 | 57,333 |
-| `return_sponsorship_ore_ata_missing` | 48,043 | 87,651 |
-| `cancel_pool_open` | 17,041 | 50,449 |
-| `split_first_sol_3_owners` | 31,893 | 68,271 |
-| `split_ore_3_owners_atas_missing` | 105,995 | 157,194 |
-| `reclaim_sol_open` | 21,284 | 55,540 |
-| `reclaim_ore_locked_ata_missing` | 43,778 | 82,533 |
-| `reclaim_sponsorship_sol` | 23,043 | 57,651 |
-| `close_sponsorship` | 14,524 | 47,428 |
+| `create_game` | 18,054 | 51,664 |
+| `update_kickoff` | 10,940 | 43,128 |
+| `post_scores_q1` | 10,951 | 43,141 |
+| `post_scores_final` | 10,963 | 43,155 |
+| `mark_game` | 10,397 | 42,476 |
+| `create_pool_sol` | 41,617 | 79,940 |
+| `create_pool_sol_5_boxes` | 47,707 | 87,248 |
+| `create_pool_spl` | 51,369 | 91,642 |
+| `buy_1` | 29,473 | 65,367 |
+| `buy_3` | 29,851 | 65,821 |
+| `buy_25th_locks` | 31,441 | 67,729 |
+| `buy_spl_1` | 31,591 | 67,909 |
+| `sponsor_new` | 26,497 | 61,796 |
+| `sponsor_box_new` | 26,531 | 61,837 |
+| `sponsor_top_up` | 24,100 | 58,920 |
+| `rotate_gate_key` | 11,263 | 43,515 |
+| `buy_link_sol` | 29,675 | 65,610 |
+| `buy_allowlist_sol_depth_1` | 29,873 | 65,847 |
+| `buy_allowlist_sol_depth_10` | 31,725 | 68,070 |
+| `buy_allowlist_sol_depth_32` | 36,233 | 73,479 |
+| `close_counter` | 6,572 | 37,886 |
+| `set_var` | 16,145 | 49,374 |
+| `sample_var` | 29,773 | 65,727 |
+| `sample_var_already_sampled` | 14,493 | 47,391 |
+| `draw` | 20,001 | 54,001 |
+| `replace_var` | 16,817 | 50,180 |
+| `settle_q1_sol` | 26,683 | 62,019 |
+| `settle_q2_sol` | 22,191 | 56,629 |
+| `settle_q4_sol` | 22,192 | 56,630 |
+| `settle_q1_final_only` | 21,177 | 55,412 |
+| `settle_q1_sol_integrator` | 28,583 | 64,299 |
+| `settle_q1_ore` | 105,912 | 157,094 |
+| `settle_q1_ore_atas_exist` | 78,669 | 124,402 |
+| `close_pool_sol` | 17,572 | 51,086 |
+| `close_pool_ore` | 49,524 | 89,428 |
+| `return_boxes_first_sol_2_owners` | 29,524 | 65,428 |
+| `return_boxes_25_owners_sol` | 135,384 | 192,460 |
+| `return_boxes_ore_3_owners_atas_missing` | 107,009 | 158,410 |
+| `return_boxes_ore_9_owners_atas_missing` | 281,448 | 367,737 |
+| `return_boxes_ore_11_owners_atas_exist` | 253,671 | 334,405 |
+| `return_sponsorship_sol` | 22,970 | 57,564 |
+| `return_sponsorship_ore_ata_missing` | 48,599 | 88,318 |
+| `cancel_pool_open` | 17,089 | 50,506 |
+| `split_first_sol_3_owners` | 32,040 | 68,448 |
+| `split_ore_3_owners_atas_missing` | 106,815 | 158,178 |
+| `reclaim_sol_open` | 21,446 | 55,735 |
+| `reclaim_ore_locked_ata_missing` | 44,305 | 83,166 |
+| `reclaim_sponsorship_sol` | 23,245 | 57,894 |
+| `close_sponsorship` | 14,588 | 47,505 |
 
 **Transaction size and the instruction trace, measured on localnet** (Step 7 and the
 lifecycle scripts): a SOL `return_boxes` of 24 owners with the counter is 1,247 bytes, over
 the 1,232-byte packet, so the keeper pages SOL returns at twelve owners (851 and 819 bytes for
 a full pool). An SPL page whose token accounts must be created costs seven inner instructions
 per owner against the runtime's trace limit of 64; the bench row above measures nine owners as
-a single instruction (`return_boxes_ore_9_owners_atas_missing`, 279,664 CU), but a real
+a single instruction (`return_boxes_ore_9_owners_atas_missing`, 281,448 CU), but a real
 transaction also carries the compute-budget instruction the page needs, and the ninth owner
 takes the trace to 65: `tests/lifecycle/04-postponed-after-draw.test.ts` shows the nine-owner
 page refused with "Max instruction trace length exceeded" and pages eight, eight, eight and
@@ -1102,7 +1119,7 @@ entry (depth 1 → 32: 29,819 → 36,179).
 
 ## 9. Pre-audit review
 
-Before the external engagement the whole program was read once more against the
+Before the 2026-10-23 audit the whole program was read once more against the
 specification, instruction by instruction, with the money rules of PROGRAM §10 and the
 randomness argument of ARCHITECTURE › Randomness as the two yardsticks. It found no place
 where code and specification disagree. Three things were changed as a result — the program's
@@ -1161,8 +1178,28 @@ listed here for the auditor's attention.
 | `PlatformConfig::validate` refuses only a default `admin`, not a default `fee_wallet`, `score_authority` or `entropy_provider`. | With `fee_wallet` default the first prize on every pool fails at the fee transfer until `update_config`; the other two idle the keeper. Recoverable, no loss. | Three `require!`s beside the `admin` one, or leave it since `update_config` repairs all three in one call. |
 | No two-step admin transfer: `update_config { admin }` takes effect at once. | A mistyped key leaves a config nobody can change. The multisig's proposal review is the mitigation; dry-run the proposal against a devnet config first. | A `pending_admin` field and an `accept_admin` instruction — a layout and instruction change, so after the audit. |
 | `prize_pool`, `quarter_prize` and `unpaid_prize_pool` stay populated on a pool returned after zero-share settlements (e.g. a Q4-only pool suspended after Q1–Q3 settled). | None on money: nothing reads them on a `Returned` pool. An indexer that sums `unpaid_prize_pool` across statuses would be wrong; clients key off `status`. | A sentence in the specification: meaningful only in `Drawn`, `Settled`, `Split`. |
-| `set_var`/`replace_var` accept any future `end_at`. | A keeper can park a pool in `Locked` with a far-off window; `replace_var` or `cancel_pool` undoes it. Keeper-trusted, recoverable. | One `require!` and a new error for an upper bound — a post-audit question. |
+| `set_var`/`replace_var` accept any future `end_at`. | A keeper can park a pool in `Locked` with a far-off window; `replace_var` or `cancel_pool` undoes it. Keeper-trusted, recoverable. | Done 2026-10-23 for `set_var`: `end_at ≤ slot + VAR_END_AT_MAX_LEAD` (1,500 slots), `VarNotFresh` otherwise; needed once `replace_var` waits for the window to be gone. `replace_var` stays unbounded: the admin's, opened hours out for a multisig. |
 | The §6.1 note on which slot hash positions the boxes was measured on Surfpool, which includes the current slot in `SlotHashes`; mainnet's newest entry is the previous produced slot. | None: the program reads the sysvar's newest entry either way and `BoxesBought` carries the positions; only the client-reproduction sentence was off by one. | Fixed in the specification; no code effect. |
+
+### The 2026-10-23 internal audit
+
+The pre-audit review above found no disagreement between code and specification; the audit
+found three in what the program did *not* check, all in the draw, and they are the reason an
+adversarial read by someone with no prior context is not the same as a careful re-read by the
+author. The report ([`docs/audits/2026-10-23-internal-audit.md`](../../docs/audits/2026-10-23-internal-audit.md))
+has the findings, the fixes and the tests; in one line each:
+
+| Finding | Severity | Fix |
+|---|---|---|
+| The pool recorded the `Var`'s end slot and never compared it; the keeper, as the `Var`'s authority, could close and re-open it with a later end slot after seeing the first hash. | Blocker | `sample_var` and `draw` require `var.end_at == pool.var_end_at` (`VarEndAtMismatch`); `sample_var` proves the sysvar entry for the pool's slot, not the `Var`'s. |
+| `replace_var` had no missed-window condition. | High | Takes `SlotHashes`; refused until `Clock.slot > var_end_at` and the entry is gone (`SampleWindowOpen`); with it, `end_at ≤ slot + 1,500` at `set_var`. |
+| `draw` was allowed after scores were posted. | High | Takes `game` (`has_one`); `quarters_posted == 0` (`DrawAfterScores`). |
+| A Token-2022 destination with `MemoTransfer` blocked `settle` and every later quarter. | High | The seven paying instructions take the Memo program on SPL pools and write a Memo first when the destination requires one. |
+| `update_kickoff` had no lower bound. | Medium | Symmetric 72-hour bound. |
+| `split` refused a pool `reclaim` had moved into `Split` unless the game was `Suspended`. | Medium | `Suspended` or already `Split`. |
+| `security.txt` not in the binary. | Medium | `solana_security_txt!` in `lib.rs`. |
+| Frozen destination / freeze authority not refused; one `Var` on two pools; keeper + leader collusion on `end_at`; no status-change event; a closed pool's address re-creatable. | Medium / Low | Documented (PROGRAM §5.4, ARCHITECTURE › Randomness, the report); none changes an instruction. |
+| SOL dust underflow in `close_pool` under a raised rent; gate key equal to the program id; `has_one = game` untested on the return family. | Low | `saturating_sub`; `GateKeyMissing`; four tests. |
 
 ## 10. Out of scope
 
