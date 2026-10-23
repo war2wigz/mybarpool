@@ -61,7 +61,7 @@ export type SampleVarInstruction<
     "ASo8r4EEFLPAMDk1w3XdKbEmq4c1GynbsHGa6RGG83fH",
   TAccountEventAuthority extends string | AccountMeta<string> = string,
   TAccountProgram extends string | AccountMeta<string> =
-    "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw",
+    "5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &

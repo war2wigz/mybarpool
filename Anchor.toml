@@ -8,7 +8,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-mybarpool = "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw"
+mybarpool = "5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6"
 
 [provider]
 cluster = "localnet"

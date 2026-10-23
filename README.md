@@ -163,7 +163,7 @@ The SDK is `@mybarpool/shared` ([packages/shared/README.md](packages/shared/READ
 
 Clients must show a box as **won** only after the settle event, never from live scores. Live scores may mark a box as **leading**, clearly provisional.
 
-The program specification, [docs/PROGRAM.md](docs/PROGRAM.md), is the contract: every account and its fields, every instruction with its checks, every event and error, and the exact box-assignment, shuffle and winner algorithms. It is what the program is built and audited against, and what an integrator's own verification can be built against. The SDK reference is generated from the package (`npm run docs`); the official program ID and config PDA will be published here when the program is deployed. Check the program ID against this repo before trusting a deployment; forks are possible and will not be served by the keeper.
+The program specification, [docs/PROGRAM.md](docs/PROGRAM.md), is the contract: every account and its fields, every instruction with its checks, every event and error, and the exact box-assignment, shuffle and winner algorithms. It is what the program is built and audited against, and what an integrator's own verification can be built against. The SDK reference is generated from the package (`npm run docs`). The official program ID is `5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6` and its config PDA is `8rDtdMvr7ZwxyrX1wSMjHYTbmcmS3rLVF3HzBbUEKXfK` (the id is in `declare_id!`, `Anchor.toml` and `idl/mybarpool.json`; the mainnet deployment itself is announced here when it lands). Check the program ID against this repo before trusting a deployment; forks are possible and will not be served by the keeper.
 
 ## What is in this repo
 

@@ -17,10 +17,10 @@ the numbers below are from the commit the report names.
 ## 1. Scope and build
 
 **Crate:** `programs/mybarpool` (Anchor 1.2.0, `crate-type = ["cdylib", "lib"]`).
-**Program id:** `declare_id!("3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw")` is a
-placeholder until the mainnet deployment; CI syncs the id to a fresh keypair on every run
-(`anchor keys sync`), and the committed IDL is compared to the build with the id
-normalised. The deployed id and the config PDA will be published in the README at deploy.
+**Program id:** `declare_id!("5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6")` is the
+mainnet id (set 2026-10-23; the placeholder before it was `3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw`).
+CI syncs the id to a fresh keypair on every run (`anchor keys sync`), and the committed IDL is
+compared to the build with the id normalised. The id and the config PDA are in the README.
 
 **Build:** `anchor build --arch v3`. The ELF must be SBPFv3 (`readelf -h
 target/deploy/mybarpool.so` shows `Flags: 0x3`; CI fails otherwise). The verifiable build

@@ -67,7 +67,7 @@ export type SplitInstruction<
   TAccountSystemProgram extends string | AccountMeta<string> = "11111111111111111111111111111111",
   TAccountEventAuthority extends string | AccountMeta<string> = string,
   TAccountProgram extends string | AccountMeta<string> =
-    "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw",
+    "5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &

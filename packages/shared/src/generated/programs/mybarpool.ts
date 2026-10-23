@@ -174,7 +174,7 @@ import {
 } from "../pdas/index.js";
 
 export const MYBARPOOL_PROGRAM_ADDRESS =
-  "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw" as Address<"3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw">;
+  "5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6" as Address<"5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6">;
 
 export enum MybarpoolAccount {
   CreatorCounter,
@@ -907,7 +907,7 @@ export function identifyMybarpoolInstruction(
 }
 
 export type ParsedMybarpoolInstruction<
-  TProgram extends string = "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw",
+  TProgram extends string = "5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6",
 > =
   | ({ instructionType: MybarpoolInstruction.Buy } & ParsedBuyInstruction<TProgram>)
   | ({ instructionType: MybarpoolInstruction.CancelPool } & ParsedCancelPoolInstruction<TProgram>)

@@ -38,7 +38,7 @@ pub use events::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw");
+declare_id!("5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6");
 
 // ARCHITECTURE › Open source: the SECURITY.md contact embedded in the deployed binary, where
 // `solana-security-txt` and the explorers read it (2026-10-23 audit, M1). Not compiled into the

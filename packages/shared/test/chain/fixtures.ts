@@ -40,7 +40,7 @@ export const fixedAddress = (byte: number): Address =>
   );
 
 export const DEFAULT = address("11111111111111111111111111111111");
-export const PROGRAM = address("3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw");
+export const PROGRAM = address("5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6");
 
 export const GAME = fixedAddress(2);
 export const CREATOR = fixedAddress(0);

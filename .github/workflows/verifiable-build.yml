@@ -37,7 +37,7 @@ env:
   VERIFY_BASE_IMAGE: solanafoundation/solana-verifiable-build@sha256:12fd4c0a0790f0fc41ef74b0cdb6bccc167ba6137eb1adb749bac649481c86bd
   # Placeholder until the mainnet program id exists (Step 14). It must be a
   # valid pubkey for the reusable workflow's input; verification is off.
-  PROGRAM_ID: "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw"
+  PROGRAM_ID: "5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6"
 
 jobs:
   gate:
@@ -60,7 +60,7 @@ jobs:
       MAINNET_DEPLOYER_KEYPAIR: ${{ secrets.MAINNET_DEPLOYER_KEYPAIR }}
     with:
       program: mybarpool
-      program-id: "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw"
+      program-id: "5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6"
       network: mainnet
       deploy: false
       upload_idl: false
