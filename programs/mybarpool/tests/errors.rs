@@ -1,13 +1,14 @@
 //! Error codes and order, PROGRAM §8 (+ `InvalidConfig`, `InvalidGameKey`,
 //! `InvalidGameStatus` appended before anything shipped, then Step 5's
-//! `SampleTooEarly` and `VarAlreadySampled`, then Step 5b's `VarCommitMismatch`;
-//! see the step NOTES).
+//! `SampleTooEarly` and `VarAlreadySampled`, then Step 5b's `VarCommitMismatch`,
+//! box sponsorship's `BoxAlreadySponsored`, and the 2026-10-23 internal audit's
+//! `VarEndAtMismatch`, `SampleWindowOpen` and `DrawAfterScores`).
 
 use anchor_lang::error::ERROR_CODE_OFFSET;
 use mybarpool::MybarpoolError as E;
 
 /// PROGRAM §8, in the listed order, then the six appended errors.
-const EXPECTED: [E; 65] = [
+const EXPECTED: [E; 69] = [
     E::Unauthorized,
     E::Paused,
     E::GameNotScheduled,
@@ -73,6 +74,10 @@ const EXPECTED: [E; 65] = [
     E::SampleTooEarly,
     E::VarAlreadySampled,
     E::VarCommitMismatch,
+    E::BoxAlreadySponsored,
+    E::VarEndAtMismatch,
+    E::SampleWindowOpen,
+    E::DrawAfterScores,
 ];
 
 #[test]
@@ -112,6 +117,14 @@ fn the_step_5_codes_appended_by_the_brief() {
 }
 
 #[test]
+fn the_2026_10_23_audit_codes() {
+    assert_eq!(E::BoxAlreadySponsored as u32, 65); // 6065
+    assert_eq!(E::VarEndAtMismatch as u32, 66); // 6066
+    assert_eq!(E::SampleWindowOpen as u32, 67); // 6067
+    assert_eq!(E::DrawAfterScores as u32, 68); // 6068
+}
+
+#[test]
 fn the_step_3_codes_from_program_section_8() {
     assert_eq!(E::GameNotScheduled as u32, 2); // 6002
     assert_eq!(E::GameAlreadyMarked as u32, 3); // 6003
@@ -132,5 +145,5 @@ fn every_error_in_program_section_8_order() {
             "{variant:?} is not at index {index}"
         );
     }
-    assert_eq!(EXPECTED.len(), 65);
+    assert_eq!(EXPECTED.len(), 69);
 }

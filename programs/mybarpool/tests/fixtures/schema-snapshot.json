@@ -1524,6 +1524,12 @@
           "optional": true
         },
         {
+          "name": "memo_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
           "name": "system_program",
           "writable": false,
           "signer": false,
@@ -1796,6 +1802,12 @@
           "optional": false
         },
         {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
           "name": "pool",
           "writable": true,
           "signer": false,
@@ -2049,6 +2061,12 @@
           "optional": true
         },
         {
+          "name": "memo_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
           "name": "system_program",
           "writable": false,
           "signer": false,
@@ -2134,6 +2152,12 @@
           "optional": true
         },
         {
+          "name": "memo_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
           "name": "system_program",
           "writable": false,
           "signer": false,
@@ -2178,6 +2202,12 @@
         },
         {
           "name": "new_var",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "slot_hashes",
           "writable": false,
           "signer": false,
           "optional": false
@@ -2251,6 +2281,12 @@
         },
         {
           "name": "associated_token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "memo_program",
           "writable": false,
           "signer": false,
           "optional": true
@@ -2336,6 +2372,12 @@
         },
         {
           "name": "associated_token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "memo_program",
           "writable": false,
           "signer": false,
           "optional": true
@@ -2651,6 +2693,12 @@
           "optional": true
         },
         {
+          "name": "memo_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
           "name": "system_program",
           "writable": false,
           "signer": false,
@@ -2719,6 +2767,12 @@
         },
         {
           "name": "associated_token_program",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "memo_program",
           "writable": false,
           "signer": false,
           "optional": true
@@ -3274,6 +3328,18 @@
     {
       "name": "BoxAlreadySponsored",
       "code": 6065
+    },
+    {
+      "name": "VarEndAtMismatch",
+      "code": 6066
+    },
+    {
+      "name": "SampleWindowOpen",
+      "code": 6067
+    },
+    {
+      "name": "DrawAfterScores",
+      "code": 6068
     }
   ]
 }

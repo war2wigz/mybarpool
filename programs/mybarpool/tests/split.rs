@@ -13,8 +13,8 @@ use common::*;
 use mollusk_svm::result::{Check, InstructionResult};
 use mollusk_svm::Mollusk;
 use mybarpool::{
-    BoxesSplit, CreatePoolParams, GameRecord, GameStatus, MybarpoolError as E, PayoutPreset, Pool,
-    PoolClosed, PoolStatus, SponsorshipClosed,
+    BoxesSplit, CreatePoolParams, GameKey, GameRecord, GameStatus, MybarpoolError as E,
+    PayoutPreset, Pool, PoolClosed, PoolStatus, SponsorshipClosed,
 };
 use solana_account::Account;
 use solana_instruction::Instruction;
@@ -22,6 +22,10 @@ use solana_pubkey::Pubkey;
 
 fn custom(code: u32) -> solana_program_error::ProgramError {
     solana_program_error::ProgramError::Custom(code)
+}
+
+fn anchor(code: ErrorCode) -> u32 {
+    code as u32
 }
 
 const UNPAID_AFTER_Q1: u64 = 880_000_000; // 1.1 SOL − 0.22
@@ -267,6 +271,76 @@ fn split_needs_a_suspended_game() {
             err(E::NotSuspended),
         );
     }
+}
+
+#[test]
+fn split_continues_a_pool_an_owner_reclaimed_into_split_on_a_final_game() {
+    // 2026-10-23 audit, money F2. An owner's `reclaim` on a Drawn pool with fees paid moves it
+    // to Split with the share fixed, on a game in any status (here Final). The keeper's `split`
+    // then pays the remaining owners at that share without the game being Suspended: the
+    // status check reads `game.status == Suspended || pool.status == Split`.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(RECLAIM_AT);
+    let pool = after_q1(&f);
+    let key = pool_key(&pool);
+    let accounts = setup(&f, &m, &pool, &record_with_quarters(4));
+    let reclaimed = ok(
+        &m,
+        &reclaim_ix(&f.buyer, &pool, &standard_game(), None, None),
+        &accounts,
+    );
+    let p1 = decode_pool(account_of(&reclaimed, &key));
+    assert_eq!((p1.status, p1.abandoned), (PoolStatus::Split, true));
+    let r = ok(
+        &m,
+        &sp(&f, &p1, &[f.creator, f.buyer_2]),
+        &reclaimed.resulting_accounts,
+    );
+    let end = decode_pool(account_of(&r, &key));
+    assert_eq!(end.unpaid_prize_pool, 0);
+    assert_eq!(end.returned, 0x1FF_FFFF);
+    assert_eq!(end.split_amount, p1.split_amount);
+    assert_eq!(
+        delta(&r, &reclaimed.resulting_accounts, &f.creator),
+        i128::from(5 * SPLIT_AMOUNT)
+    );
+    assert_eq!(
+        delta(&r, &reclaimed.resulting_accounts, &f.buyer_2),
+        i128::from(10 * SPLIT_AMOUNT)
+    );
+    assert_eq!(account_of(&r, &vault_pda(&key).0).lamports, rent_for(0));
+    // A Drawn pool on a Final game is still NotSuspended: the relaxation is for Split only.
+    let accounts = setup(&f, &m, &pool, &record_with_quarters(4));
+    fails_with(
+        &m,
+        &sp(&f, &pool, &three(&f)),
+        &accounts,
+        err(E::NotSuspended),
+    );
+}
+
+#[test]
+fn split_with_another_game_record_is_constraint_has_one() {
+    // 2026-10-23 audit, accounts F4: the game record is the pool's own.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(SCHEDULED + 7_200);
+    let pool = after_q1(&f);
+    let mut accounts = setup(&f, &m, &pool, &marked_record(GameStatus::Suspended));
+    let other_key = GameKey {
+        week: standard_key().week + 1,
+        ..standard_key()
+    };
+    let (other_game, _) = game_pda(&other_key, SCHEDULED);
+    let mut other = marked_record(GameStatus::Suspended);
+    other.key = other_key;
+    accounts.push((other_game, game_record_account(&other)));
+    let batch: Vec<_> = three(&f).iter().map(|o| (*o, None)).collect();
+    let ix = split_ix(&f.keeper, &pool, &other_game, &batch, None);
+    m.process_and_validate_instruction(
+        &ix,
+        &accounts,
+        &[Check::err(custom(anchor(ErrorCode::ConstraintHasOne)))],
+    );
 }
 
 #[test]

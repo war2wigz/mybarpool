@@ -785,6 +785,28 @@ fn buy_link_after_rotate_gate_key_takes_only_the_new_key() {
 }
 
 #[test]
+fn rotate_gate_key_refuses_the_default_key_and_the_program_id() {
+    // PROGRAM §4.3 (GateKeyMissing) and the 2026-10-23 audit, gating L2: the program id reads
+    // as "absent" through `buy`'s optional account, so it is refused like the default key.
+    let f = Fixture::new();
+    let m = mollusk_for_pools(T0, SLOT_HASH);
+    let pool = link_pool(&f);
+    let accounts = pool_accounts(
+        &f,
+        &m,
+        &f.expected_config(),
+        &pool,
+        rent_for(0) + 5 * PRICE,
+        1,
+    );
+    for key in [Pubkey::default(), to_m(&mybarpool::ID)] {
+        let r = m.process_instruction(&rotate_gate_key_ix(&f.creator, &pool, &key), &accounts);
+        assert_eq!(custom_error(&r), Some(err(E::GateKeyMissing)));
+        assert_eq!(decode_pool(account_of(&r, &pool_key(&f))), pool);
+    }
+}
+
+#[test]
 fn buy_link_by_the_creator_is_gated_too() {
     // PROGRAM §4.3: "The creator buying in their own gated pool through buy is gated like
     // anyone else." ARCHITECTURE › Limits: 5 own boxes, so the creator at 5 needs a raise.
@@ -900,7 +922,9 @@ fn buy_allowlist_proof_of_33_entries_is_invalid() {
     assert_eq!(
         proof
             .iter()
-            .fold(allowlist::leaf(&to_a(&f.buyer)), |acc, s| allowlist::node(&acc, s)),
+            .fold(allowlist::leaf(&to_a(&f.buyer)), |acc, s| allowlist::node(
+                &acc, s
+            )),
         root
     );
     assert!(!allowlist::verify(&root, &to_a(&f.buyer), &proof));
@@ -1091,7 +1115,8 @@ fn buy_gated_is_composable() {
 #[test]
 fn gating_events_and_layout_are_unchanged() {
     // PROGRAM §3.3: Pool::SIZE 1,442, access_type 186, gate_key 187, allowlist_root 219;
-    // §8: 66 errors (6000–6065); the IDL is 27 / 6 / 25 / 66 after the 2026-10-21 `sponsor_box`
+    // §8: 69 errors (6000–6068); the IDL is 27 / 6 / 25 / 69 after the 2026-10-21 `sponsor_box`
+    // and the 2026-10-23 internal audit's three errors
     // (layout.rs and errors.rs hold the per-field and per-code assertions).
     assert_eq!(Pool::SIZE, 1_442);
     assert_eq!(err(E::VarCommitMismatch), 6064);
@@ -1101,7 +1126,7 @@ fn gating_events_and_layout_are_unchanged() {
     let n = |k: &str| idl[k].as_array().unwrap().len();
     assert_eq!(
         (n("instructions"), n("accounts"), n("events"), n("errors")),
-        (27, 6, 25, 66)
+        (27, 6, 25, 69)
     );
     let buy = idl["instructions"]
         .as_array()

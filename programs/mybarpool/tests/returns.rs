@@ -14,8 +14,8 @@ use common::*;
 use mollusk_svm::result::{Check, InstructionResult};
 use mollusk_svm::Mollusk;
 use mybarpool::{
-    BoxesReturned, GameRecord, GameStatus, MybarpoolError as E, PayoutPreset, Pool, PoolCancelled,
-    PoolClosed, PoolStatus, SponsorshipReturned,
+    BoxesReturned, GameKey, GameRecord, GameStatus, MybarpoolError as E, PayoutPreset, Pool,
+    PoolCancelled, PoolClosed, PoolStatus, SponsorshipReturned,
 };
 use solana_account::Account;
 use solana_instruction::Instruction;
@@ -1435,4 +1435,39 @@ fn split_never_pays_the_default_key() {
         &result.resulting_accounts,
     );
     assert_eq!(custom_error(&again), Some(err(E::NothingToReturn)));
+}
+
+#[test]
+fn return_boxes_with_another_game_record_is_constraint_has_one() {
+    // 2026-10-23 audit, accounts F4: a marked record for another game does not make this
+    // pool returnable (`has_one = game`).
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(SCHEDULED - 3_600);
+    let pool = sol_pool(&f, PoolStatus::Open, &unfilled_15_plan(&f));
+    let mut accounts = setup(&f, &m, &pool, &standard_record(), 1);
+    let other_key = GameKey {
+        week: standard_key().week + 1,
+        ..standard_key()
+    };
+    let (other_game, _) = game_pda(&other_key, SCHEDULED);
+    let mut other = marked_record(GameStatus::Cancelled);
+    other.key = other_key;
+    accounts.push((other_game, game_record_account(&other)));
+    let batch: Vec<_> = [f.buyer].iter().map(|o| (*o, None)).collect();
+    let ix = return_boxes_ix(
+        &f.keeper,
+        &pool,
+        &other_game,
+        Some(counter(&f)),
+        &batch,
+        None,
+    );
+    fails_with(&m, &ix, &accounts, anchor(ErrorCode::ConstraintHasOne));
+    // The genuine record before kickoff: NotReturnable.
+    fails_with(
+        &m,
+        &rb(&f, &pool, Some(counter(&f)), &[f.buyer]),
+        &accounts,
+        err(E::NotReturnable),
+    );
 }

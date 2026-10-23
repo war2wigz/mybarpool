@@ -32,6 +32,8 @@ pub fn handle_rotate_gate_key(ctx: Context<RotateGateKey>, new_key: Pubkey) -> R
         MybarpoolError::InvalidAccessType
     );
     require_keys_neq!(new_key, Pubkey::default(), MybarpoolError::GateKeyMissing);
+    // The optional-account convention in `buy` reads the program id as "absent" (audit L2).
+    require_keys_neq!(new_key, crate::ID, MybarpoolError::GateKeyMissing);
     pool.gate_key = new_key;
     emit_cpi!(GateKeyRotated {
         time: now,

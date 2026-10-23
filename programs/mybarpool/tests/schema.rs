@@ -414,7 +414,11 @@ fn the_committed_idl_matches_the_schema_snapshot_or_extends_it_additively() {
     let committed: Snapshot = serde_json::from_str(&text).expect("snapshot JSON");
     compare(&committed, &current).unwrap_or_else(|e| panic!("PROGRAM §10 Layout: {e}"));
     // The Step 8 freeze 26 / 6 / 24 / 65, plus the 2026-10-21 `sponsor_box`, `BoxSponsored` and
-    // `BoxAlreadySponsored`: 27 / 6 / 25 / 66.
+    // `BoxAlreadySponsored` (27 / 6 / 25 / 66), plus the 2026-10-23 internal audit's three
+    // errors: 27 / 6 / 25 / 69. The audit also re-froze the snapshot with the account-list
+    // changes it made (`memo_program` on the seven paying instructions, `game` on `draw`,
+    // `slot_hashes` on `replace_var`): the one non-additive change since the freeze, before any
+    // mainnet deployment (PROGRAM §10 Layout).
     assert_eq!(
         (
             current.instructions.len(),
@@ -422,7 +426,7 @@ fn the_committed_idl_matches_the_schema_snapshot_or_extends_it_additively() {
             current.events.len(),
             current.errors.len()
         ),
-        (27, 6, 25, 66)
+        (27, 6, 25, 69)
     );
     assert_eq!(
         current
@@ -511,7 +515,7 @@ fn the_additive_changes_pass_and_everything_else_fails() {
     });
     more.errors.push(ErrorSchema {
         name: "SomethingNew".into(),
-        code: 6066,
+        code: 6069,
     });
     compare(&committed, &more).unwrap();
 
@@ -519,11 +523,11 @@ fn the_additive_changes_pass_and_everything_else_fails() {
     let mut skip = committed.clone();
     skip.errors.push(ErrorSchema {
         name: "SomethingNew".into(),
-        code: 6070,
+        code: 6073,
     });
     assert!(compare(&committed, &skip)
         .unwrap_err()
-        .contains("next free code is 6066"));
+        .contains("next free code is 6069"));
 
     // A new Pool field before reserved, reserved shrunk by its size: fine (the Step 5b shape).
     let mut grown = committed.clone();

@@ -506,6 +506,64 @@ fn reclaim_composes_with_neighbours() {
 // reclaim_sponsorship
 // ---------------------------------------------------------------------------
 
+/// An older game record (40 days before the standard one, so its 30-day reclaim timer has run
+/// out) planted beside the standard one; the key of the planted record.
+fn older_game_record(accounts: &mut Vec<(Pubkey, Account)>) -> Pubkey {
+    let old_sched = SCHEDULED - 40 * 86_400;
+    let (old_game, _) = game_pda(&standard_key(), old_sched);
+    accounts.push((
+        old_game,
+        game_record_account(&fresh_record(standard_key(), old_sched)),
+    ));
+    old_game
+}
+
+#[test]
+fn reclaim_with_another_game_record_is_constraint_has_one() {
+    // 2026-10-23 audit, accounts F4: the 30-day clock runs from the pool's own game record
+    // (`has_one = game`), so an older record whose timer has run out does not bypass it.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(SCHEDULED + 86_400);
+    let pool = sol_pool(&f, PoolStatus::Open, &unfilled_15_plan(&f));
+    let mut accounts = setup(&f, &m, &pool, &standard_record(), 1);
+    let old_game = older_game_record(&mut accounts);
+    fails_with(
+        &m,
+        &reclaim_ix(&f.buyer, &pool, &old_game, Some(counter(&f)), None),
+        &accounts,
+        anchor(ErrorCode::ConstraintHasOne),
+    );
+    // The genuine record at the same time is simply too early.
+    fails_with(
+        &m,
+        &rc(&f, &f.buyer, &pool, Some(counter(&f))),
+        &accounts,
+        err(E::ReclaimTooEarly),
+    );
+}
+
+#[test]
+fn reclaim_sponsorship_with_another_game_record_is_constraint_has_one() {
+    // 2026-10-23 audit, accounts F4, the sponsorship twin.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(SCHEDULED + 86_400);
+    let pool = sponsored_open(&f);
+    let mut accounts = with_sponsorship(&f, &m, &pool, &standard_record(), 1);
+    let old_game = older_game_record(&mut accounts);
+    fails_with(
+        &m,
+        &reclaim_sponsorship_ix(&f.sponsor, &pool, &old_game, Some(counter(&f)), None),
+        &accounts,
+        anchor(ErrorCode::ConstraintHasOne),
+    );
+    fails_with(
+        &m,
+        &reclaim_sponsorship_ix(&f.sponsor, &pool, &standard_game(), Some(counter(&f)), None),
+        &accounts,
+        err(E::ReclaimTooEarly),
+    );
+}
+
 fn sponsored_open(f: &Fixture) -> Pool {
     sponsored(
         sol_pool(f, PoolStatus::Open, &unfilled_15_plan(f)),

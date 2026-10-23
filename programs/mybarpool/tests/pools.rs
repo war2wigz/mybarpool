@@ -343,6 +343,19 @@ fn gate_key_and_allowlist_root_must_match_the_access_type() {
     for params in created {
         expect_create(&f, &m, &c, params, Ok(()));
     }
+    // 2026-10-23 audit, gating L2: `buy` takes the gate as an Anchor optional account, which
+    // reads this program's id as "absent", so a pool gated on it could never sell.
+    expect_create(
+        &f,
+        &m,
+        &c,
+        CreatePoolParams {
+            access_type: AccessType::Link,
+            gate_key: mybarpool::ID,
+            ..sol_params(0)
+        },
+        Err(err(E::GateKeyMissing)),
+    );
 }
 
 #[test]

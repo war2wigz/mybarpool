@@ -660,7 +660,7 @@ fn events_count_one_per_owner_paid_and_never_a_token_cpi() {
 
 #[test]
 fn layout_and_idl_counts_are_unchanged_but_for_the_new_items() {
-    // "Read this first" item 2: Pool::SIZE 1442; 66 errors and IDL 27 / 6 / 25 / 66 since
+    // "Read this first" item 2: Pool::SIZE 1442; 69 errors and IDL 27 / 6 / 25 / 69 since
     // the 2026-10-21 `sponsor_box`.
     assert_eq!(Pool::SIZE, 1442);
     let idl: serde_json::Value = serde_json::from_str(
@@ -679,7 +679,7 @@ fn layout_and_idl_counts_are_unchanged_but_for_the_new_items() {
             count("events"),
             count("errors")
         ),
-        (27, 6, 25, 66)
+        (27, 6, 25, 69)
     );
     let names: Vec<&str> = idl["instructions"]
         .as_array()

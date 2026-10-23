@@ -180,6 +180,9 @@ pub fn handle_create_pool(ctx: Context<CreatePool>, params: CreatePoolParams) ->
         (params.gate_key != Pubkey::default()) == (params.access_type == AccessType::Link),
         MybarpoolError::InvalidAccessType
     );
+    // `buy` takes the gate as an Anchor optional account, which reads this program's id as
+    // "absent"; a pool gated on it could never sell (2026-10-23 audit, gating L2).
+    require_keys_neq!(params.gate_key, crate::ID, MybarpoolError::GateKeyMissing);
     require!(
         (params.allowlist_root != [0u8; 32]) == (params.access_type == AccessType::Allowlist),
         MybarpoolError::InvalidAccessType
