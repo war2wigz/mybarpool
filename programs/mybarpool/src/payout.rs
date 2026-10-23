@@ -17,6 +17,8 @@ pub(crate) struct Spl<'a, 'info> {
     pub mint: &'a InterfaceAccount<'info, Mint>,
     pub token_program: &'a Interface<'info, TokenInterface>,
     pub associated_token_program: &'a Program<'info, AssociatedToken>,
+    /// The SPL Memo program, for a destination that requires a memo (PROGRAM §5.4).
+    pub memo_program: &'a AccountInfo<'info>,
 }
 
 /// One payment out of the vault to a verified wallet (PROGRAM §5.4): SOL by
@@ -61,6 +63,7 @@ pub(crate) fn pay_out<'info>(
                 ata,
                 pool_info,
                 spl.token_program,
+                spl.memo_program,
                 pool_seeds,
                 amount,
             )

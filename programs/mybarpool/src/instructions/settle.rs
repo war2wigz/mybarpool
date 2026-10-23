@@ -11,7 +11,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::{get_associated_token_address_with_program_id, AssociatedToken};
 use anchor_spl::token_interface::{Mint, TokenInterface};
 
-use crate::constants::{CONFIG_SEED, POOL_SEED, VAULT_SEED};
+use crate::constants::{CONFIG_SEED, MEMO_PROGRAM, POOL_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
 use crate::events::QuarterSettled;
 use crate::money::{prize_pool, quarter_prizes, FeeAmounts};
@@ -94,6 +94,11 @@ pub struct Settle<'info> {
     pub token_program: Option<Interface<'info, TokenInterface>>,
     /// The associated-token program, a fixed address; SPL pools only.
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
+    /// CHECK: `address = MEMO_PROGRAM`, executable.
+    /// The SPL Memo program, for a destination that requires a memo before an incoming
+    /// transfer (PROGRAM §5.4); SPL pools only.
+    #[account(address = MEMO_PROGRAM, executable)]
+    pub memo_program: Option<UncheckedAccount<'info>>,
     /// For the SOL transfers out of the vault and any ATA rent.
     pub system_program: Program<'info, System>,
 }
@@ -121,6 +126,7 @@ pub fn handle_settle(ctx: Context<Settle>, quarter: u8) -> Result<()> {
         integrator_token_account,
         token_program,
         associated_token_program,
+        memo_program,
         system_program,
         ..
     } = ctx.accounts;
@@ -173,6 +179,9 @@ pub fn handle_settle(ctx: Context<Settle>, quarter: u8) -> Result<()> {
         let associated_token_program = associated_token_program
             .as_ref()
             .ok_or(ErrorCode::ConstraintAccountIsNone)?;
+        let memo_program = memo_program
+            .as_ref()
+            .ok_or(ErrorCode::ConstraintAccountIsNone)?;
         require_keys_eq!(token_program.key(), pool.token_program);
         let ata = |wallet: &Pubkey| {
             get_associated_token_address_with_program_id(wallet, &mint.key(), &token_program.key())
@@ -215,6 +224,7 @@ pub fn handle_settle(ctx: Context<Settle>, quarter: u8) -> Result<()> {
             mint,
             token_program,
             associated_token_program,
+            memo_program: memo_program.as_ref(),
         })
     } else {
         None

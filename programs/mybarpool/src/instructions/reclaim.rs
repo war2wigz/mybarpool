@@ -8,7 +8,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenInterface};
 
-use crate::constants::{BOXES, COUNTER_SEED, POOL_SEED, RECLAIM_DELAY, VAULT_SEED};
+use crate::constants::{BOXES, COUNTER_SEED, MEMO_PROGRAM, POOL_SEED, RECLAIM_DELAY, VAULT_SEED};
 use crate::errors::MybarpoolError;
 use crate::events::BoxesReclaimed;
 use crate::instructions::return_boxes::spl_plumbing;
@@ -57,6 +57,11 @@ pub struct Reclaim<'info> {
     pub token_program: Option<Interface<'info, TokenInterface>>,
     /// The associated-token program, a fixed address; SPL pools only.
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
+    /// CHECK: `address = MEMO_PROGRAM`, executable.
+    /// The SPL Memo program, for a destination that requires a memo before an incoming
+    /// transfer (PROGRAM §5.4); SPL pools only.
+    #[account(address = MEMO_PROGRAM, executable)]
+    pub memo_program: Option<UncheckedAccount<'info>>,
     /// For the SOL transfer out of the vault and any ATA rent.
     pub system_program: Program<'info, System>,
 }
@@ -73,6 +78,7 @@ pub fn handle_reclaim(ctx: Context<Reclaim>) -> Result<()> {
         box_owner_token_account,
         token_program,
         associated_token_program,
+        memo_program,
         system_program,
         ..
     } = ctx.accounts;
@@ -88,7 +94,13 @@ pub fn handle_reclaim(ctx: Context<Reclaim>) -> Result<()> {
     require!(pool.owners.contains(&owner), MybarpoolError::NotOwner);
     let boxes = pool.unreturned_boxes_of(&owner);
     require!(!boxes.is_empty(), MybarpoolError::NothingToReturn);
-    let spl = spl_plumbing(pool, mint, token_program, associated_token_program)?;
+    let spl = spl_plumbing(
+        pool,
+        mint,
+        token_program,
+        associated_token_program,
+        memo_program,
+    )?;
 
     // (1) An unresolved pool is abandoned: out of Open through the counter, then to the
     // terminal status its fees decide.

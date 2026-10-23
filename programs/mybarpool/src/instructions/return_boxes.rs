@@ -9,7 +9,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenInterface};
 
-use crate::constants::{CONFIG_SEED, COUNTER_SEED, POOL_SEED, VAULT_SEED};
+use crate::constants::{CONFIG_SEED, COUNTER_SEED, MEMO_PROGRAM, POOL_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
 use crate::events::BoxesReturned;
 use crate::payout::{pay_owner_batch, Spl, VaultCtx};
@@ -60,6 +60,11 @@ pub struct ReturnBoxes<'info> {
     pub token_program: Option<Interface<'info, TokenInterface>>,
     /// The associated-token program, a fixed address; SPL pools only.
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
+    /// CHECK: `address = MEMO_PROGRAM`, executable.
+    /// The SPL Memo program, for a destination that requires a memo before an incoming
+    /// transfer (PROGRAM §5.4); SPL pools only.
+    #[account(address = MEMO_PROGRAM, executable)]
+    pub memo_program: Option<UncheckedAccount<'info>>,
     /// For the SOL transfers out of the vault and any ATA rent.
     pub system_program: Program<'info, System>,
     // Remaining accounts: the owner batch, `[owner]*` on SOL, `[owner, ata]*` on SPL.
@@ -77,6 +82,7 @@ pub fn handle_return_boxes<'info>(ctx: Context<'info, ReturnBoxes<'info>>) -> Re
         mint,
         token_program,
         associated_token_program,
+        memo_program,
         system_program,
         ..
     } = ctx.accounts;
@@ -97,7 +103,13 @@ pub fn handle_return_boxes<'info>(ctx: Context<'info, ReturnBoxes<'info>>) -> Re
         MybarpoolError::NotReturnable
     );
 
-    let spl = spl_plumbing(pool, mint, token_program, associated_token_program)?;
+    let spl = spl_plumbing(
+        pool,
+        mint,
+        token_program,
+        associated_token_program,
+        memo_program,
+    )?;
 
     // (1) The first call moves the pool to Returned (and out of Open, through the counter).
     let mut changed = false;
@@ -161,6 +173,7 @@ pub(crate) fn spl_plumbing<'a, 'info>(
     mint: &'a Option<InterfaceAccount<'info, Mint>>,
     token_program: &'a Option<Interface<'info, TokenInterface>>,
     associated_token_program: &'a Option<Program<'info, AssociatedToken>>,
+    memo_program: &'a Option<UncheckedAccount<'info>>,
 ) -> Result<Option<Spl<'a, 'info>>> {
     if pool.token == 0 {
         return Ok(None);
@@ -172,10 +185,14 @@ pub(crate) fn spl_plumbing<'a, 'info>(
     let associated_token_program = associated_token_program
         .as_ref()
         .ok_or(ErrorCode::ConstraintAccountIsNone)?;
+    let memo_program = memo_program
+        .as_ref()
+        .ok_or(ErrorCode::ConstraintAccountIsNone)?;
     require_keys_eq!(token_program.key(), pool.token_program);
     Ok(Some(Spl {
         mint,
         token_program,
         associated_token_program,
+        memo_program: memo_program.as_ref(),
     }))
 }

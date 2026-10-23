@@ -13,7 +13,7 @@ use anchor_spl::token_2022::spl_token_2022::extension::StateWithExtensions;
 use anchor_spl::token_2022::spl_token_2022::state::Account as TokenAccount2022;
 use anchor_spl::token_interface::{Mint, TokenInterface};
 
-use crate::constants::{CONFIG_SEED, POOL_SEED, VAULT_SEED};
+use crate::constants::{CONFIG_SEED, MEMO_PROGRAM, POOL_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
 use crate::events::PoolClosed;
 use crate::state::{PlatformConfig, Pool, PoolStatus};
@@ -64,6 +64,11 @@ pub struct ClosePool<'info> {
     pub token_program: Option<Interface<'info, TokenInterface>>,
     /// The associated-token program, a fixed address; SPL pools only.
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
+    /// CHECK: `address = MEMO_PROGRAM`, executable.
+    /// The SPL Memo program, for a destination that requires a memo before an incoming
+    /// transfer (PROGRAM §5.4); SPL pools only.
+    #[account(address = MEMO_PROGRAM, executable)]
+    pub memo_program: Option<UncheckedAccount<'info>>,
     /// For the SOL sweep out of the vault and any ATA rent.
     pub system_program: Program<'info, System>,
 }
@@ -91,6 +96,7 @@ pub fn handle_close_pool(ctx: Context<ClosePool>) -> Result<()> {
         destination_token_account,
         token_program,
         associated_token_program,
+        memo_program,
         system_program,
         ..
     } = ctx.accounts;
@@ -125,11 +131,11 @@ pub fn handle_close_pool(ctx: Context<ClosePool>) -> Result<()> {
     let dust = if pool.token == 0 {
         // SOL: the lamports above the vault's own rent-exempt minimum are the dust; the whole
         // balance, rent included, moves in one transfer so the account ends at zero and the
-        // runtime reaps it.
+        // runtime reaps it. The dust is an event value only; a rent minimum raised above the
+        // balance the vault was created with reports zero rather than refusing the close
+        // (2026-10-23 audit, money F3).
         let balance = vault_info.lamports();
-        let dust = balance
-            .checked_sub(Rent::get()?.minimum_balance(0))
-            .ok_or(MybarpoolError::MathOverflow)?;
+        let dust = balance.saturating_sub(Rent::get()?.minimum_balance(0));
         transfer_out_sol(
             &vault_info,
             &destination,
@@ -148,6 +154,9 @@ pub fn handle_close_pool(ctx: Context<ClosePool>) -> Result<()> {
             .as_ref()
             .ok_or(ErrorCode::ConstraintAccountIsNone)?;
         let destination_ata = destination_token_account
+            .as_ref()
+            .ok_or(ErrorCode::ConstraintAccountIsNone)?;
+        let memo_program = memo_program
             .as_ref()
             .ok_or(ErrorCode::ConstraintAccountIsNone)?;
         require_keys_eq!(token_program.key(), pool.token_program);
@@ -183,6 +192,7 @@ pub fn handle_close_pool(ctx: Context<ClosePool>) -> Result<()> {
                 &destination_ata.to_account_info(),
                 &pool_info,
                 token_program,
+                &memo_program.to_account_info(),
                 &pool_seeds,
                 dust,
             )?;

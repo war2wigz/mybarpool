@@ -8,7 +8,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenInterface};
 
-use crate::constants::{BOXES, CONFIG_SEED, POOL_SEED, VAULT_SEED};
+use crate::constants::{BOXES, CONFIG_SEED, MEMO_PROGRAM, POOL_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
 use crate::events::BoxesSplit;
 use crate::instructions::return_boxes::spl_plumbing;
@@ -51,6 +51,11 @@ pub struct Split<'info> {
     pub token_program: Option<Interface<'info, TokenInterface>>,
     /// The associated-token program, a fixed address; SPL pools only.
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
+    /// CHECK: `address = MEMO_PROGRAM`, executable.
+    /// The SPL Memo program, for a destination that requires a memo before an incoming
+    /// transfer (PROGRAM §5.4); SPL pools only.
+    #[account(address = MEMO_PROGRAM, executable)]
+    pub memo_program: Option<UncheckedAccount<'info>>,
     /// For the SOL transfers out of the vault and any ATA rent.
     pub system_program: Program<'info, System>,
     // Remaining accounts: the owner batch. No counter: a Drawn pool is never Open.
@@ -74,13 +79,17 @@ pub fn handle_split<'info>(ctx: Context<'info, Split<'info>>) -> Result<()> {
         mint,
         token_program,
         associated_token_program,
+        memo_program,
         system_program,
         ..
     } = ctx.accounts;
 
-    // PROGRAM §4.6 checks, in order.
+    // PROGRAM §4.6 checks, in order. A pool already in Split got there through this
+    // instruction on a Suspended game or through an owner's `reclaim` on any game; the share is
+    // fixed either way, so the keeper may finish the batch without the game being Suspended
+    // (2026-10-23 audit, money F2).
     require!(
-        game.status == GameStatus::Suspended,
+        game.status == GameStatus::Suspended || pool.status == PoolStatus::Split,
         MybarpoolError::NotSuspended
     );
     require!(pool.fees_paid, MybarpoolError::NotSplittable);
@@ -88,7 +97,13 @@ pub fn handle_split<'info>(ctx: Context<'info, Split<'info>>) -> Result<()> {
         matches!(pool.status, PoolStatus::Drawn | PoolStatus::Split),
         MybarpoolError::NotSplittable
     );
-    let spl = spl_plumbing(pool, mint, token_program, associated_token_program)?;
+    let spl = spl_plumbing(
+        pool,
+        mint,
+        token_program,
+        associated_token_program,
+        memo_program,
+    )?;
 
     // (1) The first call fixes the share and moves the pool to Split.
     let mut changed = false;

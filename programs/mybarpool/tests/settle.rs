@@ -1305,6 +1305,166 @@ fn skr_token_2022_settle_q1_with_atas_missing() {
     );
 }
 
+/// A Token-2022 ATA-shaped account (ImmutableOwner) for `mint` owned by `owner`, with the
+/// owner-controlled `MemoTransfer` extension present and `require_incoming_transfer_memos`
+/// set to `required` (2026-10-23 audit F1). Any owner can put their own account in this state
+/// with `Reallocate` + `EnableRequiredTransferMemos`; the mint's extension screen cannot see it.
+fn memo_transfer_account(mint: &Pubkey, owner: &Pubkey, required: bool) -> solana_account::Account {
+    use anchor_spl::token_2022::spl_token_2022::extension::immutable_owner::ImmutableOwner;
+    use anchor_spl::token_2022::spl_token_2022::extension::memo_transfer::MemoTransfer;
+    use anchor_spl::token_2022::spl_token_2022::extension::{
+        BaseStateWithExtensionsMut, ExtensionType, StateWithExtensionsMut,
+    };
+    use anchor_spl::token_2022::spl_token_2022::state::{
+        Account as TokenAccount2022, AccountState,
+    };
+    let exts = [ExtensionType::ImmutableOwner, ExtensionType::MemoTransfer];
+    let len = ExtensionType::try_calculate_account_len::<TokenAccount2022>(&exts).expect("len");
+    let mut data = vec![0u8; len];
+    {
+        let mut state = StateWithExtensionsMut::<TokenAccount2022>::unpack_uninitialized(&mut data)
+            .expect("unpack");
+        state.init_extension::<ImmutableOwner>(true).expect("io");
+        let memo = state.init_extension::<MemoTransfer>(true).expect("memo");
+        memo.require_incoming_transfer_memos = required.into();
+        state.base = TokenAccount2022 {
+            mint: to_a(mint),
+            owner: to_a(owner),
+            amount: 0,
+            delegate: None.into(),
+            state: AccountState::Initialized,
+            is_native: None.into(),
+            delegated_amount: 0,
+            close_authority: None.into(),
+        };
+        state.pack_base();
+        state.init_account_type().expect("account type");
+    }
+    solana_account::Account {
+        lamports: rent_for(len),
+        data,
+        owner: token_2022_program_id(),
+        executable: false,
+        rent_epoch: 0,
+    }
+}
+
+#[test]
+fn settle_pays_a_token_2022_destination_that_requires_memos() {
+    // 2026-10-23 audit F1 (High). Token-2022 refuses a transfer into an account whose owner
+    // enabled `MemoTransfer` unless the previous instruction at the same depth was a Memo; a
+    // creator (who always holds a fee leg) could hold every settlement of a pool by configuring
+    // their own account. The payout writes a Memo first when the destination asks for one. Both
+    // states of the flag settle; the memo CPI appears only for the account that requires it.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(T0);
+    let config = f.config_with_skr();
+    let pool = drawn_pool_for_settlement(&f, &config, &skr_params(0), 0);
+    let spl = SplSettle::derived(&f, &pool, &f.buyer_2);
+    let expected = settled_pool(&f, &config, &skr_params(0), 0, 1, true);
+    for required in [false, true] {
+        let mut accounts = settlement_accounts(&f, &m, &config, &pool, 1, Some(25 * PRICE_SKR));
+        for k in [spl.winner_ata, spl.fee_ata] {
+            set_account(&mut accounts, k, system_account(0));
+        }
+        set_account(
+            &mut accounts,
+            spl.creator_ata,
+            memo_transfer_account(&f.skr_mint, &f.creator, required),
+        );
+        let ix = settle_ix(
+            &f,
+            &f.keeper,
+            &pool,
+            &standard_game(),
+            1,
+            &f.buyer_2,
+            SettleAccounts {
+                integrator: None,
+                spl: Some(spl),
+            },
+        );
+        let result = m.process_and_validate_instruction(&ix, &accounts, &[Check::success()]);
+        for (k, amount) in [
+            (spl.winner_ata, expected.quarter_prize[0]),
+            (spl.fee_ata, expected.platform_fee),
+            (spl.creator_ata, expected.creator_fee),
+        ] {
+            assert_eq!(decode_token_amount(account_of(&result, &k)), amount);
+        }
+        let memos = inner_program_ids(&result)
+            .iter()
+            .filter(|k| **k == memo_program_id())
+            .count();
+        assert_eq!(memos, usize::from(required), "required = {required}");
+        // The event CPI is still the only event.
+        assert_eq!(event_names(&result), ["QuarterSettled"]);
+    }
+}
+
+#[test]
+fn split_pays_a_token_2022_owner_that_requires_memos() {
+    // 2026-10-23 audit F1, the owner-batch path (`pay_owner_batch` → the same `pay_out`).
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(SCHEDULED + 7_200);
+    let config = f.config_with_skr();
+    let pool = settled_pool(&f, &config, &skr_params(0), 0, 1, true);
+    let batch = SplBatch::of(&pool);
+    let per_box = pool.unpaid_prize_pool / 25;
+    let mut accounts = returns_accounts(
+        &f,
+        &m,
+        &config,
+        &pool,
+        &marked_record(mybarpool::GameStatus::Suspended),
+        0,
+        Some(pool.unpaid_prize_pool),
+    );
+    let buyer_ata = ata(&f.buyer, &f.skr_mint, &token_2022_program_id());
+    set_account(
+        &mut accounts,
+        buyer_ata,
+        memo_transfer_account(&f.skr_mint, &f.buyer, true),
+    );
+    let entries = [(f.buyer, Some(buyer_ata))];
+    let ix = split_ix(&f.keeper, &pool, &standard_game(), &entries, Some(batch));
+    let result = m.process_and_validate_instruction(&ix, &accounts, &[Check::success()]);
+    assert_eq!(
+        decode_token_amount(account_of(&result, &buyer_ata)),
+        10 * per_box
+    );
+    assert_eq!(event_names(&result), ["BoxesSplit"]);
+}
+
+#[test]
+fn an_ore_destination_never_takes_the_memo_path() {
+    // Classic Token accounts have no extensions: the memo program account is required on every
+    // SPL pool for a static account list, but no Memo is written.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(T0);
+    let pool = drawn_pool_for_settlement(&f, &f.expected_config(), &ore_params(0), 0);
+    let (spl, accounts) = ore_setup(&f, &m, &pool, 1, 25 * PRICE_ORE, &f.buyer_2, false);
+    let ix = settle_ix(
+        &f,
+        &f.keeper,
+        &pool,
+        &standard_game(),
+        1,
+        &f.buyer_2,
+        SettleAccounts {
+            integrator: None,
+            spl: Some(spl),
+        },
+    );
+    let result = m.process_and_validate_instruction(&ix, &accounts, &[Check::success()]);
+    let programs = inner_program_ids(&result);
+    assert!(
+        programs.len() > 4,
+        "ATA creates, transfers and the event CPI"
+    );
+    assert!(!programs.contains(&memo_program_id()));
+}
+
 // ---------------------------------------------------------------------------
 // close_pool
 // ---------------------------------------------------------------------------
@@ -1323,6 +1483,54 @@ fn close_setup(
         sol_vault_account(vault_lamports),
     );
     accounts
+}
+
+#[test]
+fn close_pool_sol_under_a_raised_rent_minimum_still_closes_and_reports_no_dust() {
+    // 2026-10-23 audit, money F3. The vault was funded at the rent minimum of its creation; if
+    // the network's minimum has since risen above the vault's balance, the dust is reported as
+    // zero (saturating) and the whole balance still moves — the close is never refused.
+    let f = Fixture::new();
+    let mut m = mollusk_for_settlement(T0);
+    m.sysvars.rent.lamports_per_byte *= 4;
+    let pool = settled_pool(
+        &f,
+        &f.expected_config(),
+        &sol_params(0),
+        1_000_000_003,
+        4,
+        true,
+    );
+    let mut pool = pool;
+    pool.sponsorships_open = 0;
+    let vault_balance = rent_for(0) + 2;
+    assert!(m.sysvars.rent.minimum_balance(0) > vault_balance);
+    let mut accounts = close_setup(&f, &m, &pool, vault_balance);
+    // Every fixture account at the raised minimum, so only the program's behaviour is tested.
+    for (_, account) in accounts.iter_mut() {
+        if !account.executable && !account.data.is_empty() {
+            account.lamports = account
+                .lamports
+                .max(m.sysvars.rent.minimum_balance(account.data.len()));
+        }
+    }
+    let fw0 = lamports_of(&accounts, &f.fee_wallet);
+    let pool_rent = lamports_of(&accounts, &pool_key(&f, &pool));
+    let result = m.process_and_validate_instruction(
+        &close_pool_ix(&f, &f.stranger, &pool, None),
+        &accounts,
+        &[Check::success()],
+    );
+    assert_eq!(
+        account_of(&result, &f.fee_wallet).lamports - fw0,
+        vault_balance + pool_rent
+    );
+    assert_eq!(
+        account_of(&result, &vault_pda(&pool_key(&f, &pool)).0).lamports,
+        0
+    );
+    let ev: PoolClosed = emitted_event(&result).expect("PoolClosed");
+    assert_eq!(ev.dust, 0);
 }
 
 #[test]

@@ -12,8 +12,11 @@
 //! idempotently when missing.
 
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::instruction::Instruction;
+use anchor_lang::solana_program::program;
 use anchor_lang::system_program;
 use anchor_spl::associated_token;
+use anchor_spl::token_2022::spl_token_2022::extension::memo_transfer::MemoTransfer;
 use anchor_spl::token_2022::spl_token_2022::extension::{
     BaseStateWithExtensions, ExtensionType, StateWithExtensions,
 };
@@ -22,7 +25,7 @@ use anchor_spl::token_2022::spl_token_2022::state::{
 };
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
-use crate::constants::{POOL_SEED, VAULT_SEED};
+use crate::constants::{MEMO_PROGRAM, PAYOUT_MEMO, POOL_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
 
 /// SOL vault: the creator funds the PDA with `minimum_balance(0)` so it is rent-exempt with no
@@ -241,15 +244,18 @@ pub fn transfer_out_sol<'info>(
 /// `AUDIT-READINESS.md`. The report is attached to the handler the lint started from, so the
 /// allow sits there and on its `lib.rs` entry, not here: an attribute on this function
 /// suppresses nothing.
+#[allow(clippy::too_many_arguments)]
 pub fn transfer_out_spl<'info>(
     vault: &AccountInfo<'info>,
     mint: &InterfaceAccount<'info, Mint>,
     to_token_account: &AccountInfo<'info>,
     pool: &AccountInfo<'info>,
     token_program: &Interface<'info, TokenInterface>,
+    memo_program: &AccountInfo<'info>,
     pool_seeds: &[&[u8]],
     amount: u64,
 ) -> Result<()> {
+    memo_if_required(to_token_account, memo_program)?;
     token_interface::transfer_checked(
         CpiContext::new_with_signer(
             *token_program.key,
@@ -301,6 +307,45 @@ pub fn create_ata_idempotent<'info>(
             token_program: token_program.clone(),
         },
     ))
+}
+
+/// PROGRAM §5.4: Token-2022's `MemoTransfer` extension, which any token account's owner may
+/// enable on their own account, makes the Token program refuse an incoming transfer unless the
+/// instruction processed just before it at the same depth was a Memo. The destination is read
+/// before the transfer; when it carries the extension with incoming memos required, one Memo
+/// (`PAYOUT_MEMO`, no signers) is written through `MEMO_PROGRAM` first, so a recipient cannot
+/// hold a settlement, return or split by configuring their own account (2026-10-23 audit, F1).
+/// Classic Token accounts have no extensions and never take this path; a destination that does
+/// not exist yet (created idempotently by the caller just before) has none either.
+pub fn memo_if_required<'info>(
+    to_token_account: &AccountInfo<'info>,
+    memo_program: &AccountInfo<'info>,
+) -> Result<()> {
+    let required = {
+        let data = to_token_account.try_borrow_data()?;
+        match StateWithExtensions::<TokenAccount2022>::unpack(&data) {
+            Ok(state) => state
+                .get_extension::<MemoTransfer>()
+                .map(|memo| bool::from(memo.require_incoming_transfer_memos))
+                .unwrap_or(false),
+            Err(_) => false,
+        }
+    };
+    if !required {
+        return Ok(());
+    }
+    require_keys_eq!(
+        *memo_program.key,
+        MEMO_PROGRAM,
+        ErrorCode::ConstraintAddress
+    );
+    let memo = Instruction {
+        program_id: MEMO_PROGRAM,
+        accounts: vec![],
+        data: PAYOUT_MEMO.to_vec(),
+    };
+    program::invoke(&memo, std::slice::from_ref(memo_program))?;
+    Ok(())
 }
 
 /// PROGRAM §4.5 `close_pool`, SPL: close the vault token account (balance already swept) with

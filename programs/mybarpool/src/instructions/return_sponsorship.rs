@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenInterface};
 
-use crate::constants::{CONFIG_SEED, POOL_SEED, SPONSORSHIP_SEED, VAULT_SEED};
+use crate::constants::{CONFIG_SEED, MEMO_PROGRAM, POOL_SEED, SPONSORSHIP_SEED, VAULT_SEED};
 use crate::errors::MybarpoolError;
 use crate::events::SponsorshipReturned;
 use crate::instructions::return_boxes::spl_plumbing;
@@ -64,6 +64,11 @@ pub struct ReturnSponsorship<'info> {
     pub token_program: Option<Interface<'info, TokenInterface>>,
     /// The associated-token program, a fixed address; SPL pools only.
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
+    /// CHECK: `address = MEMO_PROGRAM`, executable.
+    /// The SPL Memo program, for a destination that requires a memo before an incoming
+    /// transfer (PROGRAM §5.4); SPL pools only.
+    #[account(address = MEMO_PROGRAM, executable)]
+    pub memo_program: Option<UncheckedAccount<'info>>,
     /// For the SOL transfer out of the vault and any ATA rent.
     pub system_program: Program<'info, System>,
 }
@@ -87,6 +92,7 @@ pub fn handle_return_sponsorship(ctx: Context<ReturnSponsorship>) -> Result<()> 
         sponsor_token_account,
         token_program,
         associated_token_program,
+        memo_program,
         system_program,
         ..
     } = ctx.accounts;
@@ -97,7 +103,13 @@ pub fn handle_return_sponsorship(ctx: Context<ReturnSponsorship>) -> Result<()> 
         pool.status == PoolStatus::Returned,
         MybarpoolError::NotReturnable
     );
-    let spl = spl_plumbing(pool, mint, token_program, associated_token_program)?;
+    let spl = spl_plumbing(
+        pool,
+        mint,
+        token_program,
+        associated_token_program,
+        memo_program,
+    )?;
 
     let pool_key = pool.key();
     let (game_key, creator_key) = (pool.game, pool.creator);

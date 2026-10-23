@@ -40,6 +40,20 @@ pub use state::*;
 
 declare_id!("3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw");
 
+// ARCHITECTURE › Open source: the SECURITY.md contact embedded in the deployed binary, where
+// `solana-security-txt` and the explorers read it (2026-10-23 audit, M1). Not compiled into the
+// CPI / test library build, which has no entrypoint.
+#[cfg(not(feature = "no-entrypoint"))]
+solana_security_txt::security_txt! {
+    name: "MyBarPool",
+    project_url: "https://mybarpool.com",
+    contacts: "email:security@mybarpool.com,link:https://github.com/war2wigz/mybarpool/security/advisories/new",
+    policy: "https://github.com/war2wigz/mybarpool/blob/main/SECURITY.md",
+    preferred_languages: "en",
+    source_code: "https://github.com/war2wigz/mybarpool",
+    auditors: "Internal review, docs/audits/2026-10-23-internal-audit.md"
+}
+
 #[program]
 pub mod mybarpool {
     use super::*;

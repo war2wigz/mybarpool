@@ -7,7 +7,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenInterface};
 
-use crate::constants::{COUNTER_SEED, POOL_SEED, RECLAIM_DELAY, SPONSORSHIP_SEED, VAULT_SEED};
+use crate::constants::{
+    COUNTER_SEED, MEMO_PROGRAM, POOL_SEED, RECLAIM_DELAY, SPONSORSHIP_SEED, VAULT_SEED,
+};
 use crate::errors::MybarpoolError;
 use crate::events::SponsorshipReturned;
 use crate::instructions::return_boxes::spl_plumbing;
@@ -67,6 +69,11 @@ pub struct ReclaimSponsorship<'info> {
     pub token_program: Option<Interface<'info, TokenInterface>>,
     /// The associated-token program, a fixed address; SPL pools only.
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
+    /// CHECK: `address = MEMO_PROGRAM`, executable.
+    /// The SPL Memo program, for a destination that requires a memo before an incoming
+    /// transfer (PROGRAM §5.4); SPL pools only.
+    #[account(address = MEMO_PROGRAM, executable)]
+    pub memo_program: Option<UncheckedAccount<'info>>,
     /// For the SOL transfer out of the vault and any ATA rent.
     pub system_program: Program<'info, System>,
 }
@@ -91,6 +98,7 @@ pub fn handle_reclaim_sponsorship(ctx: Context<ReclaimSponsorship>) -> Result<()
         sponsor_token_account,
         token_program,
         associated_token_program,
+        memo_program,
         system_program,
         ..
     } = ctx.accounts;
@@ -104,7 +112,13 @@ pub fn handle_reclaim_sponsorship(ctx: Context<ReclaimSponsorship>) -> Result<()
         .ok_or(MybarpoolError::MathOverflow)?;
     require!(now >= reclaim_at, MybarpoolError::ReclaimTooEarly);
     pool.require_not_settled()?;
-    let spl = spl_plumbing(pool, mint, token_program, associated_token_program)?;
+    let spl = spl_plumbing(
+        pool,
+        mint,
+        token_program,
+        associated_token_program,
+        memo_program,
+    )?;
 
     // (1) An unresolved pool is abandoned and Returned (fees are untaken here).
     if pool.is_unresolved() {
