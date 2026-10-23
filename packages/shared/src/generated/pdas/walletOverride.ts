@@ -11,11 +11,12 @@ import {
   getBytesEncoder,
   getProgramDerivedAddress,
   type Address,
+  type HasAddress,
   type ProgramDerivedAddress,
 } from "@solana/kit";
 
 export type WalletOverrideSeeds = {
-  wallet: Address;
+  wallet: Address | HasAddress;
 };
 
 export async function findWalletOverridePda(

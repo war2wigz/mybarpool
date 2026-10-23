@@ -32,6 +32,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type MaybeAccount,
   type MaybeEncodedAccount,
   type ReadonlyUint8Array,
@@ -59,9 +60,9 @@ export type CreatorCounter = {
 
 export type CreatorCounterArgs = {
   /** The creator; part of the seeds. */
-  creator: Address;
+  creator: Address | HasAddress;
   /** The `GameRecord`; part of the seeds. */
-  game: Address;
+  game: Address | HasAddress;
   /** Pools in `Open` by this creator on this game. */
   openCount: number;
   /** PDA bump. */

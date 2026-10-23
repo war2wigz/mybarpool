@@ -27,6 +27,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
@@ -95,7 +96,7 @@ export type SetWalletOverrideInstructionData = {
 };
 
 export type SetWalletOverrideInstructionDataArgs = {
-  wallet: Address;
+  wallet: Address | HasAddress;
   maxOpenPools: number;
   maxOwnBoxes: number;
 };

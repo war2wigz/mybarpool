@@ -25,6 +25,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
@@ -78,7 +79,7 @@ export type RotateGateKeyInstruction<
 
 export type RotateGateKeyInstructionData = { discriminator: ReadonlyUint8Array; newKey: Address };
 
-export type RotateGateKeyInstructionDataArgs = { newKey: Address };
+export type RotateGateKeyInstructionDataArgs = { newKey: Address | HasAddress };
 
 export function getRotateGateKeyInstructionDataEncoder(): FixedSizeEncoder<RotateGateKeyInstructionDataArgs> {
   return transformEncoder(

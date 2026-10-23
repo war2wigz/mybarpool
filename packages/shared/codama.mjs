@@ -1,7 +1,9 @@
 // Renders the generated client under `src/generated/` from the committed IDL (never from
 // `target/idl/`, whose address CI rewrites to a fresh keypair). Run by `npm run generate`;
 // the committed output is regenerated and diffed in CI, so nothing under `src/generated/` is
-// ever edited by hand. Codama 1.11.0, nodes-from-anchor 1.5.6, renderers-js 2.5.0, pinned.
+// ever edited by hand. Codama 1.11.0, nodes-from-anchor 1.5.6, renderers-js 2.6.0, pinned; 2.7 and
+// 2.8 render a program-address override that is not valid under exactOptionalPropertyTypes
+// (CHANGELOG, 2026-10-23).
 import { readFileSync, writeFileSync } from "node:fs";
 
 import { rootNodeFromAnchor } from "@codama/nodes-from-anchor";

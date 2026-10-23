@@ -31,6 +31,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -63,11 +64,11 @@ export type VarReplacedEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** The `Var` abandoned (its address stays in history). */
-  oldVar: Address;
+  oldVar: Address | HasAddress;
   /** The `Var` bound instead. */
-  newVar: Address;
+  newVar: Address | HasAddress;
   /** The new `Var`'s `end_at`. */
   endAt: number | bigint;
   /** `pool.var_replacements` after this call (1 or 2). */

@@ -44,6 +44,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type MaybeAccount,
   type MaybeEncodedAccount,
   type ReadonlyUint8Array,
@@ -187,19 +188,19 @@ export type Pool = {
 
 export type PoolArgs = {
   /** The `GameRecord` (PROGRAM §3.2); part of the seeds. */
-  game: Address;
+  game: Address | HasAddress;
   /** The creator; part of the seeds; receives `creator_fee` at the first settlement. */
-  creator: Address;
+  creator: Address | HasAddress;
   /** Client-chosen; part of the seeds. */
   nonce: number | bigint;
   /** PROGRAM §2 token index: 0 SOL, 1 SKR, 2 ORE. */
   token: number;
   /** Copied from `config.tokens[token]` at creation; `Pubkey::default()` for SOL. */
-  mint: Address;
+  mint: Address | HasAddress;
   /** Copied from `config.tokens[token]` at creation; `Pubkey::default()` for SOL. */
-  tokenProgram: Address;
+  tokenProgram: Address | HasAddress;
   /** The vault (PROGRAM §3.4) at `["vault", pool]`. */
-  vault: Address;
+  vault: Address | HasAddress;
   /** Per box, base units; on the token's ladder at creation. */
   price: number | bigint;
   /** PROGRAM §1 payout preset. */
@@ -207,13 +208,13 @@ export type PoolArgs = {
   /** PROGRAM §3.3 access type. */
   accessType: AccessTypeArgs;
   /** Co-signer for `Link` pools; default otherwise. */
-  gateKey: Address;
+  gateKey: Address | HasAddress;
   /** Merkle root for `Allowlist` pools; zero otherwise. */
   allowlistRoot: ReadonlyUint8Array;
   /** 0–500: extra fee to the creator on top of the base share. */
   creatorAddonBps: number;
   /** The client that created the pool, when it takes a fee; default when unset. */
-  integrator: Address;
+  integrator: Address | HasAddress;
   /** 0–500; 0 when `integrator` is unset. */
   integratorBps: number;
   /** PROGRAM §5.1, fixed at creation. */
@@ -227,7 +228,7 @@ export type PoolArgs = {
   /** Boxes sold, 0–25. */
   sold: number;
   /** Box owners by 0-based index; `Pubkey::default()` is unsold. */
-  owners: Array<Address>;
+  owners: Array<Address | HasAddress>;
   /** Boxes the creator holds in this pool, against the creator cap. */
   creatorBoxes: number;
   /** Sum of all sponsorships (PROGRAM §3.7); never part of the fee base. */
@@ -237,7 +238,7 @@ export type PoolArgs = {
   /** `Sponsorship` accounts not yet closed. */
   sponsorshipsOpen: number;
   /** Entropy `Var` recorded at lock (Step 5); default until then. */
-  var: Address;
+  var: Address | HasAddress;
   /** The `Var`'s `end_at` (Step 5); 0 until then. */
   varEndAt: number | bigint;
   /** Slot at which `sample_var` ran (Step 5); 0 until then. */

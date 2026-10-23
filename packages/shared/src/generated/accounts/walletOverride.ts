@@ -32,6 +32,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type MaybeAccount,
   type MaybeEncodedAccount,
   type ReadonlyUint8Array,
@@ -59,7 +60,7 @@ export type WalletOverride = {
 
 export type WalletOverrideArgs = {
   /** The wallet these limits apply to; also the PDA seed. */
-  wallet: Address;
+  wallet: Address | HasAddress;
   /** Open pools per game for this wallet; ≥ 1. */
   maxOpenPools: number;
   /** Boxes in its own pool for this wallet; 1–MAX_OWN_BOXES_ABSOLUTE. */

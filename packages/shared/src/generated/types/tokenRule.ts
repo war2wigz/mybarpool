@@ -22,6 +22,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
 } from "@solana/kit";
 
 /** PROGRAM §3.1 `TokenRule`: one per token index (0 SOL, 1 SKR, 2 ORE). 98 bytes. */
@@ -48,9 +49,9 @@ export type TokenRuleArgs = {
   /** Pools may be created in this token. */
   enabled: boolean;
   /** The mint; `Pubkey::default()` for SOL and for a token whose mint is not yet known. */
-  mint: Address;
+  mint: Address | HasAddress;
   /** Token or Token-2022; `Pubkey::default()` for SOL. */
-  tokenProgram: Address;
+  tokenProgram: Address | HasAddress;
   /** Base-unit decimals: 9 SOL, 11 ORE, SKR per mint. */
   decimals: number;
   /** Minimum box price, base units; ≥ 1. */

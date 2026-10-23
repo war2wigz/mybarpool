@@ -38,6 +38,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type MaybeAccount,
   type MaybeEncodedAccount,
   type ReadonlyUint8Array,
@@ -93,13 +94,13 @@ export type PlatformConfig = {
 
 export type PlatformConfigArgs = {
   /** PROGRAM §3.1: the Squads vault on mainnet. May not be the default pubkey. */
-  admin: Address;
+  admin: Address | HasAddress;
   /** PROGRAM §3.1: the keeper's KMS key. */
-  scoreAuthority: Address;
+  scoreAuthority: Address | HasAddress;
   /** PROGRAM §3.1: the Entropy provider whose commits `set_var` accepts. */
-  entropyProvider: Address;
+  entropyProvider: Address | HasAddress;
   /** PROGRAM §3.1: platform fee destination (SOL directly; SPL to its ATA). */
-  feeWallet: Address;
+  feeWallet: Address | HasAddress;
   /** PROGRAM §3.1: ≤ PLATFORM_BPS_MAX; initial 500. */
   platformBps: number;
   /** PROGRAM §3.1: ≤ CREATOR_BPS_MAX; initial 500. */

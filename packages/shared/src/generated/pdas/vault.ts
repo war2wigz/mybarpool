@@ -11,11 +11,12 @@ import {
   getBytesEncoder,
   getProgramDerivedAddress,
   type Address,
+  type HasAddress,
   type ProgramDerivedAddress,
 } from "@solana/kit";
 
 export type VaultSeeds = {
-  pool: Address;
+  pool: Address | HasAddress;
 };
 
 export async function findVaultPda(

@@ -33,6 +33,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -78,7 +79,7 @@ export type QuarterSettledEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** 1–4. */
   quarter: number;
   /** Cumulative home score at the end of the quarter (PROGRAM §3.2). */
@@ -91,7 +92,7 @@ export type QuarterSettledEventArgs = {
    */
   boxIndex: number;
   /** The box's owner at settlement, who was paid `amount`. */
-  winner: Address;
+  winner: Address | HasAddress;
   /** `quarter_prize[quarter − 1]`; 0 on a zero-share quarter. */
   amount: number | bigint;
   /** True on the call that moved the fees (the first non-zero prize). */

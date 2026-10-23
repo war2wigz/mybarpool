@@ -31,6 +31,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 import {
@@ -89,15 +90,15 @@ export type PoolCreatedEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** The `GameRecord`. */
-  game: Address;
+  game: Address | HasAddress;
   /** The creator. */
-  creator: Address;
+  creator: Address | HasAddress;
   /** PROGRAM §2 token index. */
   token: number;
   /** The mint; default for SOL. */
-  mint: Address;
+  mint: Address | HasAddress;
   /** Per box, base units. */
   price: number | bigint;
   /** PROGRAM §1 payout preset. */
@@ -107,7 +108,7 @@ export type PoolCreatedEventArgs = {
   /** 0–500. */
   creatorAddonBps: number;
   /** Default when unset. */
-  integrator: Address;
+  integrator: Address | HasAddress;
   /** 0–500; 0 when unset. */
   integratorBps: number;
   /** PROGRAM §5.1. */

@@ -33,6 +33,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 import {
@@ -85,13 +86,13 @@ export type ConfigUpdatedEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** PROGRAM §3.1 `admin`. */
-  admin: Address;
+  admin: Address | HasAddress;
   /** PROGRAM §3.1 `score_authority`. */
-  scoreAuthority: Address;
+  scoreAuthority: Address | HasAddress;
   /** PROGRAM §3.1 `entropy_provider`. */
-  entropyProvider: Address;
+  entropyProvider: Address | HasAddress;
   /** PROGRAM §3.1 `fee_wallet`. */
-  feeWallet: Address;
+  feeWallet: Address | HasAddress;
   /** PROGRAM §3.1 `platform_bps`. */
   platformBps: number;
   /** PROGRAM §3.1 `creator_bps`. */

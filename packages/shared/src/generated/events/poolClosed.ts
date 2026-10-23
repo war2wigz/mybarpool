@@ -27,6 +27,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -57,9 +58,9 @@ export type PoolClosedEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address (now closed). */
-  pool: Address;
+  pool: Address | HasAddress;
   /** `fee_wallet`, or the creator on an abandoned pool. */
-  destination: Address;
+  destination: Address | HasAddress;
   /**
    * The amount swept: the SPL vault's token balance; for SOL, the lamports above the vault's
    * own rent-exempt minimum (that minimum and the pool's rent go to the same destination but

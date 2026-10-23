@@ -32,6 +32,7 @@ import {
   type Codec,
   type Decoder,
   type Encoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -60,9 +61,9 @@ export type BoxesReclaimedEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** The signer, paid for their own boxes. */
-  owner: Address;
+  owner: Address | HasAddress;
   /** The boxes paid in this call, 0-based, ascending. */
   boxes: ReadonlyUint8Array;
   /** The sum paid in this call. */

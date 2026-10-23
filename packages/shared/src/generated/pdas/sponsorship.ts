@@ -11,12 +11,13 @@ import {
   getBytesEncoder,
   getProgramDerivedAddress,
   type Address,
+  type HasAddress,
   type ProgramDerivedAddress,
 } from "@solana/kit";
 
 export type SponsorshipSeeds = {
-  pool: Address;
-  sponsor: Address;
+  pool: Address | HasAddress;
+  sponsor: Address | HasAddress;
 };
 
 export async function findSponsorshipPda(

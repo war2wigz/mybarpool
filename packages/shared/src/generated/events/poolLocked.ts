@@ -25,6 +25,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -49,7 +50,7 @@ export type PoolLockedEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** `pool.locked_at`, the same instant. */
   lockedAt: number | bigint;
 };

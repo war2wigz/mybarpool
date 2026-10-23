@@ -29,6 +29,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -61,11 +62,11 @@ export type VarSampledEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** The `Var`. */
-  var: Address;
+  var: Address | HasAddress;
   /** Whoever signed `sample_var` (anyone may). */
-  sampler: Address;
+  sampler: Address | HasAddress;
   /** The slot `sample_var` ran in. */
   slot: number | bigint;
   /** The `Var`'s `end_at`. */

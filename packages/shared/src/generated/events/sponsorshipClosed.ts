@@ -27,6 +27,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -53,9 +54,9 @@ export type SponsorshipClosedEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** `sponsorship.wallet`, who receives the account's rent. */
-  sponsor: Address;
+  sponsor: Address | HasAddress;
   /** The committed amount, informational. */
   amount: number | bigint;
 };

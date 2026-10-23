@@ -27,6 +27,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -57,9 +58,9 @@ export type DigitsDrawnEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** The `Var` drawn on. */
-  var: Address;
+  var: Address | HasAddress;
   /** The revealed Entropy value. */
   value: ReadonlyUint8Array;
   /** Home (column) digits; lane `l` = positions `l`, `l + 5`. */

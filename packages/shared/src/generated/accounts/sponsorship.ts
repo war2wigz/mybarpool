@@ -36,6 +36,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type MaybeAccount,
   type MaybeEncodedAccount,
   type ReadonlyUint8Array,
@@ -68,9 +69,9 @@ export type Sponsorship = {
 
 export type SponsorshipArgs = {
   /** The pool; part of the seeds. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** The sponsor; part of the seeds; the only possible return destination. */
-  wallet: Address;
+  wallet: Address | HasAddress;
   /** Cumulative amount in the pool's token, base units. */
   amount: number | bigint;
   /** PDA bump. */

@@ -19,7 +19,7 @@
     "format:fix": "prettier --write \"**/*.{ts,json,md,yml,yaml}\""
   },
   "devDependencies": {
-    "@solana/kit": "8.4.0",
+    "@solana/kit": "8.5.0",
     "@types/node": "22.20.5",
     "prettier": "3.9.9",
     "typescript": "5.9.3",

@@ -32,6 +32,7 @@ import {
   type Codec,
   type Decoder,
   type Encoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -62,9 +63,9 @@ export type BoxesBoughtEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** The buyer. */
-  buyer: Address;
+  buyer: Address | HasAddress;
   /** 0-based box indices in assignment order (labels 1–25 are made in `packages/shared`). */
   boxes: ReadonlyUint8Array;
   /** Boxes bought. */

@@ -25,6 +25,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 import {
@@ -57,7 +58,7 @@ export type GameCreatedEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The record's address. */
-  game: Address;
+  game: Address | HasAddress;
   /** PROGRAM §2 game key. */
   key: GameKeyArgs;
   /** PROGRAM §3.2 `scheduled_kickoff`; also `recorded_kickoff` at creation. */

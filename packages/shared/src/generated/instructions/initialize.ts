@@ -34,6 +34,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
@@ -133,11 +134,11 @@ export type InitializeInstructionData = {
 
 export type InitializeInstructionDataArgs = {
   /** PROGRAM §3.1 `score_authority`: the keeper's key. */
-  scoreAuthority: Address;
+  scoreAuthority: Address | HasAddress;
   /** PROGRAM §3.1 `entropy_provider`. */
-  entropyProvider: Address;
+  entropyProvider: Address | HasAddress;
   /** PROGRAM §3.1 `fee_wallet`. */
-  feeWallet: Address;
+  feeWallet: Address | HasAddress;
   /** PROGRAM §3.1 `platform_bps`; ≤ PLATFORM_BPS_MAX. */
   platformBps: number;
   /** PROGRAM §3.1 `creator_bps`; ≤ CREATOR_BPS_MAX. */

@@ -27,6 +27,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -53,7 +54,7 @@ export type OverrideSetEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The wallet the limits apply to. */
-  wallet: Address;
+  wallet: Address | HasAddress;
   /** PROGRAM §3.6 `max_open_pools`. */
   maxOpenPools: number;
   /** PROGRAM §3.6 `max_own_boxes`. */

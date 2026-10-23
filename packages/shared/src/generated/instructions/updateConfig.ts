@@ -35,6 +35,7 @@ import {
   type Codec,
   type Decoder,
   type Encoder,
+  type HasAddress,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
@@ -130,13 +131,13 @@ export type UpdateConfigInstructionData = {
 
 export type UpdateConfigInstructionDataArgs = {
   /** New `admin`; takes effect for the next instruction. May not be the default pubkey. */
-  admin: OptionOrNullable<Address>;
+  admin: OptionOrNullable<Address | HasAddress>;
   /** PROGRAM §3.1 `score_authority`. */
-  scoreAuthority: OptionOrNullable<Address>;
+  scoreAuthority: OptionOrNullable<Address | HasAddress>;
   /** PROGRAM §3.1 `entropy_provider`. */
-  entropyProvider: OptionOrNullable<Address>;
+  entropyProvider: OptionOrNullable<Address | HasAddress>;
   /** PROGRAM §3.1 `fee_wallet`. */
-  feeWallet: OptionOrNullable<Address>;
+  feeWallet: OptionOrNullable<Address | HasAddress>;
   /** PROGRAM §3.1 `platform_bps`; up or down, never above PLATFORM_BPS_MAX. */
   platformBps: OptionOrNullable<number>;
   /** PROGRAM §3.1 `creator_bps`; never above CREATOR_BPS_MAX. */

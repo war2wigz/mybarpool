@@ -27,6 +27,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -53,7 +54,7 @@ export type OverrideClosedEventArgs = {
   /** Unix time of the close. */
   time: number | bigint;
   /** The wallet whose override was closed. */
-  wallet: Address;
+  wallet: Address | HasAddress;
   /** The `max_open_pools` that was in force. */
   maxOpenPools: number;
   /** The `max_own_boxes` that was in force. */

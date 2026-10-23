@@ -25,6 +25,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
@@ -86,7 +87,7 @@ export type CloseWalletOverrideInstructionData = {
   wallet: Address;
 };
 
-export type CloseWalletOverrideInstructionDataArgs = { wallet: Address };
+export type CloseWalletOverrideInstructionDataArgs = { wallet: Address | HasAddress };
 
 export function getCloseWalletOverrideInstructionDataEncoder(): FixedSizeEncoder<CloseWalletOverrideInstructionDataArgs> {
   return transformEncoder(

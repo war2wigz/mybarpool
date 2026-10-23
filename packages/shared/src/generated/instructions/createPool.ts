@@ -31,6 +31,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
@@ -166,13 +167,13 @@ export type CreatePoolInstructionDataArgs = {
   /** PROGRAM §3.3 access type; a byte outside 0–2 fails to deserialise. Step 4: `Public` only. */
   accessType: AccessTypeArgs;
   /** Co-signer for `Link`; must be default otherwise. */
-  gateKey: Address;
+  gateKey: Address | HasAddress;
   /** Merkle root for `Allowlist`; must be zero otherwise. */
   allowlistRoot: ReadonlyUint8Array;
   /** 0–500, within `config.addon_budget_bps` together with `integrator_bps`. */
   creatorAddonBps: number;
   /** The client taking `integrator_bps`; default iff `integrator_bps == 0`. */
-  integrator: Address;
+  integrator: Address | HasAddress;
   /** 0–500. */
   integratorBps: number;
   /** Boxes the creator buys in the same instruction, 0–`max_own_boxes`. */

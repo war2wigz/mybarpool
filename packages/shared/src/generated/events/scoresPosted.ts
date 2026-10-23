@@ -31,6 +31,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -63,7 +64,7 @@ export type ScoresPostedEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The record's address. */
-  game: Address;
+  game: Address | HasAddress;
   /** 1–4; 4 is the final score. */
   quarter: number;
   /** Cumulative home score. */

@@ -6,7 +6,7 @@
  * @see https://github.com/codama-idl/codama
  */
 
-import { address, type Address, type ReadonlyUint8Array } from "@solana/kit";
+import { address, type Address, type HasAddress, type ReadonlyUint8Array } from "@solana/kit";
 
 export const ADDON_BUDGET_BPS_MAX: number = 500;
 

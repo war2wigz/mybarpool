@@ -11,12 +11,13 @@ import {
   getBytesEncoder,
   getProgramDerivedAddress,
   type Address,
+  type HasAddress,
   type ProgramDerivedAddress,
 } from "@solana/kit";
 
 export type CounterSeeds = {
-  creator: Address;
-  game: Address;
+  creator: Address | HasAddress;
+  game: Address | HasAddress;
 };
 
 export async function findCounterPda(

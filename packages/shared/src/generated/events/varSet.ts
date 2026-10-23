@@ -29,6 +29,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type HasAddress,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
@@ -57,9 +58,9 @@ export type VarSetEventArgs = {
   /** Unix time of the write. */
   time: number | bigint;
   /** The pool's address. */
-  pool: Address;
+  pool: Address | HasAddress;
   /** The `Var` bound. */
-  var: Address;
+  var: Address | HasAddress;
   /** The `Var`'s `end_at`, the slot whose hash will be sampled. */
   endAt: number | bigint;
   /** The `Var`'s `commit`, now recorded on the pool (Step 5b). */
