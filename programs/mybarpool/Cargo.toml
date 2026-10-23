@@ -69,7 +69,7 @@ solana-pubkey = "4.1"
 # bpf_loader_upgradeable` re-exports, only to switch its `serde` feature on;
 # Mollusk's own 7.x is a separate crate. The Token / Token-2022 mint fixtures
 # use the SPL interface crates anchor-spl re-exports, so no line here.
-bincode = "1.3"
+bincode = "3.0"
 solana-loader-v3-interface = { version = "6.1", features = ["serde"] }
 
 [[bench]]
