@@ -52,8 +52,15 @@ pub fn require_fresh(v: &Var, config: &PlatformConfig, slot: u64) -> Result<()> 
     require!(v.samples == 1, MybarpoolError::VarNotFresh);
     require!(v.is_auto == 0, MybarpoolError::VarNotFresh);
     require!(v.end_at > slot, MybarpoolError::VarNotFresh);
-    // PROGRAM §1 `VAR_END_AT_MAX_LEAD`: an end slot too far ahead would hold the pool behind a
-    // window nobody can sample or replace until it passes (2026-10-23 audit F2).
+    Ok(())
+}
+
+/// PROGRAM §1 `VAR_END_AT_MAX_LEAD`, `set_var` only: an end slot too far ahead would hold the
+/// pool behind a window nobody can sample, and that the admin could not replace until it
+/// passed (2026-10-23 audit F2). `replace_var` does not apply it: the replacement is opened
+/// for a multisig that needs hours to execute, the admin chooses it, and the admin can always
+/// `cancel_pool` instead.
+pub fn require_lead(v: &Var, slot: u64) -> Result<()> {
     let latest = slot
         .checked_add(VAR_END_AT_MAX_LEAD)
         .ok_or(MybarpoolError::MathOverflow)?;
@@ -72,6 +79,7 @@ pub fn handle_set_var(ctx: Context<SetVar>) -> Result<()> {
     require_keys_eq!(pool.var, Pubkey::default(), MybarpoolError::VarAlreadySet);
     let v = Var::try_from_account(var)?;
     require_fresh(&v, config, clock.slot)?;
+    require_lead(&v, clock.slot)?;
 
     pool.var = var.key();
     pool.var_end_at = v.end_at;

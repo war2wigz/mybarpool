@@ -1294,19 +1294,25 @@ fn set_var_refuses_an_end_slot_more_than_the_lead_ahead() {
         decode_pool(account_of(&r, &pool_key(&f))).var_end_at,
         900 + VAR_END_AT_MAX_LEAD
     );
-    // The same clause in replace_var, through `require_fresh`.
+    // replace_var is not bound by the lead: the replacement is opened for a multisig that
+    // needs hours to execute (the keeper opens it 36,000 slots out), and the admin chooses it.
+    // The missed window (end slot 100, long gone from an empty sysvar at slot 900) is required.
     let bound = locked_pool_with_var(&f, &var, 100);
     let b = var_pda(&f.keeper, VAR_ID + 1).0;
     let b_fields = VarFields {
         id: VAR_ID + 1,
-        ..f.fresh_var(900 + VAR_END_AT_MAX_LEAD + 1)
+        ..f.fresh_var(900 + 36_000)
     };
     let mut accounts = draw_accounts(&f, &m, &bound, Some((&var, &f.fresh_var(100))));
     set_account(&mut accounts, b, var_account(&b_fields));
-    m.process_and_validate_instruction(
+    let r = m.process_and_validate_instruction(
         &replace_var_ix(&f.admin, &bound, &b),
         &accounts,
-        &[Check::err(custom(err(E::VarNotFresh)))],
+        &[Check::success()],
+    );
+    assert_eq!(
+        decode_pool(account_of(&r, &pool_key(&f))).var_end_at,
+        900 + 36_000
     );
 }
 

@@ -98,9 +98,10 @@ pub const NO_WINNING_BOX: u8 = 255;
 #[constant]
 pub const VAR_REPLACEMENTS_MAX: u8 = 2;
 
-/// PROGRAM §1 `VAR_END_AT_MAX_LEAD`: how far ahead of the current slot a bound `Var`'s `end_at`
-/// may be (1,500 slots, about ten minutes). Without it a keeper could park a pool behind an end
-/// slot the admin cannot replace until it passes (2026-10-23 audit F2).
+/// PROGRAM §1 `VAR_END_AT_MAX_LEAD`: how far ahead of the current slot the `end_at` of a `Var`
+/// bound by `set_var` may be (1,500 slots, about five minutes at 200 ms). Without it a keeper
+/// could park a pool behind an end slot the admin cannot replace until it passes (2026-10-23
+/// audit F2). `replace_var` is the admin's and is not bound by it.
 #[constant]
 pub const VAR_END_AT_MAX_LEAD: u64 = 1_500;
 
