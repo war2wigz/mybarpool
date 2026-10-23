@@ -56,6 +56,8 @@ export type ReplaceVarInstruction<
   TAccountConfig extends string | AccountMeta<string> = string,
   TAccountPool extends string | AccountMeta<string> = string,
   TAccountNewVar extends string | AccountMeta<string> = string,
+  TAccountSlotHashes extends string | AccountMeta<string> =
+    "SysvarS1otHashes111111111111111111111111111",
   TAccountEventAuthority extends string | AccountMeta<string> = string,
   TAccountProgram extends string | AccountMeta<string> =
     "3jk4YM9xnpoMYK3nuaUHZ59SCDxwExfT9EHxwP2wRMBw",
@@ -70,6 +72,7 @@ export type ReplaceVarInstruction<
       TAccountConfig extends string ? ReadonlyAccount<TAccountConfig> : TAccountConfig,
       TAccountPool extends string ? WritableAccount<TAccountPool> : TAccountPool,
       TAccountNewVar extends string ? ReadonlyAccount<TAccountNewVar> : TAccountNewVar,
+      TAccountSlotHashes extends string ? ReadonlyAccount<TAccountSlotHashes> : TAccountSlotHashes,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -105,6 +108,7 @@ export type ReplaceVarAsyncInput<
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
   TAccountPool extends InstructionAccountInput = InstructionAccountInput,
   TAccountNewVar extends InstructionAccountInput = InstructionAccountInput,
+  TAccountSlotHashes extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
@@ -116,6 +120,8 @@ export type ReplaceVarAsyncInput<
   pool: TAccountPool;
   /** The fresh `Var` bound in place of `pool.var`. */
   newVar: TAccountNewVar;
+  /** gone (2026-10-23 audit F2). */
+  slotHashes?: TAccountSlotHashes;
   eventAuthority?: TAccountEventAuthority;
   program?: TAccountProgram;
 };
@@ -125,6 +131,7 @@ export async function getReplaceVarInstructionAsync<
   TAccountConfig extends InstructionAccountInput,
   TAccountPool extends InstructionAccountInput,
   TAccountNewVar extends InstructionAccountInput,
+  TAccountSlotHashes extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput,
   TProgramAddress extends Address = typeof MYBARPOOL_PROGRAM_ADDRESS,
@@ -134,6 +141,7 @@ export async function getReplaceVarInstructionAsync<
     TAccountConfig,
     TAccountPool,
     TAccountNewVar,
+    TAccountSlotHashes,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -145,6 +153,10 @@ export async function getReplaceVarInstructionAsync<
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountNewVar, InstructionAccountInputAddress<TAccountNewVar>>,
+    ResolvedInstructionAccountMeta<
+      TAccountSlotHashes,
+      InstructionAccountInputAddress<TAccountSlotHashes>
+    >,
     ResolvedInstructionAccountMeta<
       TAccountEventAuthority,
       InstructionAccountInputAddress<TAccountEventAuthority>
@@ -164,6 +176,7 @@ export async function getReplaceVarInstructionAsync<
     config: { value: input.config ?? null, isSigner: false, isWritable: false },
     pool: { value: input.pool ?? null, isSigner: false, isWritable: true },
     newVar: { value: input.newVar ?? null, isSigner: false, isWritable: false },
+    slotHashes: { value: input.slotHashes ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
     program: { value: input.program ?? null, isSigner: false, isWritable: false },
   };
@@ -175,6 +188,10 @@ export async function getReplaceVarInstructionAsync<
   // Resolve default values.
   if (!accounts.config.value) {
     accounts.config.value = await findConfigPda({ programAddress });
+  }
+  if (!accounts.slotHashes.value) {
+    accounts.slotHashes.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
   }
   if (!accounts.eventAuthority.value) {
     accounts.eventAuthority.value = await findEventAuthorityPda({ programAddress });
@@ -190,6 +207,7 @@ export async function getReplaceVarInstructionAsync<
       getAccountMeta("config", accounts.config),
       getAccountMeta("pool", accounts.pool),
       getAccountMeta("newVar", accounts.newVar),
+      getAccountMeta("slotHashes", accounts.slotHashes),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
       getAccountMeta("program", accounts.program),
     ],
@@ -201,6 +219,10 @@ export async function getReplaceVarInstructionAsync<
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountNewVar, InstructionAccountInputAddress<TAccountNewVar>>,
+    ResolvedInstructionAccountMeta<
+      TAccountSlotHashes,
+      InstructionAccountInputAddress<TAccountSlotHashes>
+    >,
     ResolvedInstructionAccountMeta<
       TAccountEventAuthority,
       InstructionAccountInputAddress<TAccountEventAuthority>
@@ -214,6 +236,7 @@ export type ReplaceVarInput<
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
   TAccountPool extends InstructionAccountInput = InstructionAccountInput,
   TAccountNewVar extends InstructionAccountInput = InstructionAccountInput,
+  TAccountSlotHashes extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
@@ -225,6 +248,8 @@ export type ReplaceVarInput<
   pool: TAccountPool;
   /** The fresh `Var` bound in place of `pool.var`. */
   newVar: TAccountNewVar;
+  /** gone (2026-10-23 audit F2). */
+  slotHashes?: TAccountSlotHashes;
   eventAuthority: TAccountEventAuthority;
   program?: TAccountProgram;
 };
@@ -234,6 +259,7 @@ export function getReplaceVarInstruction<
   TAccountConfig extends InstructionAccountInput,
   TAccountPool extends InstructionAccountInput,
   TAccountNewVar extends InstructionAccountInput,
+  TAccountSlotHashes extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput,
   TProgramAddress extends Address = typeof MYBARPOOL_PROGRAM_ADDRESS,
@@ -243,6 +269,7 @@ export function getReplaceVarInstruction<
     TAccountConfig,
     TAccountPool,
     TAccountNewVar,
+    TAccountSlotHashes,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -253,6 +280,10 @@ export function getReplaceVarInstruction<
   ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
   ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
   ResolvedInstructionAccountMeta<TAccountNewVar, InstructionAccountInputAddress<TAccountNewVar>>,
+  ResolvedInstructionAccountMeta<
+    TAccountSlotHashes,
+    InstructionAccountInputAddress<TAccountSlotHashes>
+  >,
   ResolvedInstructionAccountMeta<
     TAccountEventAuthority,
     InstructionAccountInputAddress<TAccountEventAuthority>
@@ -271,6 +302,7 @@ export function getReplaceVarInstruction<
     config: { value: input.config ?? null, isSigner: false, isWritable: false },
     pool: { value: input.pool ?? null, isSigner: false, isWritable: true },
     newVar: { value: input.newVar ?? null, isSigner: false, isWritable: false },
+    slotHashes: { value: input.slotHashes ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
     program: { value: input.program ?? null, isSigner: false, isWritable: false },
   };
@@ -280,6 +312,10 @@ export function getReplaceVarInstruction<
   >;
 
   // Resolve default values.
+  if (!accounts.slotHashes.value) {
+    accounts.slotHashes.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
   if (!accounts.program.value) {
     accounts.program.value = programAddress;
     accounts.program.isWritable = false;
@@ -291,6 +327,7 @@ export function getReplaceVarInstruction<
       getAccountMeta("config", accounts.config),
       getAccountMeta("pool", accounts.pool),
       getAccountMeta("newVar", accounts.newVar),
+      getAccountMeta("slotHashes", accounts.slotHashes),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
       getAccountMeta("program", accounts.program),
     ],
@@ -302,6 +339,10 @@ export function getReplaceVarInstruction<
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountNewVar, InstructionAccountInputAddress<TAccountNewVar>>,
+    ResolvedInstructionAccountMeta<
+      TAccountSlotHashes,
+      InstructionAccountInputAddress<TAccountSlotHashes>
+    >,
     ResolvedInstructionAccountMeta<
       TAccountEventAuthority,
       InstructionAccountInputAddress<TAccountEventAuthority>
@@ -324,8 +365,10 @@ export type ParsedReplaceVarInstruction<
     pool: TAccountMetas[2];
     /** The fresh `Var` bound in place of `pool.var`. */
     newVar: TAccountMetas[3];
-    eventAuthority: TAccountMetas[4];
-    program: TAccountMetas[5];
+    /** gone (2026-10-23 audit F2). */
+    slotHashes: TAccountMetas[4];
+    eventAuthority: TAccountMetas[5];
+    program: TAccountMetas[6];
   };
   data: ReplaceVarInstructionData;
 };
@@ -338,10 +381,10 @@ export function parseReplaceVarInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedReplaceVarInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 7) {
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
       actualAccountMetas: instruction.accounts.length,
-      expectedAccountMetas: 6,
+      expectedAccountMetas: 7,
     });
   }
   let accountIndex = 0;
@@ -357,6 +400,7 @@ export function parseReplaceVarInstruction<
       config: getNextAccount(),
       pool: getNextAccount(),
       newVar: getNextAccount(),
+      slotHashes: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },

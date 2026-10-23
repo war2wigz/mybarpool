@@ -64,6 +64,8 @@ export type ReclaimSponsorshipInstruction<
   TAccountTokenProgram extends string | AccountMeta<string> = string,
   TAccountAssociatedTokenProgram extends string | AccountMeta<string> =
     "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+  TAccountMemoProgram extends string | AccountMeta<string> =
+    "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
   TAccountSystemProgram extends string | AccountMeta<string> = "11111111111111111111111111111111",
   TAccountEventAuthority extends string | AccountMeta<string> = string,
   TAccountProgram extends string | AccountMeta<string> =
@@ -93,6 +95,9 @@ export type ReclaimSponsorshipInstruction<
       TAccountAssociatedTokenProgram extends string
         ? ReadonlyAccount<TAccountAssociatedTokenProgram>
         : TAccountAssociatedTokenProgram,
+      TAccountMemoProgram extends string
+        ? ReadonlyAccount<TAccountMemoProgram>
+        : TAccountMemoProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -140,6 +145,7 @@ export type ReclaimSponsorshipAsyncInput<
   TAccountSponsorTokenAccount extends InstructionAccountInput = InstructionAccountInput,
   TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountAssociatedTokenProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountMemoProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountSystemProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput = InstructionAccountInput,
@@ -174,6 +180,11 @@ export type ReclaimSponsorshipAsyncInput<
   tokenProgram?: TAccountTokenProgram;
   /** The associated-token program, a fixed address; SPL pools only. */
   associatedTokenProgram?: TAccountAssociatedTokenProgram;
+  /**
+   * The SPL Memo program, for a destination that requires a memo before an incoming
+   * transfer (PROGRAM §5.4); SPL pools only.
+   */
+  memoProgram?: TAccountMemoProgram;
   /** For the SOL transfer out of the vault and any ATA rent. */
   systemProgram?: TAccountSystemProgram;
   eventAuthority?: TAccountEventAuthority;
@@ -191,6 +202,7 @@ export async function getReclaimSponsorshipInstructionAsync<
   TAccountSponsorTokenAccount extends InstructionAccountInput,
   TAccountTokenProgram extends InstructionAccountInput,
   TAccountAssociatedTokenProgram extends InstructionAccountInput,
+  TAccountMemoProgram extends InstructionAccountInput,
   TAccountSystemProgram extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput,
@@ -207,6 +219,7 @@ export async function getReclaimSponsorshipInstructionAsync<
     TAccountSponsorTokenAccount,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
+    TAccountMemoProgram,
     TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
@@ -242,6 +255,10 @@ export async function getReclaimSponsorshipInstructionAsync<
     ResolvedInstructionAccountMeta<
       TAccountAssociatedTokenProgram,
       InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
+    >,
+    ResolvedInstructionAccountMeta<
+      TAccountMemoProgram,
+      InstructionAccountInputAddress<TAccountMemoProgram>
     >,
     ResolvedInstructionAccountMeta<
       TAccountSystemProgram,
@@ -280,6 +297,7 @@ export async function getReclaimSponsorshipInstructionAsync<
       isSigner: false,
       isWritable: false,
     },
+    memoProgram: { value: input.memoProgram ?? null, isSigner: false, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
     program: { value: input.program ?? null, isSigner: false, isWritable: false },
@@ -309,6 +327,10 @@ export async function getReclaimSponsorshipInstructionAsync<
     accounts.associatedTokenProgram.value =
       "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">;
   }
+  if (!accounts.memoProgram.value) {
+    accounts.memoProgram.value =
+      "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr" as Address<"MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr">;
+  }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
@@ -333,6 +355,7 @@ export async function getReclaimSponsorshipInstructionAsync<
       getAccountMeta("sponsorTokenAccount", accounts.sponsorTokenAccount),
       getAccountMeta("tokenProgram", accounts.tokenProgram),
       getAccountMeta("associatedTokenProgram", accounts.associatedTokenProgram),
+      getAccountMeta("memoProgram", accounts.memoProgram),
       getAccountMeta("systemProgram", accounts.systemProgram),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
       getAccountMeta("program", accounts.program),
@@ -370,6 +393,10 @@ export async function getReclaimSponsorshipInstructionAsync<
       InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
     >,
     ResolvedInstructionAccountMeta<
+      TAccountMemoProgram,
+      InstructionAccountInputAddress<TAccountMemoProgram>
+    >,
+    ResolvedInstructionAccountMeta<
       TAccountSystemProgram,
       InstructionAccountInputAddress<TAccountSystemProgram>
     >,
@@ -392,6 +419,7 @@ export type ReclaimSponsorshipInput<
   TAccountSponsorTokenAccount extends InstructionAccountInput = InstructionAccountInput,
   TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountAssociatedTokenProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountMemoProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountSystemProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput = InstructionAccountInput,
@@ -426,6 +454,11 @@ export type ReclaimSponsorshipInput<
   tokenProgram?: TAccountTokenProgram;
   /** The associated-token program, a fixed address; SPL pools only. */
   associatedTokenProgram?: TAccountAssociatedTokenProgram;
+  /**
+   * The SPL Memo program, for a destination that requires a memo before an incoming
+   * transfer (PROGRAM §5.4); SPL pools only.
+   */
+  memoProgram?: TAccountMemoProgram;
   /** For the SOL transfer out of the vault and any ATA rent. */
   systemProgram?: TAccountSystemProgram;
   eventAuthority: TAccountEventAuthority;
@@ -443,6 +476,7 @@ export function getReclaimSponsorshipInstruction<
   TAccountSponsorTokenAccount extends InstructionAccountInput,
   TAccountTokenProgram extends InstructionAccountInput,
   TAccountAssociatedTokenProgram extends InstructionAccountInput,
+  TAccountMemoProgram extends InstructionAccountInput,
   TAccountSystemProgram extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput,
@@ -459,6 +493,7 @@ export function getReclaimSponsorshipInstruction<
     TAccountSponsorTokenAccount,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
+    TAccountMemoProgram,
     TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
@@ -487,6 +522,10 @@ export function getReclaimSponsorshipInstruction<
   ResolvedInstructionAccountMeta<
     TAccountAssociatedTokenProgram,
     InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
+  >,
+  ResolvedInstructionAccountMeta<
+    TAccountMemoProgram,
+    InstructionAccountInputAddress<TAccountMemoProgram>
   >,
   ResolvedInstructionAccountMeta<
     TAccountSystemProgram,
@@ -524,6 +563,7 @@ export function getReclaimSponsorshipInstruction<
       isSigner: false,
       isWritable: false,
     },
+    memoProgram: { value: input.memoProgram ?? null, isSigner: false, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
     program: { value: input.program ?? null, isSigner: false, isWritable: false },
@@ -537,6 +577,10 @@ export function getReclaimSponsorshipInstruction<
   if (!accounts.associatedTokenProgram.value) {
     accounts.associatedTokenProgram.value =
       "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">;
+  }
+  if (!accounts.memoProgram.value) {
+    accounts.memoProgram.value =
+      "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr" as Address<"MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr">;
   }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
@@ -559,6 +603,7 @@ export function getReclaimSponsorshipInstruction<
       getAccountMeta("sponsorTokenAccount", accounts.sponsorTokenAccount),
       getAccountMeta("tokenProgram", accounts.tokenProgram),
       getAccountMeta("associatedTokenProgram", accounts.associatedTokenProgram),
+      getAccountMeta("memoProgram", accounts.memoProgram),
       getAccountMeta("systemProgram", accounts.systemProgram),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
       getAccountMeta("program", accounts.program),
@@ -594,6 +639,10 @@ export function getReclaimSponsorshipInstruction<
     ResolvedInstructionAccountMeta<
       TAccountAssociatedTokenProgram,
       InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
+    >,
+    ResolvedInstructionAccountMeta<
+      TAccountMemoProgram,
+      InstructionAccountInputAddress<TAccountMemoProgram>
     >,
     ResolvedInstructionAccountMeta<
       TAccountSystemProgram,
@@ -643,10 +692,15 @@ export type ParsedReclaimSponsorshipInstruction<
     tokenProgram?: TAccountMetas[8] | undefined;
     /** The associated-token program, a fixed address; SPL pools only. */
     associatedTokenProgram?: TAccountMetas[9] | undefined;
+    /**
+     * The SPL Memo program, for a destination that requires a memo before an incoming
+     * transfer (PROGRAM §5.4); SPL pools only.
+     */
+    memoProgram?: TAccountMetas[10] | undefined;
     /** For the SOL transfer out of the vault and any ATA rent. */
-    systemProgram: TAccountMetas[10];
-    eventAuthority: TAccountMetas[11];
-    program: TAccountMetas[12];
+    systemProgram: TAccountMetas[11];
+    eventAuthority: TAccountMetas[12];
+    program: TAccountMetas[13];
   };
   data: ReclaimSponsorshipInstructionData;
 };
@@ -659,10 +713,10 @@ export function parseReclaimSponsorshipInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedReclaimSponsorshipInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 13) {
+  if (instruction.accounts.length < 14) {
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
       actualAccountMetas: instruction.accounts.length,
-      expectedAccountMetas: 13,
+      expectedAccountMetas: 14,
     });
   }
   let accountIndex = 0;
@@ -688,6 +742,7 @@ export function parseReclaimSponsorshipInstruction<
       sponsorTokenAccount: getNextOptionalAccount(),
       tokenProgram: getNextOptionalAccount(),
       associatedTokenProgram: getNextOptionalAccount(),
+      memoProgram: getNextOptionalAccount(),
       systemProgram: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),

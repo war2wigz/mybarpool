@@ -62,6 +62,8 @@ export type SplitInstruction<
   TAccountTokenProgram extends string | AccountMeta<string> = string,
   TAccountAssociatedTokenProgram extends string | AccountMeta<string> =
     "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+  TAccountMemoProgram extends string | AccountMeta<string> =
+    "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
   TAccountSystemProgram extends string | AccountMeta<string> = "11111111111111111111111111111111",
   TAccountEventAuthority extends string | AccountMeta<string> = string,
   TAccountProgram extends string | AccountMeta<string> =
@@ -85,6 +87,9 @@ export type SplitInstruction<
       TAccountAssociatedTokenProgram extends string
         ? ReadonlyAccount<TAccountAssociatedTokenProgram>
         : TAccountAssociatedTokenProgram,
+      TAccountMemoProgram extends string
+        ? ReadonlyAccount<TAccountMemoProgram>
+        : TAccountMemoProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -127,6 +132,7 @@ export type SplitAsyncInput<
   TAccountMint extends InstructionAccountInput = InstructionAccountInput,
   TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountAssociatedTokenProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountMemoProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountSystemProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput = InstructionAccountInput,
@@ -150,6 +156,11 @@ export type SplitAsyncInput<
   tokenProgram?: TAccountTokenProgram;
   /** The associated-token program, a fixed address; SPL pools only. */
   associatedTokenProgram?: TAccountAssociatedTokenProgram;
+  /**
+   * The SPL Memo program, for a destination that requires a memo before an incoming
+   * transfer (PROGRAM §5.4); SPL pools only.
+   */
+  memoProgram?: TAccountMemoProgram;
   /** For the SOL transfers out of the vault and any ATA rent. */
   systemProgram?: TAccountSystemProgram;
   eventAuthority?: TAccountEventAuthority;
@@ -165,6 +176,7 @@ export async function getSplitInstructionAsync<
   TAccountMint extends InstructionAccountInput,
   TAccountTokenProgram extends InstructionAccountInput,
   TAccountAssociatedTokenProgram extends InstructionAccountInput,
+  TAccountMemoProgram extends InstructionAccountInput,
   TAccountSystemProgram extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput,
@@ -179,6 +191,7 @@ export async function getSplitInstructionAsync<
     TAccountMint,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
+    TAccountMemoProgram,
     TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
@@ -203,6 +216,10 @@ export async function getSplitInstructionAsync<
     ResolvedInstructionAccountMeta<
       TAccountAssociatedTokenProgram,
       InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
+    >,
+    ResolvedInstructionAccountMeta<
+      TAccountMemoProgram,
+      InstructionAccountInputAddress<TAccountMemoProgram>
     >,
     ResolvedInstructionAccountMeta<
       TAccountSystemProgram,
@@ -235,6 +252,7 @@ export async function getSplitInstructionAsync<
       isSigner: false,
       isWritable: false,
     },
+    memoProgram: { value: input.memoProgram ?? null, isSigner: false, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
     program: { value: input.program ?? null, isSigner: false, isWritable: false },
@@ -258,6 +276,10 @@ export async function getSplitInstructionAsync<
     accounts.associatedTokenProgram.value =
       "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">;
   }
+  if (!accounts.memoProgram.value) {
+    accounts.memoProgram.value =
+      "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr" as Address<"MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr">;
+  }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
@@ -280,6 +302,7 @@ export async function getSplitInstructionAsync<
       getAccountMeta("mint", accounts.mint),
       getAccountMeta("tokenProgram", accounts.tokenProgram),
       getAccountMeta("associatedTokenProgram", accounts.associatedTokenProgram),
+      getAccountMeta("memoProgram", accounts.memoProgram),
       getAccountMeta("systemProgram", accounts.systemProgram),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
       getAccountMeta("program", accounts.program),
@@ -306,6 +329,10 @@ export async function getSplitInstructionAsync<
       InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
     >,
     ResolvedInstructionAccountMeta<
+      TAccountMemoProgram,
+      InstructionAccountInputAddress<TAccountMemoProgram>
+    >,
+    ResolvedInstructionAccountMeta<
       TAccountSystemProgram,
       InstructionAccountInputAddress<TAccountSystemProgram>
     >,
@@ -326,6 +353,7 @@ export type SplitInput<
   TAccountMint extends InstructionAccountInput = InstructionAccountInput,
   TAccountTokenProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountAssociatedTokenProgram extends InstructionAccountInput = InstructionAccountInput,
+  TAccountMemoProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountSystemProgram extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput = InstructionAccountInput,
@@ -349,6 +377,11 @@ export type SplitInput<
   tokenProgram?: TAccountTokenProgram;
   /** The associated-token program, a fixed address; SPL pools only. */
   associatedTokenProgram?: TAccountAssociatedTokenProgram;
+  /**
+   * The SPL Memo program, for a destination that requires a memo before an incoming
+   * transfer (PROGRAM §5.4); SPL pools only.
+   */
+  memoProgram?: TAccountMemoProgram;
   /** For the SOL transfers out of the vault and any ATA rent. */
   systemProgram?: TAccountSystemProgram;
   eventAuthority: TAccountEventAuthority;
@@ -364,6 +397,7 @@ export function getSplitInstruction<
   TAccountMint extends InstructionAccountInput,
   TAccountTokenProgram extends InstructionAccountInput,
   TAccountAssociatedTokenProgram extends InstructionAccountInput,
+  TAccountMemoProgram extends InstructionAccountInput,
   TAccountSystemProgram extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput,
@@ -378,6 +412,7 @@ export function getSplitInstruction<
     TAccountMint,
     TAccountTokenProgram,
     TAccountAssociatedTokenProgram,
+    TAccountMemoProgram,
     TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
@@ -401,6 +436,10 @@ export function getSplitInstruction<
   ResolvedInstructionAccountMeta<
     TAccountAssociatedTokenProgram,
     InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
+  >,
+  ResolvedInstructionAccountMeta<
+    TAccountMemoProgram,
+    InstructionAccountInputAddress<TAccountMemoProgram>
   >,
   ResolvedInstructionAccountMeta<
     TAccountSystemProgram,
@@ -432,6 +471,7 @@ export function getSplitInstruction<
       isSigner: false,
       isWritable: false,
     },
+    memoProgram: { value: input.memoProgram ?? null, isSigner: false, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
     program: { value: input.program ?? null, isSigner: false, isWritable: false },
@@ -445,6 +485,10 @@ export function getSplitInstruction<
   if (!accounts.associatedTokenProgram.value) {
     accounts.associatedTokenProgram.value =
       "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">;
+  }
+  if (!accounts.memoProgram.value) {
+    accounts.memoProgram.value =
+      "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr" as Address<"MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr">;
   }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
@@ -465,6 +509,7 @@ export function getSplitInstruction<
       getAccountMeta("mint", accounts.mint),
       getAccountMeta("tokenProgram", accounts.tokenProgram),
       getAccountMeta("associatedTokenProgram", accounts.associatedTokenProgram),
+      getAccountMeta("memoProgram", accounts.memoProgram),
       getAccountMeta("systemProgram", accounts.systemProgram),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
       getAccountMeta("program", accounts.program),
@@ -489,6 +534,10 @@ export function getSplitInstruction<
     ResolvedInstructionAccountMeta<
       TAccountAssociatedTokenProgram,
       InstructionAccountInputAddress<TAccountAssociatedTokenProgram>
+    >,
+    ResolvedInstructionAccountMeta<
+      TAccountMemoProgram,
+      InstructionAccountInputAddress<TAccountMemoProgram>
     >,
     ResolvedInstructionAccountMeta<
       TAccountSystemProgram,
@@ -527,10 +576,15 @@ export type ParsedSplitInstruction<
     tokenProgram?: TAccountMetas[6] | undefined;
     /** The associated-token program, a fixed address; SPL pools only. */
     associatedTokenProgram?: TAccountMetas[7] | undefined;
+    /**
+     * The SPL Memo program, for a destination that requires a memo before an incoming
+     * transfer (PROGRAM §5.4); SPL pools only.
+     */
+    memoProgram?: TAccountMetas[8] | undefined;
     /** For the SOL transfers out of the vault and any ATA rent. */
-    systemProgram: TAccountMetas[8];
-    eventAuthority: TAccountMetas[9];
-    program: TAccountMetas[10];
+    systemProgram: TAccountMetas[9];
+    eventAuthority: TAccountMetas[10];
+    program: TAccountMetas[11];
   };
   data: SplitInstructionData;
 };
@@ -543,10 +597,10 @@ export function parseSplitInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedSplitInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 11) {
+  if (instruction.accounts.length < 12) {
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
       actualAccountMetas: instruction.accounts.length,
-      expectedAccountMetas: 11,
+      expectedAccountMetas: 12,
     });
   }
   let accountIndex = 0;
@@ -570,6 +624,7 @@ export function parseSplitInstruction<
       mint: getNextOptionalAccount(),
       tokenProgram: getNextOptionalAccount(),
       associatedTokenProgram: getNextOptionalAccount(),
+      memoProgram: getNextOptionalAccount(),
       systemProgram: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),

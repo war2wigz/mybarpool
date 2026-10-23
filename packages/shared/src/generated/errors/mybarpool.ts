@@ -146,6 +146,12 @@ export const MYBARPOOL_ERROR__VAR_ALREADY_SAMPLED = 0x17af; // 6063
 export const MYBARPOOL_ERROR__VAR_COMMIT_MISMATCH = 0x17b0; // 6064
 /** BoxAlreadySponsored: Box already sponsored or box index out of range */
 export const MYBARPOOL_ERROR__BOX_ALREADY_SPONSORED = 0x17b1; // 6065
+/** VarEndAtMismatch: Var end slot is not the one recorded on the pool */
+export const MYBARPOOL_ERROR__VAR_END_AT_MISMATCH = 0x17b2; // 6066
+/** SampleWindowOpen: Var sample window is still open */
+export const MYBARPOOL_ERROR__SAMPLE_WINDOW_OPEN = 0x17b3; // 6067
+/** DrawAfterScores: Draw refused after the first score post */
+export const MYBARPOOL_ERROR__DRAW_AFTER_SCORES = 0x17b4; // 6068
 
 export type MybarpoolError =
   | typeof MYBARPOOL_ERROR__ADDON_BUDGET_EXCEEDED
@@ -154,6 +160,7 @@ export type MybarpoolError =
   | typeof MYBARPOOL_ERROR__BOX_ALREADY_SPONSORED
   | typeof MYBARPOOL_ERROR__BOXES_STILL_OUTSTANDING
   | typeof MYBARPOOL_ERROR__COUNTER_NOT_EMPTY
+  | typeof MYBARPOOL_ERROR__DRAW_AFTER_SCORES
   | typeof MYBARPOOL_ERROR__FEE_ACCOUNT_MISMATCH
   | typeof MYBARPOOL_ERROR__FEES_ALREADY_PAID
   | typeof MYBARPOOL_ERROR__FINAL_FLAG_MISMATCH
@@ -192,6 +199,7 @@ export type MybarpoolError =
   | typeof MYBARPOOL_ERROR__SALES_CLOSED
   | typeof MYBARPOOL_ERROR__SAMPLE_TOO_EARLY
   | typeof MYBARPOOL_ERROR__SAMPLE_WINDOW_MISSED
+  | typeof MYBARPOOL_ERROR__SAMPLE_WINDOW_OPEN
   | typeof MYBARPOOL_ERROR__SCORE_DECREASED
   | typeof MYBARPOOL_ERROR__SCORES_NOT_POSTED
   | typeof MYBARPOOL_ERROR__SPONSORSHIP_CAP_EXCEEDED
@@ -205,6 +213,7 @@ export type MybarpoolError =
   | typeof MYBARPOOL_ERROR__VAR_ALREADY_SAMPLED
   | typeof MYBARPOOL_ERROR__VAR_ALREADY_SET
   | typeof MYBARPOOL_ERROR__VAR_COMMIT_MISMATCH
+  | typeof MYBARPOOL_ERROR__VAR_END_AT_MISMATCH
   | typeof MYBARPOOL_ERROR__VAR_FALLBACK_HASH
   | typeof MYBARPOOL_ERROR__VAR_MISMATCH
   | typeof MYBARPOOL_ERROR__VAR_NOT_ENTROPY
@@ -224,6 +233,7 @@ if (process.env["NODE_ENV"] !== "production") {
     [MYBARPOOL_ERROR__BOX_ALREADY_SPONSORED]: `Box already sponsored or box index out of range`,
     [MYBARPOOL_ERROR__BOXES_STILL_OUTSTANDING]: `Boxes still outstanding`,
     [MYBARPOOL_ERROR__COUNTER_NOT_EMPTY]: `Counter is not empty`,
+    [MYBARPOOL_ERROR__DRAW_AFTER_SCORES]: `Draw refused after the first score post`,
     [MYBARPOOL_ERROR__FEE_ACCOUNT_MISMATCH]: `Fee account does not match`,
     [MYBARPOOL_ERROR__FEES_ALREADY_PAID]: `Fees already paid`,
     [MYBARPOOL_ERROR__FINAL_FLAG_MISMATCH]: `is_final must be set on the fourth post only; had_overtime needs is_final`,
@@ -262,6 +272,7 @@ if (process.env["NODE_ENV"] !== "production") {
     [MYBARPOOL_ERROR__SALES_CLOSED]: `Sales closed at kickoff`,
     [MYBARPOOL_ERROR__SAMPLE_TOO_EARLY]: `Sample window not open yet`,
     [MYBARPOOL_ERROR__SAMPLE_WINDOW_MISSED]: `Sample window missed: SlotHashes does not confirm the Var's hash for end_at`,
+    [MYBARPOOL_ERROR__SAMPLE_WINDOW_OPEN]: `Var sample window is still open`,
     [MYBARPOOL_ERROR__SCORE_DECREASED]: `A cumulative score is lower than the previous post`,
     [MYBARPOOL_ERROR__SCORES_NOT_POSTED]: `Scores not posted`,
     [MYBARPOOL_ERROR__SPONSORSHIP_CAP_EXCEEDED]: `Sponsorship cap exceeded`,
@@ -275,6 +286,7 @@ if (process.env["NODE_ENV"] !== "production") {
     [MYBARPOOL_ERROR__VAR_ALREADY_SAMPLED]: `Var already has a sample recorded`,
     [MYBARPOOL_ERROR__VAR_ALREADY_SET]: `Var is already set on this pool`,
     [MYBARPOOL_ERROR__VAR_COMMIT_MISMATCH]: `Var seed does not hash to the commit recorded on the pool`,
+    [MYBARPOOL_ERROR__VAR_END_AT_MISMATCH]: `Var end slot is not the one recorded on the pool`,
     [MYBARPOOL_ERROR__VAR_FALLBACK_HASH]: `Var carries the keccak(end_at) fallback hash`,
     [MYBARPOOL_ERROR__VAR_MISMATCH]: `Var does not match the one recorded on the pool`,
     [MYBARPOOL_ERROR__VAR_NOT_ENTROPY]: `Account is not an Entropy Var`,

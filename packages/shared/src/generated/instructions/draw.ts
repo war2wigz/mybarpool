@@ -54,6 +54,7 @@ export type DrawInstruction<
   TProgram extends string = typeof MYBARPOOL_PROGRAM_ADDRESS,
   TAccountScoreAuthority extends string | AccountMeta<string> = string,
   TAccountConfig extends string | AccountMeta<string> = string,
+  TAccountGame extends string | AccountMeta<string> = string,
   TAccountPool extends string | AccountMeta<string> = string,
   TAccountVar extends string | AccountMeta<string> = string,
   TAccountEventAuthority extends string | AccountMeta<string> = string,
@@ -68,6 +69,7 @@ export type DrawInstruction<
         ? ReadonlySignerAccount<TAccountScoreAuthority> & AccountSignerMeta<TAccountScoreAuthority>
         : TAccountScoreAuthority,
       TAccountConfig extends string ? ReadonlyAccount<TAccountConfig> : TAccountConfig,
+      TAccountGame extends string ? ReadonlyAccount<TAccountGame> : TAccountGame,
       TAccountPool extends string ? WritableAccount<TAccountPool> : TAccountPool,
       TAccountVar extends string ? ReadonlyAccount<TAccountVar> : TAccountVar,
       TAccountEventAuthority extends string
@@ -103,6 +105,7 @@ export function getDrawInstructionDataCodec(): FixedSizeCodec<
 export type DrawAsyncInput<
   TAccountScoreAuthority extends InstructionSignerInput = InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput = InstructionAccountInput,
   TAccountPool extends InstructionAccountInput = InstructionAccountInput,
   TAccountVar extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
@@ -112,6 +115,11 @@ export type DrawAsyncInput<
   scoreAuthority: TAccountScoreAuthority;
   /** PROGRAM §3.1 `PlatformConfig`. */
   config?: TAccountConfig;
+  /**
+   * PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for `quarters_posted`: a
+   * draw after the first score post is refused (2026-10-23 audit F3).
+   */
+  game: TAccountGame;
   /** PROGRAM §3.3 `Pool`, re-derived from its own fields. */
   pool: TAccountPool;
   /** The recorded `Var`, sampled through this program and revealed by its provider. */
@@ -123,6 +131,7 @@ export type DrawAsyncInput<
 export async function getDrawInstructionAsync<
   TAccountScoreAuthority extends InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput,
   TAccountPool extends InstructionAccountInput,
   TAccountVar extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
@@ -132,6 +141,7 @@ export async function getDrawInstructionAsync<
   input: DrawAsyncInput<
     TAccountScoreAuthority,
     TAccountConfig,
+    TAccountGame,
     TAccountPool,
     TAccountVar,
     TAccountEventAuthority,
@@ -146,6 +156,7 @@ export async function getDrawInstructionAsync<
       InstructionAccountInputAddress<TAccountScoreAuthority>
     >,
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+    ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountVar, InstructionAccountInputAddress<TAccountVar>>,
     ResolvedInstructionAccountMeta<
@@ -165,6 +176,7 @@ export async function getDrawInstructionAsync<
   const originalAccounts = {
     scoreAuthority: { value: input.scoreAuthority ?? null, isSigner: true, isWritable: false },
     config: { value: input.config ?? null, isSigner: false, isWritable: false },
+    game: { value: input.game ?? null, isSigner: false, isWritable: false },
     pool: { value: input.pool ?? null, isSigner: false, isWritable: true },
     var: { value: input.var ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
@@ -191,6 +203,7 @@ export async function getDrawInstructionAsync<
     accounts: [
       getAccountMeta("scoreAuthority", accounts.scoreAuthority),
       getAccountMeta("config", accounts.config),
+      getAccountMeta("game", accounts.game),
       getAccountMeta("pool", accounts.pool),
       getAccountMeta("var", accounts.var),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
@@ -205,6 +218,7 @@ export async function getDrawInstructionAsync<
       InstructionAccountInputAddress<TAccountScoreAuthority>
     >,
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+    ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountVar, InstructionAccountInputAddress<TAccountVar>>,
     ResolvedInstructionAccountMeta<
@@ -218,6 +232,7 @@ export async function getDrawInstructionAsync<
 export type DrawInput<
   TAccountScoreAuthority extends InstructionSignerInput = InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput = InstructionAccountInput,
   TAccountPool extends InstructionAccountInput = InstructionAccountInput,
   TAccountVar extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
@@ -227,6 +242,11 @@ export type DrawInput<
   scoreAuthority: TAccountScoreAuthority;
   /** PROGRAM §3.1 `PlatformConfig`. */
   config: TAccountConfig;
+  /**
+   * PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for `quarters_posted`: a
+   * draw after the first score post is refused (2026-10-23 audit F3).
+   */
+  game: TAccountGame;
   /** PROGRAM §3.3 `Pool`, re-derived from its own fields. */
   pool: TAccountPool;
   /** The recorded `Var`, sampled through this program and revealed by its provider. */
@@ -238,6 +258,7 @@ export type DrawInput<
 export function getDrawInstruction<
   TAccountScoreAuthority extends InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput,
   TAccountPool extends InstructionAccountInput,
   TAccountVar extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
@@ -247,6 +268,7 @@ export function getDrawInstruction<
   input: DrawInput<
     TAccountScoreAuthority,
     TAccountConfig,
+    TAccountGame,
     TAccountPool,
     TAccountVar,
     TAccountEventAuthority,
@@ -260,6 +282,7 @@ export function getDrawInstruction<
     InstructionAccountInputAddress<TAccountScoreAuthority>
   >,
   ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+  ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
   ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
   ResolvedInstructionAccountMeta<TAccountVar, InstructionAccountInputAddress<TAccountVar>>,
   ResolvedInstructionAccountMeta<
@@ -278,6 +301,7 @@ export function getDrawInstruction<
   const originalAccounts = {
     scoreAuthority: { value: input.scoreAuthority ?? null, isSigner: true, isWritable: false },
     config: { value: input.config ?? null, isSigner: false, isWritable: false },
+    game: { value: input.game ?? null, isSigner: false, isWritable: false },
     pool: { value: input.pool ?? null, isSigner: false, isWritable: true },
     var: { value: input.var ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
@@ -298,6 +322,7 @@ export function getDrawInstruction<
     accounts: [
       getAccountMeta("scoreAuthority", accounts.scoreAuthority),
       getAccountMeta("config", accounts.config),
+      getAccountMeta("game", accounts.game),
       getAccountMeta("pool", accounts.pool),
       getAccountMeta("var", accounts.var),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
@@ -312,6 +337,7 @@ export function getDrawInstruction<
       InstructionAccountInputAddress<TAccountScoreAuthority>
     >,
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+    ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountVar, InstructionAccountInputAddress<TAccountVar>>,
     ResolvedInstructionAccountMeta<
@@ -332,12 +358,17 @@ export type ParsedDrawInstruction<
     scoreAuthority: TAccountMetas[0];
     /** PROGRAM §3.1 `PlatformConfig`. */
     config: TAccountMetas[1];
+    /**
+     * PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for `quarters_posted`: a
+     * draw after the first score post is refused (2026-10-23 audit F3).
+     */
+    game: TAccountMetas[2];
     /** PROGRAM §3.3 `Pool`, re-derived from its own fields. */
-    pool: TAccountMetas[2];
+    pool: TAccountMetas[3];
     /** The recorded `Var`, sampled through this program and revealed by its provider. */
-    var: TAccountMetas[3];
-    eventAuthority: TAccountMetas[4];
-    program: TAccountMetas[5];
+    var: TAccountMetas[4];
+    eventAuthority: TAccountMetas[5];
+    program: TAccountMetas[6];
   };
   data: DrawInstructionData;
 };
@@ -350,10 +381,10 @@ export function parseDrawInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedDrawInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 7) {
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
       actualAccountMetas: instruction.accounts.length,
-      expectedAccountMetas: 6,
+      expectedAccountMetas: 7,
     });
   }
   let accountIndex = 0;
@@ -367,6 +398,7 @@ export function parseDrawInstruction<
     accounts: {
       scoreAuthority: getNextAccount(),
       config: getNextAccount(),
+      game: getNextAccount(),
       pool: getNextAccount(),
       var: getNextAccount(),
       eventAuthority: getNextAccount(),

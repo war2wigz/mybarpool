@@ -256,10 +256,11 @@ describe("admin instructions (Surfpool, mainnet fork)", () => {
     expect([closed.wallet, closed.maxOpenPools, closed.maxOwnBoxes]).toEqual([wallet, 10, 5]);
   });
 
-  it("5. the committed IDL freezes 66 errors from 6000 and carries every §1 constant", () => {
+  it("5. the committed IDL freezes 69 errors from 6000 and carries every §1 constant", () => {
     // 60 after Step 2, + InvalidGameKey, InvalidGameStatus (Step 3), + SampleTooEarly,
-    // VarAlreadySampled (Step 5), + VarCommitMismatch (Step 5b), + BoxAlreadySponsored (6065, box sponsorship).
-    expect(IDL.errors).toHaveLength(66);
+    // VarAlreadySampled (Step 5), + VarCommitMismatch (Step 5b), + BoxAlreadySponsored (6065, box
+    // sponsorship), + VarEndAtMismatch, SampleWindowOpen, DrawAfterScores (6066–6068, the 2026-10-23 audit).
+    expect(IDL.errors).toHaveLength(69);
     IDL.errors.forEach((e, i) => expect(e.code).toBe(6000 + i));
     const names = IDL.constants.map((c) => c.name);
     for (const c of [

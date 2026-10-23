@@ -379,7 +379,7 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     expect(revealed.value).toEqual(entropyValue(sampled.slotHash, SEED1, 1n));
 
     // draw by the keeper.
-    const drawSig = await send(keeper, await drawInstruction(keeper, p1.pool, v1.address));
+    const drawSig = await send(keeper, await drawInstruction(keeper, p1.game, p1.pool, v1.address));
     measured["draw"] = await computeUnitsConsumed(drawSig);
     pool = await fetchPool(p1.pool);
     expect(pool.status).toBe(PoolStatus.Drawn);
@@ -399,7 +399,7 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
 
     // Second draw: the pool is Drawn, not Locked (6027).
     expect(
-      await sendExpectingError(keeper, await drawInstruction(keeper, p1.pool, v1.address)),
+      await sendExpectingError(keeper, await drawInstruction(keeper, p1.game, p1.pool, v1.address)),
     ).toBe(errorCode("PoolNotLocked"));
 
     // Close by the keeper (authority), three accounts; the stranger pays the fee so the
@@ -411,7 +411,7 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     // With the Var closed, `draw` fails at the owner constraint before any status check:
     // 6034 (PROGRAM §4.4 draw, Step 5 decision 19).
     expect(
-      await sendExpectingError(keeper, await drawInstruction(keeper, p1.pool, v1.address)),
+      await sendExpectingError(keeper, await drawInstruction(keeper, p1.game, p1.pool, v1.address)),
     ).toBe(errorCode("VarNotEntropy"));
     // Step 4's Drawn sponsorship window, now reachable.
     await send(stranger, await sponsorInstruction(stranger, p1, PRICE));
@@ -445,10 +445,13 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     ).rejects.toBeTruthy();
     expect((await fetchVar(v.address))!.seed).toEqual(ZERO32);
     expect(
-      await sendExpectingError(keeper, await drawInstruction(keeper, refs.pool, v.address)),
+      await sendExpectingError(
+        keeper,
+        await drawInstruction(keeper, refs.game, refs.pool, v.address),
+      ),
     ).toBe(errorCode("VarNotRevealed")); // 6037
     await send(keeper, revealInstruction(keeper, v.address, SEED2));
-    await send(keeper, await drawInstruction(keeper, refs.pool, v.address));
+    await send(keeper, await drawInstruction(keeper, refs.game, refs.pool, v.address));
     const pool = await fetchPool(refs.pool);
     expect(pool.status).toBe(PoolStatus.Drawn);
     const axes = drawAxes((await fetchVar(v.address))!.value);
@@ -470,7 +473,10 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     });
     await plantVar(v.address, forSeed4);
     expect(
-      await sendExpectingError(keeper, await drawInstruction(keeper, refs.pool, v.address)),
+      await sendExpectingError(
+        keeper,
+        await drawInstruction(keeper, refs.game, refs.pool, v.address),
+      ),
     ).toBe(errorCode("VarCommitMismatch")); // 6064
     expect((await fetchPool(refs.pool)).status).toBe(PoolStatus.Locked);
     // Step 5b audit L1: the Var's `commit` equal to the pool's, the seed SEED4 (which does not
@@ -486,7 +492,10 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     );
     expect(Uint8Array.from((await fetchVar(v.address))!.commit)).toEqual(keccak(SEED3));
     expect(
-      await sendExpectingError(keeper, await drawInstruction(keeper, refs.pool, v.address)),
+      await sendExpectingError(
+        keeper,
+        await drawInstruction(keeper, refs.game, refs.pool, v.address),
+      ),
     ).toBe(errorCode("VarCommitMismatch")); // 6064
     // Re-plant the fields Reveal(SEED3) would have written: the draw goes through.
     await plantVar(
@@ -497,7 +506,7 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
         value: entropyValue(sampledHash, SEED3, 1n),
       }),
     );
-    await send(keeper, await drawInstruction(keeper, refs.pool, v.address));
+    await send(keeper, await drawInstruction(keeper, refs.game, refs.pool, v.address));
     expect((await fetchPool(refs.pool)).status).toBe(PoolStatus.Drawn);
   });
 
@@ -512,7 +521,10 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
       value: entropyValue(revealed.slotHash, SEED6, 2n),
     });
     expect(
-      await sendExpectingError(keeper, await drawInstruction(keeper, refs.pool, v.address)),
+      await sendExpectingError(
+        keeper,
+        await drawInstruction(keeper, refs.game, refs.pool, v.address),
+      ),
     ).toBe(errorCode("VarNotFresh")); // 6036
   });
 
@@ -523,6 +535,12 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     const a = await openFresh(keeper, keeper.address, SEED_A);
     await send(keeper, await setVarInstruction(keeper, p5.pool, a.address));
     expect(Uint8Array.from((await fetchPool(p5.pool)).varCommit)).toEqual(keccak(SEED_A));
+    // 2026-10-23 audit F2: while A's window is ahead, a replacement is SampleWindowOpen.
+    const early = await openFresh(keeper, keeper.address, seedOf(0x53));
+    expect(
+      await sendExpectingError(admin, await replaceVarInstruction(admin, p5.pool, early.address)),
+    ).toBe(errorCode("SampleWindowOpen")); // 6067
+    expect((await fetchPool(p5.pool)).var).toBe(a.address);
 
     // Past end_at + 512: the sysvar no longer holds end_at.
     const target = a.endAt + 600n;
@@ -568,7 +586,7 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     await waitForSlot(b.endAt + 1n);
     await sampleVar(stranger, p5.pool, b.address);
     await send(keeper, revealInstruction(keeper, b.address, SEED_B));
-    await send(keeper, await drawInstruction(keeper, p5.pool, b.address));
+    await send(keeper, await drawInstruction(keeper, p5.game, p5.pool, b.address));
     pool = await fetchPool(p5.pool);
     expect(pool.status).toBe(PoolStatus.Drawn);
     expect(pool.homeAxis).toEqual(Array.from(drawAxes((await fetchVar(b.address))!.value).home));
@@ -591,6 +609,9 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     expect(await setVarBy(keeper, two.address)).toBe(errorCode("VarNotFresh")); // 6036
     const now = await plantFresh(seedOf(0x84), { endAt: await currentSlot() });
     expect(await setVarBy(keeper, now.address)).toBe(errorCode("VarNotFresh")); // 6036
+    // 2026-10-23 audit F2: end_at more than VAR_END_AT_MAX_LEAD (1,500) slots ahead.
+    const far = await plantFresh(seedOf(0x87), { ahead: 1_600n });
+    expect(await setVarBy(keeper, far.address)).toBe(errorCode("VarNotFresh")); // 6036
     const systemOwned = await entropyVarPda(keeper.address, nextVarId++);
     await plantVar(systemOwned, freshVar(0n, seedOf(0x85), (await currentSlot()) + 300n));
     await localnet.setAccount(systemOwned, { owner: SYSTEM_PROGRAM });
@@ -609,7 +630,10 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
       errorCode("VarMismatch"), // 6033
     );
     expect(
-      await sendExpectingError(keeper, await drawInstruction(keeper, refs.pool, v.address)),
+      await sendExpectingError(
+        keeper,
+        await drawInstruction(keeper, refs.game, refs.pool, v.address),
+      ),
     ).toBe(errorCode("VarNotSampledHere")); // 6038
 
     // Window missed: the fork's Sample fails with SlotHashUnavailable, the Var is untouched.
@@ -650,7 +674,10 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     expect(Uint8Array.from(forged.sampledHash)).toEqual(fallback);
     expect(Uint8Array.from(forged.varCommit)).toEqual(keccak(v.seed));
     expect(
-      await sendExpectingError(keeper, await drawInstruction(keeper, refs.pool, v.address)),
+      await sendExpectingError(
+        keeper,
+        await drawInstruction(keeper, refs.game, refs.pool, v.address),
+      ),
     ).toBe(errorCode("VarFallbackHash")); // 6040
   });
 
@@ -662,11 +689,11 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     expect(measured["sample_var"]!).toBeLessThan(250_000n);
   });
 
-  it("10. the IDL has 27 instructions, 6 accounts, 25 events, 66 errors, the Step 5b fields with docs", () => {
+  it("10. the IDL has 27 instructions, 6 accounts, 25 events, 69 errors, the Step 5b fields with docs", () => {
     expect(IDL.instructions).toHaveLength(27); // 19 after Step 6, + the seven §4.6 instructions, + sponsor_box
     expect(IDL.accounts).toHaveLength(6);
     expect(IDL.events).toHaveLength(25); // 18 after Step 6, + the six §4.6 events, + BoxSponsored
-    expect(IDL.errors).toHaveLength(66);
+    expect(IDL.errors).toHaveLength(69);
     const idl = IDL as unknown as {
       instructions: {
         name: string;

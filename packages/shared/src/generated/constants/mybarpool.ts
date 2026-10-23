@@ -34,6 +34,8 @@ export const L_A_N_E_S: number = 5;
 
 export const MAX_OWN_BOXES_ABSOLUTE: number = 25;
 
+export const MEMO_PROGRAM: Address = address("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+
 export const MIN_QUARTER_SECONDS: bigint = 900n;
 
 export const NO_WINNING_BOX: number = 255;
@@ -59,6 +61,8 @@ export const SPONSORSHIP_SEED: ReadonlyUint8Array = new Uint8Array([
 ]);
 
 export const TOTAL_BPS_MAX: number = 1500;
+
+export const VAR_END_AT_MAX_LEAD: bigint = 1500n;
 
 export const VAR_REPLACEMENTS_MAX: number = 2;
 

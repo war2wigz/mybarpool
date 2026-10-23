@@ -144,7 +144,8 @@ pub fn outcome_of(r: &InstructionResult) -> Outcome {
 }
 
 /// A Mollusk with the program under test at `mybarpool::ID`, the token programs, the
-/// associated-token program and the platform's Entropy fork loaded; the fixtures bring their
+/// associated-token program, the Memo program (a payout to a Token-2022 account that requires
+/// memos, PROGRAM §5.4) and the platform's Entropy fork loaded; the fixtures bring their
 /// own compute budget, feature set and sysvars.
 pub fn mollusk(program_elf: &[u8], entropy_elf: &[u8]) -> Mollusk {
     let mut m = Mollusk::default();
@@ -161,6 +162,7 @@ pub fn mollusk(program_elf: &[u8], entropy_elf: &[u8]) -> Mollusk {
     mollusk_svm_programs_token::token::add_program(&mut m);
     mollusk_svm_programs_token::token2022::add_program(&mut m);
     mollusk_svm_programs_token::associated_token::add_program(&mut m);
+    mollusk_svm_programs_memo::memo::add_program(&mut m);
     // A result below rent is a failure the oracle classifies, not a panic (Step 7).
     m.config.panic = false;
     m

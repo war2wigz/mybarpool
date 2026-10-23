@@ -841,11 +841,11 @@ describe("returns, splits and cancellations (Surfpool, the platform's Entropy de
     expect(measured["split_ore_3_owners_one_create"]!).toBeLessThan(150_000n);
   });
 
-  it("7. the IDL has 27 instructions, 6 accounts, 25 events, 66 errors, docs on each new item", () => {
+  it("7. the IDL has 27 instructions, 6 accounts, 25 events, 69 errors, docs on each new item", () => {
     expect(IDL.instructions).toHaveLength(27);
     expect(IDL.accounts).toHaveLength(6);
     expect(IDL.events).toHaveLength(25);
-    expect(IDL.errors).toHaveLength(66);
+    expect(IDL.errors).toHaveLength(69);
     const idl = IDL as unknown as {
       instructions: {
         name: string;

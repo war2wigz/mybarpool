@@ -2096,6 +2096,7 @@ dependencies = [
  "anchor-lang",
  "mollusk-svm",
  "mollusk-svm-fuzz-fixture",
+ "mollusk-svm-programs-memo",
  "mollusk-svm-programs-token",
  "mybarpool",
  "proptest",

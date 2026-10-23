@@ -294,7 +294,7 @@ async function drawThroughSdk(
   const revealed = (await fetchVar(varAddress))!;
   expect(revealed.value).toEqual(entropyValue(revealed.slotHash, seed, 1n));
   const draw = await getDrawInstructionAsync(
-    { scoreAuthority: keeper, pool: poolAddress, var: varAddress },
+    { scoreAuthority: keeper, game, pool: poolAddress, var: varAddress },
     { programAddress: client.programAddress },
   );
   await run(`draw (${format})`, format, keeper, [draw]);

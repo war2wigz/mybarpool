@@ -74,4 +74,7 @@ export const MYBARPOOL_ERROR_NAMES: Readonly<Record<number, string>> = Object.fr
   6063: "VarAlreadySampled",
   6064: "VarCommitMismatch",
   6065: "BoxAlreadySponsored",
+  6066: "VarEndAtMismatch",
+  6067: "SampleWindowOpen",
+  6068: "DrawAfterScores",
 });

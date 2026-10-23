@@ -186,7 +186,7 @@ export async function drawLockedPool(
   await send(s.keeper, revealInstruction(s.keeper, varAddress!, seed!));
   const revealed = (await fetchVar(varAddress!))!;
   expect(revealed.value).toEqual(entropyValue(revealed.slotHash, seed!, 1n));
-  await send(s.keeper, await drawInstruction(s.keeper, refs.pool, varAddress!));
+  await send(s.keeper, await drawInstruction(s.keeper, refs.game, refs.pool, varAddress!));
   const pool = await fetchPool(refs.pool);
   expect(pool.status).toBe(PoolStatus.Drawn);
   const axes = drawAxes(revealed.value);

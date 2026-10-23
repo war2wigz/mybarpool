@@ -1422,15 +1422,17 @@ export async function sampleVarInstruction(
   };
 }
 
-/** `draw`: `score_authority (s)`, `config`, `pool (w)`, `var`, event CPI. */
+/** `draw`: `score_authority (s)`, `config`, `game`, `pool (w)`, `var`, event CPI. */
 export async function drawInstruction(
   keeper: TransactionSigner,
+  game: Address,
   pool: Address,
   varAddress: Address,
 ): Promise<SignedInstruction> {
   const accounts: SignedMetas = [
     { address: keeper.address, role: AccountRole.READONLY_SIGNER, signer: keeper },
     { address: await configPda(), role: AccountRole.READONLY },
+    { address: game, role: AccountRole.READONLY },
     { address: pool, role: AccountRole.WRITABLE },
     { address: varAddress, role: AccountRole.READONLY },
     ...(await eventCpiAccounts()),
@@ -1442,7 +1444,7 @@ export async function drawInstruction(
   };
 }
 
-/** `replace_var`: `admin (s)`, `config`, `pool (w)`, `new_var`, event CPI. */
+/** `replace_var`: `admin (s)`, `config`, `pool (w)`, `new_var`, SlotHashes, event CPI. */
 export async function replaceVarInstruction(
   admin: TransactionSigner,
   pool: Address,
@@ -1453,6 +1455,7 @@ export async function replaceVarInstruction(
     { address: await configPda(), role: AccountRole.READONLY },
     { address: pool, role: AccountRole.WRITABLE },
     { address: newVar, role: AccountRole.READONLY },
+    { address: SLOT_HASHES_SYSVAR, role: AccountRole.READONLY },
     ...(await eventCpiAccounts()),
   ];
   return {
@@ -1558,6 +1561,7 @@ export async function settleInstruction(
     opt(integrator === undefined ? undefined : tokenAccounts[3], true),
     opt(spl?.tokenProgram),
     opt(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    opt(spl ? MEMO_PROGRAM : undefined),
     { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
     ...(await eventCpiAccounts()),
   ];
@@ -1597,6 +1601,7 @@ export async function closePoolInstruction(
     opt(spl ? await ata(destination, spl.mint, spl.tokenProgram) : undefined, true),
     opt(spl?.tokenProgram),
     opt(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    opt(spl ? MEMO_PROGRAM : undefined),
     { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
     ...(await eventCpiAccounts()),
   ];
@@ -1694,6 +1699,7 @@ export async function returnBoxesInstruction(
     optional(spl?.mint),
     optional(spl?.tokenProgram),
     optional(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    optional(spl ? MEMO_PROGRAM : undefined),
     { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
     ...(await eventCpiAccounts()),
     ...(await ownerBatch(owners, spl)),
@@ -1725,6 +1731,7 @@ export async function splitInstruction(
     optional(spl?.mint),
     optional(spl?.tokenProgram),
     optional(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    optional(spl ? MEMO_PROGRAM : undefined),
     { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
     ...(await eventCpiAccounts()),
     ...(await ownerBatch(owners, spl)),
@@ -1761,6 +1768,7 @@ export async function returnSponsorshipInstruction(
     optional(spl ? await ata(destination, spl.mint, spl.tokenProgram) : undefined, true),
     optional(spl?.tokenProgram),
     optional(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    optional(spl ? MEMO_PROGRAM : undefined),
     { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
     ...(await eventCpiAccounts()),
   ];
@@ -1812,6 +1820,7 @@ export async function reclaimInstruction(
     optional(spl ? await ata(boxOwner.address, spl.mint, spl.tokenProgram) : undefined, true),
     optional(spl?.tokenProgram),
     optional(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    optional(spl ? MEMO_PROGRAM : undefined),
     { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
     ...(await eventCpiAccounts()),
   ];
@@ -1844,6 +1853,7 @@ export async function reclaimSponsorshipInstruction(
     optional(spl ? await ata(sponsor.address, spl.mint, spl.tokenProgram) : undefined, true),
     optional(spl?.tokenProgram),
     optional(spl ? ASSOCIATED_TOKEN_PROGRAM : undefined),
+    optional(spl ? MEMO_PROGRAM : undefined),
     { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
     ...(await eventCpiAccounts()),
   ];
@@ -2087,7 +2097,11 @@ export async function fetchLamports(addr: Address): Promise<bigint> {
 export const COMPUTE_BUDGET_PROGRAM = address("ComputeBudget111111111111111111111111111111");
 
 /** `ComputeBudgetInstruction::SetComputeUnitLimit(units)`: `[2] ‖ u32 LE`. */
-/** The SPL Memo program; a memo with no signer accounts only logs its text. */
+/**
+ * The SPL Memo program (PROGRAM §1 `MEMO_PROGRAM`): on every SPL payout since the 2026-10-23
+ * audit (F1), and the unrelated neighbour of the §10 composability checks; a memo with no signer
+ * accounts only logs its text.
+ */
 export const MEMO_PROGRAM = address("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
 
 /** A memo instruction, the unrelated neighbour of the §10 composability checks. */
