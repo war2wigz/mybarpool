@@ -113,7 +113,9 @@ returns `"v1"` when the list includes `1` and `"legacy"` otherwise — a v1 mess
 limits in the message itself (4,096 bytes), a legacy one as ComputeBudget instructions
 (1,232 bytes). `signAndSend` confirms at `confirmed`, never resends, and classifies failures as
 `SdkError` codes: `SimulationFailed` and `ProgramError` carry the PROGRAM §8 error name,
-`BlockhashExpired` means nothing landed and `refreshBlockhash` gives the one allowed retry.
+`BlockhashExpired` means nothing landed (once the block height passes `lastValidBlockHeight`
+the ledger's history is read once, so a transaction the status cache missed is found rather
+than reported as never processed) and `refreshBlockhash` gives the one allowed retry.
 `checkFunds` reports a lamport or token shortfall before the wallet opens.
 
 ### Reads and subscriptions

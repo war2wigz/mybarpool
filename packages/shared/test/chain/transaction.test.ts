@@ -396,8 +396,8 @@ describe("signAndSend", () => {
     expect(methods).toEqual(["getSignatureStatuses", "getEpochInfo", "getSignatureStatuses"]);
   });
 
-  it("a wallet fee payer: past lastValidBlockHeight with no status is BlockhashExpired, never a second send", async () => {
-    const { rpc } = rpcFor(
+  it("a wallet fee payer: past lastValidBlockHeight with no status (the ledger's history read too) is BlockhashExpired, never a second send", async () => {
+    const { rpc, calls } = rpcFor(
       {},
       {
         getSignatureStatuses: () => ({ context: { slot: 1n }, value: [null] }),
@@ -419,6 +419,45 @@ describe("signAndSend", () => {
     expect(isSdkError(e, "BlockhashExpired")).toBe(true);
     expect((e as SdkError).details.lastValidBlockHeight).toBe(1_000n);
     expect(sends).toBe(1);
+    // The ledger was asked before "expired" was said.
+    const statuses = calls.filter((c) => c.method === "getSignatureStatuses");
+    expect(statuses.map((c) => c.params)).toEqual([
+      [[expect.any(String)]],
+      [[expect.any(String)], { searchTransactionHistory: true }],
+    ]);
+  });
+
+  it("a wallet fee payer: a landed transaction the status cache missed is found in the ledger's history past the height, not called expired (A1, 2026-10-22)", async () => {
+    let reads = 0;
+    const { rpc } = rpcFor(
+      {},
+      {
+        getSignatureStatuses: (_sigs: unknown, opts?: { searchTransactionHistory?: boolean }) => ({
+          context: { slot: 1n },
+          value: [
+            opts?.searchTransactionHistory
+              ? { confirmationStatus: "finalized", err: null, slot: 5n, confirmations: null }
+              : (reads++, null),
+          ],
+        }),
+        getEpochInfo: () => ({
+          blockHeight: 5_000n,
+          epoch: 0n,
+          absoluteSlot: 1n,
+          slotIndex: 0n,
+          slotsInEpoch: 1n,
+        }),
+      },
+    );
+    let sends = 0;
+    const { client, p } = await prepared(
+      rpc,
+      sendingSigner(() => sends++),
+    );
+    const sig = await signAndSend(client, p, { pollIntervalMs: 1 });
+    expect(typeof sig).toBe("string");
+    expect(sends).toBe(1);
+    expect(reads).toBe(1);
   });
 
   it("a wallet fee payer: a failed status with a program code is ProgramError with its name", async () => {

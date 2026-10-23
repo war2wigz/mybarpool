@@ -294,18 +294,28 @@ async function confirmByPolling(
   options: SignAndSendOptions,
 ): Promise<void> {
   const interval = options.pollIntervalMs ?? 1_000;
+  const landed = (
+    status: { err: unknown; confirmationStatus: string | null } | null | undefined,
+  ): boolean => {
+    if (!status) return false;
+    if (status.err) throw getSolanaErrorFromTransactionError(status.err as never);
+    return status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized";
+  };
   for (;;) {
     options.abortSignal?.throwIfAborted();
     const { value } = await client.rpc.getSignatureStatuses([signature]).send();
-    const status = value[0];
-    if (status) {
-      if (status.err) throw getSolanaErrorFromTransactionError(status.err as never);
-      if (status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized")
-        return;
-    }
+    if (landed(value[0])) return;
     const epoch = await client.rpc.getEpochInfo({ commitment: "confirmed" }).send();
     if (epoch.blockHeight > lastValidBlockHeight) {
-      throw new SdkError("BlockhashExpired", { lastValidBlockHeight });
+      // The status cache is recent slots only and, behind a load balancer, one node's. A
+      // transaction that landed but is not in this node's cache would read as never processed
+      // and the caller's one retry would send it twice; the ledger's history is asked once
+      // before "expired" is said.
+      const { value: history } = await client.rpc
+        .getSignatureStatuses([signature], { searchTransactionHistory: true })
+        .send();
+      if (landed(history[0])) return;
+      if (!history[0]) throw new SdkError("BlockhashExpired", { lastValidBlockHeight });
     }
     await new Promise((r) => setTimeout(r, interval));
   }
