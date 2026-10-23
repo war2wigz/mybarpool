@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { winningBox, type Digits, type GameKey } from "@mybarpool/shared";
+import { SPONSORSHIP_SIZE, winningBox, type Digits, type GameKey } from "@mybarpool/shared";
 import {
   airdropFactory,
   createKeyPairSignerFromBytes,
@@ -205,7 +205,7 @@ export class Lifecycle {
       vault: await r(0n),
       pool: await r(1442n), // PROGRAM §3.3
       tokenAccount: await r(165n),
-      sponsorship: await r(81n), // PROGRAM §3.7
+      sponsorship: await r(BigInt(SPONSORSHIP_SIZE)), // PROGRAM §3.7
       counter: await r(74n), // PROGRAM §3.5
     };
     // PROGRAM §2 team table: KC hosting DAL; the week is this script's own.

@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { winningBox, type Digits } from "@mybarpool/shared";
+import { SPONSORSHIP_SIZE, winningBox, type Digits } from "@mybarpool/shared";
 import {
   airdropFactory,
   createKeyPairSignerFromBytes,
@@ -257,7 +257,7 @@ describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
       vault: await r(0n),
       pool: await r(1442n),
       tokenAccount: await r(165n),
-      sponsorship: await r(81n),
+      sponsorship: await r(BigInt(SPONSORSHIP_SIZE)),
     };
 
     kickoff = (await chainNow()) + 3n * HOUR;
@@ -600,11 +600,11 @@ describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
     }
   });
 
-  it("9. the IDL has 26 instructions, 6 accounts, 24 events, 65 errors, docs on each new item", () => {
-    expect(IDL.instructions).toHaveLength(26);
+  it("9. the IDL has 27 instructions, 6 accounts, 25 events, 66 errors, docs on each new item", () => {
+    expect(IDL.instructions).toHaveLength(27);
     expect(IDL.accounts).toHaveLength(6);
-    expect(IDL.events).toHaveLength(24);
-    expect(IDL.errors).toHaveLength(65);
+    expect(IDL.events).toHaveLength(25);
+    expect(IDL.errors).toHaveLength(66);
     const idl = IDL as unknown as {
       instructions: {
         name: string;

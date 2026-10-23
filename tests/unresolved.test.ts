@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { winningBox, type Digits } from "@mybarpool/shared";
+import { SPONSORSHIP_SIZE, winningBox, type Digits } from "@mybarpool/shared";
 import {
   airdropFactory,
   createKeyPairSignerFromBytes,
@@ -241,7 +241,7 @@ describe("unresolved pools: reclaim at thirty days (Surfpool, runs last)", () =>
       vault: await r(0n),
       pool: await r(1442n),
       tokenAccount: await r(165n),
-      sponsorship: await r(81n),
+      sponsorship: await r(BigInt(SPONSORSHIP_SIZE)),
       counter: await r(74n),
     };
     // ORE for R3 exactly: every ATA holds 0 after buying, so buyerA can close theirs.

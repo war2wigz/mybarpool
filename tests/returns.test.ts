@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { winningBox, type Digits } from "@mybarpool/shared";
+import { SPONSORSHIP_SIZE, winningBox, type Digits } from "@mybarpool/shared";
 import {
   airdropFactory,
   createKeyPairSignerFromBytes,
@@ -392,7 +392,7 @@ describe("returns, splits and cancellations (Surfpool, the platform's Entropy de
       vault: await r(0n),
       pool: await r(1442n),
       tokenAccount: await r(165n),
-      sponsorship: await r(81n),
+      sponsorship: await r(BigInt(SPONSORSHIP_SIZE)),
       counter: await r(74n),
     };
     // ORE: the creator buys 5 on U2 and 5 on T2, buyerA 3 on U2 (so the ATA is empty and can
@@ -841,11 +841,11 @@ describe("returns, splits and cancellations (Surfpool, the platform's Entropy de
     expect(measured["split_ore_3_owners_one_create"]!).toBeLessThan(150_000n);
   });
 
-  it("7. the IDL has 26 instructions, 6 accounts, 24 events, 65 errors, docs on each new item", () => {
-    expect(IDL.instructions).toHaveLength(26);
+  it("7. the IDL has 27 instructions, 6 accounts, 25 events, 66 errors, docs on each new item", () => {
+    expect(IDL.instructions).toHaveLength(27);
     expect(IDL.accounts).toHaveLength(6);
-    expect(IDL.events).toHaveLength(24);
-    expect(IDL.errors).toHaveLength(65);
+    expect(IDL.events).toHaveLength(25);
+    expect(IDL.errors).toHaveLength(66);
     const idl = IDL as unknown as {
       instructions: {
         name: string;

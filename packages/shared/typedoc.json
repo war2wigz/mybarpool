@@ -30,6 +30,7 @@
     "src/generated/accounts/walletOverride.ts:WalletOverride",
     "src/generated/accounts/sponsorship.ts:Sponsorship",
     "src/generated/types/tokenRule.ts:TokenRule",
+    "src/generated/events/boxSponsored.ts:BoxSponsoredEvent",
     "src/generated/events/boxesBought.ts:BoxesBoughtEvent",
     "src/generated/events/boxesReclaimed.ts:BoxesReclaimedEvent",
     "src/generated/events/boxesReturned.ts:BoxesReturnedEvent",
