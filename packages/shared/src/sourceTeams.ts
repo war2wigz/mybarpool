@@ -224,8 +224,50 @@ export const TXODDS_TEAMS: Readonly<Record<string, number>> = Object.freeze({
   "Washington Commanders": id("WAS"),
 });
 
+/**
+ * Yahoo Sports `home_team_id` / `away_team_id` on the editorial scoreboard
+ * (`api-secure.sports.yahoo.com/v1/editorial/s/scoreboard?leagues=nfl`) → team id. The 32 ids
+ * were read from the 2026 week 6–8 scoreboards on 2026-10-23 (the `teams` block names each
+ * with its abbreviation); the numbering has gaps (no 31, 32) and is stable across seasons.
+ * Note `LA` (the Rams), `JAC` and `WAS` in Yahoo's abbreviations.
+ */
+export const YAHOO_TEAM_IDS: Readonly<Record<string, number>> = Object.freeze({
+  "nfl.t.1": id("ATL"),
+  "nfl.t.2": id("BUF"),
+  "nfl.t.3": id("CHI"),
+  "nfl.t.4": id("CIN"),
+  "nfl.t.5": id("CLE"),
+  "nfl.t.6": id("DAL"),
+  "nfl.t.7": id("DEN"),
+  "nfl.t.8": id("DET"),
+  "nfl.t.9": id("GB"),
+  "nfl.t.10": id("TEN"),
+  "nfl.t.11": id("IND"),
+  "nfl.t.12": id("KC"),
+  "nfl.t.13": id("LV"),
+  "nfl.t.14": id("LAR"),
+  "nfl.t.15": id("MIA"),
+  "nfl.t.16": id("MIN"),
+  "nfl.t.17": id("NE"),
+  "nfl.t.18": id("NO"),
+  "nfl.t.19": id("NYG"),
+  "nfl.t.20": id("NYJ"),
+  "nfl.t.21": id("PHI"),
+  "nfl.t.22": id("ARI"),
+  "nfl.t.23": id("PIT"),
+  "nfl.t.24": id("LAC"),
+  "nfl.t.25": id("SF"),
+  "nfl.t.26": id("SEA"),
+  "nfl.t.27": id("TB"),
+  "nfl.t.28": id("WAS"),
+  "nfl.t.29": id("CAR"),
+  "nfl.t.30": id("JAX"),
+  "nfl.t.33": id("BAL"),
+  "nfl.t.34": id("HOU"),
+});
+
 /** The source names the scores service uses for its team tables. */
-export type TeamTableSource = "espn" | "kalshi" | "nflverse" | "polymarket" | "txodds";
+export type TeamTableSource = "espn" | "kalshi" | "nflverse" | "polymarket" | "txodds" | "yahoo";
 
 /** Every source table the package carries, by the name the scores service uses. */
 export const SOURCE_TEAM_TABLES: Readonly<
@@ -236,6 +278,7 @@ export const SOURCE_TEAM_TABLES: Readonly<
   nflverse: NFLVERSE_CODES,
   polymarket: SPORTRADAR_ABBREVIATIONS,
   txodds: TXODDS_TEAMS,
+  yahoo: YAHOO_TEAM_IDS,
 });
 
 /**

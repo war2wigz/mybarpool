@@ -8,6 +8,7 @@ import {
   SOURCE_TEAM_TABLES,
   SPORTRADAR_ABBREVIATIONS,
   TXODDS_TEAMS,
+  YAHOO_TEAM_IDS,
 } from "../src/sourceTeams.js";
 import { TEAMS } from "../src/teams.js";
 
@@ -50,6 +51,7 @@ describe("source team tables (ARCHITECTURE › Games)", () => {
       "nflverse",
       "polymarket",
       "txodds",
+      "yahoo",
     ]);
   });
 
@@ -69,6 +71,19 @@ describe("source team tables (ARCHITECTURE › Games)", () => {
     expect(resolveSourceTeam("polymarket", "LAC")).toBe(16);
     for (const other of ["LA", "WSH", "JAC", "NOLA"])
       expect(resolveSourceTeam("polymarket", other)).toBeUndefined();
+  });
+
+  it("Yahoo: the 32 team ids of the editorial scoreboard, numbered with gaps; every value a distinct team", () => {
+    expect(Object.keys(YAHOO_TEAM_IDS)).toHaveLength(32);
+    expect(new Set(Object.values(YAHOO_TEAM_IDS)).size).toBe(32);
+    expect(resolveSourceTeam("yahoo", "nfl.t.3")).toBe(5); // CHI, the 2026 week 7 home side
+    expect(resolveSourceTeam("yahoo", "nfl.t.17")).toBe(21); // NE
+    expect(resolveSourceTeam("yahoo", "nfl.t.14")).toBe(17); // Yahoo's LA is the Rams
+    expect(resolveSourceTeam("yahoo", "nfl.t.30")).toBe(14); // Yahoo's JAC
+    expect(resolveSourceTeam("yahoo", "nfl.t.33")).toBe(2); // BAL
+    expect(resolveSourceTeam("yahoo", "nfl.t.34")).toBe(12); // HOU
+    for (const absent of ["nfl.t.31", "nfl.t.32", "3", "CHI"])
+      expect(resolveSourceTeam("yahoo", absent)).toBeUndefined();
   });
 
   it("TxODDS: the 32 NFL team names from the TxLINE schedule, including dotted L.A. and N.Y. prefixes", () => {

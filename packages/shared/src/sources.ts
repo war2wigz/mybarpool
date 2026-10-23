@@ -1,17 +1,23 @@
 /**
- * The game-ID mapping shape for the four score sources (ARCHITECTURE › Games,
+ * The game-ID mapping shape for the five score sources (ARCHITECTURE › Games,
  * Score integrity: Polymarket's live stream, Kalshi's live data, ESPN's
- * scoreboard, and TxODDS's TxLINE feed). Shape and pure helpers only; the
+ * scoreboard, TxODDS's TxLINE feed, and Yahoo's scoreboard). Shape and pure helpers only; the
  * scores service fills the map in Step 10. A game is identified on-chain by
  * its `GameKey`, never by a source's ID (PROGRAM §2).
  */
 import type { GameKey } from "./gameKey.js";
 
 /** A live-score source whose game ids map to a {@link GameKey}. */
-export type ScoreSource = "polymarket" | "kalshi" | "espn" | "txodds";
+export type ScoreSource = "polymarket" | "kalshi" | "espn" | "txodds" | "yahoo";
 
 /** Every {@link ScoreSource}. */
-export const SCORE_SOURCES: readonly ScoreSource[] = ["polymarket", "kalshi", "espn", "txodds"];
+export const SCORE_SOURCES: readonly ScoreSource[] = [
+  "polymarket",
+  "kalshi",
+  "espn",
+  "txodds",
+  "yahoo",
+];
 
 /** A game's IDs at each source; any may be unknown. */
 export interface SourceGameIds {
@@ -23,6 +29,8 @@ export interface SourceGameIds {
   readonly espn?: string;
   /** TxODDS `FixtureId` (an integer on the TxLINE feed, as a string). */
   readonly txodds?: string;
+  /** Yahoo's `gameid` on the editorial scoreboard (`nfl.g.<yyyymmdd><nnn>`). */
+  readonly yahoo?: string;
 }
 
 /** `sourceKey(source, id)` → `GameKey`. */
@@ -54,6 +62,7 @@ export function buildGameIdMap(entries: Iterable<{ key: GameKey; ids: SourceGame
       ["kalshi", ids.kalshi],
       ["espn", ids.espn],
       ["txodds", ids.txodds],
+      ["yahoo", ids.yahoo],
     ];
     for (const [source, id] of pairs) {
       if (id === undefined) continue;

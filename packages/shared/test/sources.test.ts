@@ -12,8 +12,8 @@ const KC_BAL = { season: 2026, week: 1, home: 15, away: 2 };
 const PHI_DAL = { season: 2026, week: 1, home: 25, away: 8 };
 
 describe("score-source game-ID map (ARCHITECTURE › Games; PROGRAM §2)", () => {
-  it("names the four sources", () => {
-    expect(SCORE_SOURCES).toEqual(["polymarket", "kalshi", "espn", "txodds"]);
+  it("names the five sources", () => {
+    expect(SCORE_SOURCES).toEqual(["polymarket", "kalshi", "espn", "txodds", "yahoo"]);
   });
 
   it("keys are source-prefixed and never collide across sources", () => {
