@@ -102,7 +102,7 @@ function initialParams(
     maxOwnBoxes: 5,
     preseasonEnabled: false,
     paused: false,
-    tokens: [sol, skr, ore],
+    tokens: [sol, skr, ore, skr, skr, skr], // PROGRAM §2: slots 3–5 are spare placeholders
   };
 }
 
@@ -143,7 +143,7 @@ describe("admin instructions (Surfpool, mainnet fork)", () => {
   });
 
   it("1. refuses initialize from a funded key that is not the upgrade authority (6000)", async () => {
-    const ix = await initializeInstruction(stranger, params, { mint2: ORE_MINT });
+    const ix = await initializeInstruction(stranger, params, { 2: ORE_MINT });
     expect(await sendExpectingError(stranger, ix)).toBe(errorCode("Unauthorized"));
     expect(errorCode("Unauthorized")).toBe(6000);
     expect(await fetchAccountData(config)).toBeNull();
@@ -152,12 +152,12 @@ describe("admin instructions (Surfpool, mainnet fork)", () => {
   it("2. initialize by the upgrade authority writes the §3.1 config and emits ConfigUpdated", async () => {
     // First touch of the ORE mint, fetched from mainnet (Step 3 audit M1).
     const signature = await withRetry(async () =>
-      send(admin, await initializeInstruction(admin, params, { mint2: ORE_MINT })),
+      send(admin, await initializeInstruction(admin, params, { 2: ORE_MINT })),
     );
 
     const data = await fetchAccountData(config);
     expect(data).not.toBeNull();
-    expect(data!.length).toBe(698); // PROGRAM §3.1
+    expect(data!.length).toBe(992); // PROGRAM §3.1
     const stored = decodeAccount("PlatformConfig", data!, platformConfigDecoder);
     expect(stored.admin).toBe(admin.address);
     expect(stored.scoreAuthority).toBe(keeper.address);
@@ -192,7 +192,7 @@ describe("admin instructions (Surfpool, mainnet fork)", () => {
     expect(event.tokens).toEqual(params.tokens);
     expect(event.time).toBeGreaterThan(0n);
 
-    const rent = await rpc.getMinimumBalanceForRentExemption(698n).send();
+    const rent = await rpc.getMinimumBalanceForRentExemption(992n).send();
     expect(await fetchLamports(config)).toBe(rent);
   });
 

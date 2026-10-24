@@ -596,7 +596,7 @@ describe("pool instructions (Surfpool, mainnet fork)", () => {
     await send(
       admin,
       await updateConfigInstruction(admin, {
-        tokens: [{ ...solRule, maxSponsorship: 5n * PRICE }, undefined, undefined],
+        tokens: [{ ...solRule, maxSponsorship: 5n * PRICE }],
       }),
     );
     expect(
@@ -605,10 +605,7 @@ describe("pool instructions (Surfpool, mainnet fork)", () => {
     expect(errorCode("SponsorshipCapExceeded")).toBe(6030);
     await send(sponsorB, await sponsorInstruction(sponsorB, pool2, PRICE));
     expect((await fetchPool(pool2.pool)).sponsoredTotal).toBe(5n * PRICE);
-    await send(
-      admin,
-      await updateConfigInstruction(admin, { tokens: [solRule, undefined, undefined] }),
-    );
+    await send(admin, await updateConfigInstruction(admin, { tokens: [solRule] }));
   });
 
   it("7. after the recorded kickoff: buy, sponsor and create_pool are SalesClosed", async () => {

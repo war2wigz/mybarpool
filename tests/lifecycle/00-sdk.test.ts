@@ -352,7 +352,7 @@ describe("lifecycle 00: the SDK, v1 (Surfpool)", { timeout: 120_000 }, () => {
         maxOwnBoxes: null,
         preseasonEnabled: null,
         paused: null,
-        tokens: [null, null, null],
+        tokens: [null, null, null, null, null, null],
       },
       { programAddress: client.programAddress },
     );

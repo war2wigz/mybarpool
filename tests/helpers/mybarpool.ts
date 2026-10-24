@@ -80,6 +80,7 @@ import {
   poolSeeds,
   REGOLITH_ENTROPY_PROGRAM,
   sponsorshipSeeds,
+  TOKEN_COUNT,
   vaultSeeds,
   type GameKey,
 } from "@mybarpool/shared";
@@ -240,7 +241,8 @@ export interface ConfigFields {
   maxOwnBoxes: number;
   preseasonEnabled: boolean;
   paused: boolean;
-  tokens: [TokenRule, TokenRule, TokenRule];
+  /** One per token index (PROGRAM §2), `TOKEN_COUNT` entries. */
+  tokens: [TokenRule, TokenRule, TokenRule, TokenRule, TokenRule, TokenRule];
 }
 
 export type InitializeParams = ConfigFields;
@@ -263,7 +265,7 @@ const configFieldEncoders = [
   ["maxOwnBoxes", getU8Encoder()],
   ["preseasonEnabled", getBooleanEncoder()],
   ["paused", getBooleanEncoder()],
-  ["tokens", getArrayEncoder(tokenRuleEncoder, { size: 3 })],
+  ["tokens", getArrayEncoder(tokenRuleEncoder, { size: TOKEN_COUNT })],
 ] as const;
 
 const configFieldDecoders = [
@@ -278,7 +280,7 @@ const configFieldDecoders = [
   ["maxOwnBoxes", getU8Decoder()],
   ["preseasonEnabled", getBooleanDecoder()],
   ["paused", getBooleanDecoder()],
-  ["tokens", getArrayDecoder(tokenRuleDecoder, { size: 3 })],
+  ["tokens", getArrayDecoder(tokenRuleDecoder, { size: TOKEN_COUNT })],
 ] as const;
 
 export const initializeParamsEncoder = getStructEncoder([
@@ -305,7 +307,8 @@ export interface UpdateConfigParams {
   maxOwnBoxes?: number;
   preseasonEnabled?: boolean;
   paused?: boolean;
-  tokens?: [TokenRule | undefined, TokenRule | undefined, TokenRule | undefined];
+  /** By token index; a missing or `undefined` entry leaves that slot unchanged. */
+  tokens?: (TokenRule | undefined)[];
 }
 
 /** Anchor `Option<T>` is a 1-byte tag, Kit's `getOptionEncoder` default. */
@@ -324,11 +327,11 @@ const updateConfigParamsEncoder = getStructEncoder([
   ["maxOwnBoxes", opt(getU8Encoder())],
   ["preseasonEnabled", opt(getBooleanEncoder())],
   ["paused", opt(getBooleanEncoder())],
-  ["tokens", getArrayEncoder(opt(tokenRuleEncoder), { size: 3 })],
+  ["tokens", getArrayEncoder(opt(tokenRuleEncoder), { size: TOKEN_COUNT })],
 ]);
 
 function encodeUpdateConfigParams(p: UpdateConfigParams): ReadonlyUint8Array {
-  const tokens = p.tokens ?? [undefined, undefined, undefined];
+  const tokens = Array.from({ length: TOKEN_COUNT }, (_, i) => p.tokens?.[i] ?? null);
   return updateConfigParamsEncoder.encode({
     admin: p.admin ?? null,
     scoreAuthority: p.scoreAuthority ?? null,
@@ -342,7 +345,7 @@ function encodeUpdateConfigParams(p: UpdateConfigParams): ReadonlyUint8Array {
     maxOwnBoxes: p.maxOwnBoxes ?? null,
     preseasonEnabled: p.preseasonEnabled ?? null,
     paused: p.paused ?? null,
-    tokens: tokens.map((t) => t ?? null),
+    tokens,
   });
 }
 
@@ -417,10 +420,24 @@ async function eventCpiAccounts(): Promise<{ address: Address; role: AccountRole
   ];
 }
 
+/**
+ * The `mint_1` … `mint_5` accounts of `initialize` / `update_config`, by token index
+ * (index 0, SOL, has none). An absent mint is the program id.
+ */
+export type ConfigMints = { [index: number]: Address | undefined };
+
+function mintAccounts(mints: ConfigMints): { address: Address; role: AccountRole.READONLY }[] {
+  const out: { address: Address; role: AccountRole.READONLY }[] = [];
+  for (let i = 1; i < TOKEN_COUNT; i++) {
+    out.push({ address: mints[i] ?? PROGRAM_ID, role: AccountRole.READONLY });
+  }
+  return out;
+}
+
 export async function initializeInstruction(
   admin: TransactionSigner,
   params: InitializeParams,
-  mints: { mint1?: Address; mint2?: Address } = {},
+  mints: ConfigMints = {},
 ): Promise<Instruction> {
   return {
     programAddress: PROGRAM_ID,
@@ -428,8 +445,7 @@ export async function initializeInstruction(
       { address: admin.address, role: AccountRole.WRITABLE_SIGNER },
       { address: await configPda(), role: AccountRole.WRITABLE },
       { address: await programDataPda(), role: AccountRole.READONLY },
-      { address: mints.mint1 ?? PROGRAM_ID, role: AccountRole.READONLY },
-      { address: mints.mint2 ?? PROGRAM_ID, role: AccountRole.READONLY },
+      ...mintAccounts(mints),
       { address: SYSTEM_PROGRAM, role: AccountRole.READONLY },
       ...(await eventCpiAccounts()),
     ],
@@ -440,15 +456,14 @@ export async function initializeInstruction(
 export async function updateConfigInstruction(
   admin: TransactionSigner,
   params: UpdateConfigParams,
-  mints: { mint1?: Address; mint2?: Address } = {},
+  mints: ConfigMints = {},
 ): Promise<Instruction> {
   return {
     programAddress: PROGRAM_ID,
     accounts: [
       { address: admin.address, role: AccountRole.READONLY_SIGNER },
       { address: await configPda(), role: AccountRole.WRITABLE },
-      { address: mints.mint1 ?? PROGRAM_ID, role: AccountRole.READONLY },
-      { address: mints.mint2 ?? PROGRAM_ID, role: AccountRole.READONLY },
+      ...mintAccounts(mints),
       ...(await eventCpiAccounts()),
     ],
     data: withDiscriminator("update_config", encodeUpdateConfigParams(params)),
