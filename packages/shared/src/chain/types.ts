@@ -17,7 +17,7 @@ export type CreatorCounter = g.CreatorCounter;
 export type WalletOverride = g.WalletOverride;
 /** PROGRAM §3.7 `Sponsorship`. */
 export type Sponsorship = g.Sponsorship;
-/** PROGRAM §3.1 `TokenRule`: one per token index (0 SOL, 1 SKR, 2 ORE). */
+/** PROGRAM §3.1 `TokenRule`: one per token index (0 SOL, 1 SKR, 2 ORE, 3–5 spare). */
 export type TokenRule = g.TokenRule;
 /** PROGRAM §7 `BoxesBought`: a purchase landed (by `buy`, or by `create_pool` for the creator). */
 export type BoxesBoughtEvent = g.BoxesBoughtEvent;

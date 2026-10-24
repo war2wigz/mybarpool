@@ -130,7 +130,7 @@ export function getConfigUpdatedEventEncoder(): FixedSizeEncoder<ConfigUpdatedEv
       ["maxOwnBoxes", getU8Encoder()],
       ["preseasonEnabled", getBooleanEncoder()],
       ["paused", getBooleanEncoder()],
-      ["tokens", getArrayEncoder(getTokenRuleEncoder(), { size: 3 })],
+      ["tokens", getArrayEncoder(getTokenRuleEncoder(), { size: 6 })],
     ]),
     [getConstantEncoder(CONFIG_UPDATED_EVENT_DISCRIMINATOR)],
   );
@@ -153,7 +153,7 @@ export function getConfigUpdatedEventDecoder(): FixedSizeDecoder<ConfigUpdatedEv
       ["maxOwnBoxes", getU8Decoder()],
       ["preseasonEnabled", getBooleanDecoder()],
       ["paused", getBooleanDecoder()],
-      ["tokens", getArrayDecoder(getTokenRuleDecoder(), { size: 3 })],
+      ["tokens", getArrayDecoder(getTokenRuleDecoder(), { size: 6 })],
     ]),
     [getConstantDecoder(CONFIG_UPDATED_EVENT_DISCRIMINATOR)],
   );

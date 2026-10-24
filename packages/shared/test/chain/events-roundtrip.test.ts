@@ -73,7 +73,7 @@ const cases: Array<[string, ArrayLike<number>, Record<string, unknown>]> = [
       maxOwnBoxes: 5,
       preseasonEnabled: false,
       paused: true,
-      tokens: [rule, rule, rule],
+      tokens: [rule, rule, rule, rule, rule, rule],
     }),
     { paused: true },
   ],

@@ -95,6 +95,17 @@ function configArgs(overrides: Partial<PlatformConfigArgs> = {}): PlatformConfig
     maxPrice: 1_000_000_000n,
     maxSponsorship: 10_000_000_000n,
   };
+  // PROGRAM §2: a spare slot is a disabled placeholder.
+  const spare = {
+    enabled: false,
+    mint: DEFAULT_ADDRESS,
+    tokenProgram: DEFAULT_ADDRESS,
+    decimals: 0,
+    minPrice: 1n,
+    step: 1n,
+    maxPrice: 1n,
+    maxSponsorship: 1n,
+  };
   return {
     admin: CREATOR,
     scoreAuthority: CREATOR,
@@ -120,6 +131,9 @@ function configArgs(overrides: Partial<PlatformConfigArgs> = {}): PlatformConfig
         step: 100n,
         maxPrice: 2_000n,
       },
+      spare,
+      spare,
+      spare,
     ],
     bump: 255,
     reserved: new Uint8Array(256),

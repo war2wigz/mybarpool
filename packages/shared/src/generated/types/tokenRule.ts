@@ -25,7 +25,7 @@ import {
   type HasAddress,
 } from "@solana/kit";
 
-/** PROGRAM §3.1 `TokenRule`: one per token index (0 SOL, 1 SKR, 2 ORE). 98 bytes. */
+/** PROGRAM §3.1 `TokenRule`: one per token index (0 SOL, 1 SKR, 2 ORE, 3–5 spare). 98 bytes. */
 export type TokenRule = {
   /** Pools may be created in this token. */
   enabled: boolean;

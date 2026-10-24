@@ -56,7 +56,7 @@ const config: PlatformConfigArgs = {
   maxOwnBoxes: 1,
   preseasonEnabled: false,
   paused: false,
-  tokens: [rule, rule, { ...rule, mint: ORE_MINT, tokenProgram: TOKEN_PROGRAM }],
+  tokens: [rule, rule, { ...rule, mint: ORE_MINT, tokenProgram: TOKEN_PROGRAM }, rule, rule, rule],
   bump: 0,
   reserved: new Uint8Array(256),
 };

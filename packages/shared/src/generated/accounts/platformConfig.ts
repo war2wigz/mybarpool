@@ -84,7 +84,7 @@ export type PlatformConfig = {
   preseasonEnabled: boolean;
   /** PROGRAM §3.1: when true, `create_pool`, `buy` and `sponsor` fail; nothing else is affected. */
   paused: boolean;
-  /** PROGRAM §3.1: indexed by token index (0 SOL, 1 SKR, 2 ORE). */
+  /** PROGRAM §3.1: indexed by token index (0 SOL, 1 SKR, 2 ORE, 3–5 spare). */
   tokens: Array<TokenRule>;
   /** PDA bump. */
   bump: number;
@@ -117,7 +117,7 @@ export type PlatformConfigArgs = {
   preseasonEnabled: boolean;
   /** PROGRAM §3.1: when true, `create_pool`, `buy` and `sponsor` fail; nothing else is affected. */
   paused: boolean;
-  /** PROGRAM §3.1: indexed by token index (0 SOL, 1 SKR, 2 ORE). */
+  /** PROGRAM §3.1: indexed by token index (0 SOL, 1 SKR, 2 ORE, 3–5 spare). */
   tokens: Array<TokenRuleArgs>;
   /** PDA bump. */
   bump: number;
@@ -142,7 +142,7 @@ export function getPlatformConfigEncoder(): FixedSizeEncoder<PlatformConfigArgs>
       ["maxOwnBoxes", getU8Encoder()],
       ["preseasonEnabled", getBooleanEncoder()],
       ["paused", getBooleanEncoder()],
-      ["tokens", getArrayEncoder(getTokenRuleEncoder(), { size: 3 })],
+      ["tokens", getArrayEncoder(getTokenRuleEncoder(), { size: 6 })],
       ["bump", getU8Encoder()],
       ["reserved", fixEncoderSize(getBytesEncoder(), 256)],
     ]),
@@ -166,7 +166,7 @@ export function getPlatformConfigDecoder(): FixedSizeDecoder<PlatformConfig> {
     ["maxOwnBoxes", getU8Decoder()],
     ["preseasonEnabled", getBooleanDecoder()],
     ["paused", getBooleanDecoder()],
-    ["tokens", getArrayDecoder(getTokenRuleDecoder(), { size: 3 })],
+    ["tokens", getArrayDecoder(getTokenRuleDecoder(), { size: 6 })],
     ["bump", getU8Decoder()],
     ["reserved", fixDecoderSize(getBytesDecoder(), 256)],
   ]);
@@ -228,5 +228,5 @@ export async function fetchAllMaybePlatformConfig(
 }
 
 export function getPlatformConfigSize(): number {
-  return 698;
+  return 992;
 }

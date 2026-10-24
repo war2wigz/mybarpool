@@ -8,12 +8,15 @@
 import { BOXES } from "./boxes.js";
 import { assertU64 } from "./bytes.js";
 
-/** PROGRAM §2 token index. */
+/** PROGRAM §2 token index. Indices 3–5 are spare slots (disabled placeholders until filled). */
 export enum TokenIndex {
   SOL = 0,
   SKR = 1,
   ORE = 2,
 }
+
+/** PROGRAM §2: the number of `TokenRule` slots in `PlatformConfig.tokens`. */
+export const TOKEN_COUNT = 6;
 
 /** The price fields of a `TokenRule`, in base units. */
 export interface PriceLadder {

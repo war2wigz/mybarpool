@@ -74,7 +74,7 @@ describe("account sizes and offsets (PROGRAM §3)", () => {
     });
     expect([POOL_SIZE, SPONSORSHIP_SIZE, GAME_RECORD_SIZE]).toEqual([1442, 85, 153]);
     expect([PLATFORM_CONFIG_SIZE, CREATOR_COUNTER_SIZE, WALLET_OVERRIDE_SIZE]).toEqual([
-      698, 74, 43,
+      992, 74, 43,
     ]);
   });
 
@@ -239,7 +239,7 @@ describe("reads over a mock RPC", () => {
       maxOwnBoxes: 5,
       preseasonEnabled: false,
       paused: false,
-      tokens: [0, 1, 2].map((i) => ({
+      tokens: [0, 1, 2, 3, 4, 5].map((i) => ({
         enabled: i !== 1,
         mint: i === 0 ? DEFAULT : fixedAddress(10),
         tokenProgram: i === 0 ? DEFAULT : fixedAddress(11),

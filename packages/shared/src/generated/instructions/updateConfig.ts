@@ -77,6 +77,9 @@ export type UpdateConfigInstruction<
   TAccountConfig extends string | AccountMeta<string> = string,
   TAccountMint1 extends string | AccountMeta<string> = string,
   TAccountMint2 extends string | AccountMeta<string> = string,
+  TAccountMint3 extends string | AccountMeta<string> = string,
+  TAccountMint4 extends string | AccountMeta<string> = string,
+  TAccountMint5 extends string | AccountMeta<string> = string,
   TAccountEventAuthority extends string | AccountMeta<string> = string,
   TAccountProgram extends string | AccountMeta<string> =
     "5SrgR4uZH2xqvNvJVgLddFuLMLaiYbbsXtmtS4rvLfD6",
@@ -91,6 +94,9 @@ export type UpdateConfigInstruction<
       TAccountConfig extends string ? WritableAccount<TAccountConfig> : TAccountConfig,
       TAccountMint1 extends string ? ReadonlyAccount<TAccountMint1> : TAccountMint1,
       TAccountMint2 extends string ? ReadonlyAccount<TAccountMint2> : TAccountMint2,
+      TAccountMint3 extends string ? ReadonlyAccount<TAccountMint3> : TAccountMint3,
+      TAccountMint4 extends string ? ReadonlyAccount<TAccountMint4> : TAccountMint4,
+      TAccountMint5 extends string ? ReadonlyAccount<TAccountMint5> : TAccountMint5,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -174,7 +180,7 @@ export function getUpdateConfigInstructionDataEncoder(): Encoder<UpdateConfigIns
       ["maxOwnBoxes", getOptionEncoder(getU8Encoder())],
       ["preseasonEnabled", getOptionEncoder(getBooleanEncoder())],
       ["paused", getOptionEncoder(getBooleanEncoder())],
-      ["tokens", getArrayEncoder(getOptionEncoder(getTokenRuleEncoder()), { size: 3 })],
+      ["tokens", getArrayEncoder(getOptionEncoder(getTokenRuleEncoder()), { size: 6 })],
     ]),
     (value) => ({ ...value, discriminator: UPDATE_CONFIG_DISCRIMINATOR }),
   );
@@ -195,7 +201,7 @@ export function getUpdateConfigInstructionDataDecoder(): Decoder<UpdateConfigIns
     ["maxOwnBoxes", getOptionDecoder(getU8Decoder())],
     ["preseasonEnabled", getOptionDecoder(getBooleanDecoder())],
     ["paused", getOptionDecoder(getBooleanDecoder())],
-    ["tokens", getArrayDecoder(getOptionDecoder(getTokenRuleDecoder()), { size: 3 })],
+    ["tokens", getArrayDecoder(getOptionDecoder(getTokenRuleDecoder()), { size: 6 })],
   ]);
 }
 
@@ -214,17 +220,29 @@ export type UpdateConfigAsyncInput<
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint1 extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint2 extends InstructionAccountInput = InstructionAccountInput,
+  TAccountMint3 extends InstructionAccountInput = InstructionAccountInput,
+  TAccountMint4 extends InstructionAccountInput = InstructionAccountInput,
+  TAccountMint5 extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
   /** `config.admin`. */
   admin: TAccountAdmin;
-  /** PROGRAM §3.1 `PlatformConfig`. */
+  /**
+   * PROGRAM §3.1 `PlatformConfig`. Boxed: with six token rules the config, the params and
+   * the event together exceed the 4 KiB frame.
+   */
   config?: TAccountConfig;
   /** Mint for token index 1 (SKR), required when `tokens[1]` is `Some` with a non-default mint. */
   mint1?: TAccountMint1;
   /** Mint for token index 2 (ORE), required when `tokens[2]` is `Some` with a non-default mint. */
   mint2?: TAccountMint2;
+  /** Mint for token index 3 (spare), required when `tokens[3]` is `Some` with a non-default mint. */
+  mint3?: TAccountMint3;
+  /** Mint for token index 4 (spare), required when `tokens[4]` is `Some` with a non-default mint. */
+  mint4?: TAccountMint4;
+  /** Mint for token index 5 (spare), required when `tokens[5]` is `Some` with a non-default mint. */
+  mint5?: TAccountMint5;
   eventAuthority?: TAccountEventAuthority;
   program?: TAccountProgram;
   adminArg: UpdateConfigInstructionDataArgs["admin"];
@@ -247,6 +265,9 @@ export async function getUpdateConfigInstructionAsync<
   TAccountConfig extends InstructionAccountInput,
   TAccountMint1 extends InstructionAccountInput,
   TAccountMint2 extends InstructionAccountInput,
+  TAccountMint3 extends InstructionAccountInput,
+  TAccountMint4 extends InstructionAccountInput,
+  TAccountMint5 extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput,
   TProgramAddress extends Address = typeof MYBARPOOL_PROGRAM_ADDRESS,
@@ -256,6 +277,9 @@ export async function getUpdateConfigInstructionAsync<
     TAccountConfig,
     TAccountMint1,
     TAccountMint2,
+    TAccountMint3,
+    TAccountMint4,
+    TAccountMint5,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -267,6 +291,9 @@ export async function getUpdateConfigInstructionAsync<
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
     ResolvedInstructionAccountMeta<TAccountMint1, InstructionAccountInputAddress<TAccountMint1>>,
     ResolvedInstructionAccountMeta<TAccountMint2, InstructionAccountInputAddress<TAccountMint2>>,
+    ResolvedInstructionAccountMeta<TAccountMint3, InstructionAccountInputAddress<TAccountMint3>>,
+    ResolvedInstructionAccountMeta<TAccountMint4, InstructionAccountInputAddress<TAccountMint4>>,
+    ResolvedInstructionAccountMeta<TAccountMint5, InstructionAccountInputAddress<TAccountMint5>>,
     ResolvedInstructionAccountMeta<
       TAccountEventAuthority,
       InstructionAccountInputAddress<TAccountEventAuthority>
@@ -286,6 +313,9 @@ export async function getUpdateConfigInstructionAsync<
     config: { value: input.config ?? null, isSigner: false, isWritable: true },
     mint1: { value: input.mint1 ?? null, isSigner: false, isWritable: false },
     mint2: { value: input.mint2 ?? null, isSigner: false, isWritable: false },
+    mint3: { value: input.mint3 ?? null, isSigner: false, isWritable: false },
+    mint4: { value: input.mint4 ?? null, isSigner: false, isWritable: false },
+    mint5: { value: input.mint5 ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
     program: { value: input.program ?? null, isSigner: false, isWritable: false },
   };
@@ -315,6 +345,9 @@ export async function getUpdateConfigInstructionAsync<
       getAccountMeta("config", accounts.config),
       getAccountMeta("mint1", accounts.mint1),
       getAccountMeta("mint2", accounts.mint2),
+      getAccountMeta("mint3", accounts.mint3),
+      getAccountMeta("mint4", accounts.mint4),
+      getAccountMeta("mint5", accounts.mint5),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
       getAccountMeta("program", accounts.program),
     ],
@@ -326,6 +359,9 @@ export async function getUpdateConfigInstructionAsync<
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
     ResolvedInstructionAccountMeta<TAccountMint1, InstructionAccountInputAddress<TAccountMint1>>,
     ResolvedInstructionAccountMeta<TAccountMint2, InstructionAccountInputAddress<TAccountMint2>>,
+    ResolvedInstructionAccountMeta<TAccountMint3, InstructionAccountInputAddress<TAccountMint3>>,
+    ResolvedInstructionAccountMeta<TAccountMint4, InstructionAccountInputAddress<TAccountMint4>>,
+    ResolvedInstructionAccountMeta<TAccountMint5, InstructionAccountInputAddress<TAccountMint5>>,
     ResolvedInstructionAccountMeta<
       TAccountEventAuthority,
       InstructionAccountInputAddress<TAccountEventAuthority>
@@ -339,17 +375,29 @@ export type UpdateConfigInput<
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint1 extends InstructionAccountInput = InstructionAccountInput,
   TAccountMint2 extends InstructionAccountInput = InstructionAccountInput,
+  TAccountMint3 extends InstructionAccountInput = InstructionAccountInput,
+  TAccountMint4 extends InstructionAccountInput = InstructionAccountInput,
+  TAccountMint5 extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput = InstructionAccountInput,
 > = {
   /** `config.admin`. */
   admin: TAccountAdmin;
-  /** PROGRAM §3.1 `PlatformConfig`. */
+  /**
+   * PROGRAM §3.1 `PlatformConfig`. Boxed: with six token rules the config, the params and
+   * the event together exceed the 4 KiB frame.
+   */
   config: TAccountConfig;
   /** Mint for token index 1 (SKR), required when `tokens[1]` is `Some` with a non-default mint. */
   mint1?: TAccountMint1;
   /** Mint for token index 2 (ORE), required when `tokens[2]` is `Some` with a non-default mint. */
   mint2?: TAccountMint2;
+  /** Mint for token index 3 (spare), required when `tokens[3]` is `Some` with a non-default mint. */
+  mint3?: TAccountMint3;
+  /** Mint for token index 4 (spare), required when `tokens[4]` is `Some` with a non-default mint. */
+  mint4?: TAccountMint4;
+  /** Mint for token index 5 (spare), required when `tokens[5]` is `Some` with a non-default mint. */
+  mint5?: TAccountMint5;
   eventAuthority: TAccountEventAuthority;
   program?: TAccountProgram;
   adminArg: UpdateConfigInstructionDataArgs["admin"];
@@ -372,6 +420,9 @@ export function getUpdateConfigInstruction<
   TAccountConfig extends InstructionAccountInput,
   TAccountMint1 extends InstructionAccountInput,
   TAccountMint2 extends InstructionAccountInput,
+  TAccountMint3 extends InstructionAccountInput,
+  TAccountMint4 extends InstructionAccountInput,
+  TAccountMint5 extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
   TAccountProgram extends InstructionAccountInput,
   TProgramAddress extends Address = typeof MYBARPOOL_PROGRAM_ADDRESS,
@@ -381,6 +432,9 @@ export function getUpdateConfigInstruction<
     TAccountConfig,
     TAccountMint1,
     TAccountMint2,
+    TAccountMint3,
+    TAccountMint4,
+    TAccountMint5,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -391,6 +445,9 @@ export function getUpdateConfigInstruction<
   ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
   ResolvedInstructionAccountMeta<TAccountMint1, InstructionAccountInputAddress<TAccountMint1>>,
   ResolvedInstructionAccountMeta<TAccountMint2, InstructionAccountInputAddress<TAccountMint2>>,
+  ResolvedInstructionAccountMeta<TAccountMint3, InstructionAccountInputAddress<TAccountMint3>>,
+  ResolvedInstructionAccountMeta<TAccountMint4, InstructionAccountInputAddress<TAccountMint4>>,
+  ResolvedInstructionAccountMeta<TAccountMint5, InstructionAccountInputAddress<TAccountMint5>>,
   ResolvedInstructionAccountMeta<
     TAccountEventAuthority,
     InstructionAccountInputAddress<TAccountEventAuthority>
@@ -409,6 +466,9 @@ export function getUpdateConfigInstruction<
     config: { value: input.config ?? null, isSigner: false, isWritable: true },
     mint1: { value: input.mint1 ?? null, isSigner: false, isWritable: false },
     mint2: { value: input.mint2 ?? null, isSigner: false, isWritable: false },
+    mint3: { value: input.mint3 ?? null, isSigner: false, isWritable: false },
+    mint4: { value: input.mint4 ?? null, isSigner: false, isWritable: false },
+    mint5: { value: input.mint5 ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
     program: { value: input.program ?? null, isSigner: false, isWritable: false },
   };
@@ -432,6 +492,9 @@ export function getUpdateConfigInstruction<
       getAccountMeta("config", accounts.config),
       getAccountMeta("mint1", accounts.mint1),
       getAccountMeta("mint2", accounts.mint2),
+      getAccountMeta("mint3", accounts.mint3),
+      getAccountMeta("mint4", accounts.mint4),
+      getAccountMeta("mint5", accounts.mint5),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
       getAccountMeta("program", accounts.program),
     ],
@@ -443,6 +506,9 @@ export function getUpdateConfigInstruction<
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
     ResolvedInstructionAccountMeta<TAccountMint1, InstructionAccountInputAddress<TAccountMint1>>,
     ResolvedInstructionAccountMeta<TAccountMint2, InstructionAccountInputAddress<TAccountMint2>>,
+    ResolvedInstructionAccountMeta<TAccountMint3, InstructionAccountInputAddress<TAccountMint3>>,
+    ResolvedInstructionAccountMeta<TAccountMint4, InstructionAccountInputAddress<TAccountMint4>>,
+    ResolvedInstructionAccountMeta<TAccountMint5, InstructionAccountInputAddress<TAccountMint5>>,
     ResolvedInstructionAccountMeta<
       TAccountEventAuthority,
       InstructionAccountInputAddress<TAccountEventAuthority>
@@ -459,14 +525,23 @@ export type ParsedUpdateConfigInstruction<
   accounts: {
     /** `config.admin`. */
     admin: TAccountMetas[0];
-    /** PROGRAM §3.1 `PlatformConfig`. */
+    /**
+     * PROGRAM §3.1 `PlatformConfig`. Boxed: with six token rules the config, the params and
+     * the event together exceed the 4 KiB frame.
+     */
     config: TAccountMetas[1];
     /** Mint for token index 1 (SKR), required when `tokens[1]` is `Some` with a non-default mint. */
     mint1?: TAccountMetas[2] | undefined;
     /** Mint for token index 2 (ORE), required when `tokens[2]` is `Some` with a non-default mint. */
     mint2?: TAccountMetas[3] | undefined;
-    eventAuthority: TAccountMetas[4];
-    program: TAccountMetas[5];
+    /** Mint for token index 3 (spare), required when `tokens[3]` is `Some` with a non-default mint. */
+    mint3?: TAccountMetas[4] | undefined;
+    /** Mint for token index 4 (spare), required when `tokens[4]` is `Some` with a non-default mint. */
+    mint4?: TAccountMetas[5] | undefined;
+    /** Mint for token index 5 (spare), required when `tokens[5]` is `Some` with a non-default mint. */
+    mint5?: TAccountMetas[6] | undefined;
+    eventAuthority: TAccountMetas[7];
+    program: TAccountMetas[8];
   };
   data: UpdateConfigInstructionData;
 };
@@ -479,10 +554,10 @@ export function parseUpdateConfigInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedUpdateConfigInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 9) {
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
       actualAccountMetas: instruction.accounts.length,
-      expectedAccountMetas: 6,
+      expectedAccountMetas: 9,
     });
   }
   let accountIndex = 0;
@@ -502,6 +577,9 @@ export function parseUpdateConfigInstruction<
       config: getNextAccount(),
       mint1: getNextOptionalAccount(),
       mint2: getNextOptionalAccount(),
+      mint3: getNextOptionalAccount(),
+      mint4: getNextOptionalAccount(),
+      mint5: getNextOptionalAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },

@@ -77,8 +77,8 @@ export const GAME_RECORD_OFFSETS = Object.freeze({
   /** `GameStatus` discriminant, one byte. */
   status: 29,
 });
-/** `PlatformConfig` is 698 bytes (PROGRAM §3.1). */
-export const PLATFORM_CONFIG_SIZE = 698;
+/** `PlatformConfig` is 992 bytes (PROGRAM §3.1): six `TokenRule`s of 98 bytes from offset 147. */
+export const PLATFORM_CONFIG_SIZE = 992;
 /** `CreatorCounter` is 74 bytes (PROGRAM §3.5). */
 export const CREATOR_COUNTER_SIZE = 74;
 /** `WalletOverride` is 43 bytes (PROGRAM §3.6). */
