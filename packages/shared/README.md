@@ -5,8 +5,8 @@ read pools and follow settlements on the MyBarPool program, with no dependency
 on the platform's servers: the package takes a Solana connection as a parameter
 and ships with no default RPC endpoint.
 
-Status: in development. Build plan Steps 1–9: the pure core and the chain layer; no mainnet
-deployment yet.
+Status: complete for the program as frozen for audit (2026-10-23): the pure core and the chain
+layer. No mainnet deployment yet; it is announced in the repository's `CHANGELOG.md` when it lands.
 
 - `boxes` — index 0–24 ↔ label 1–25, row and column. The only place the product adds or
   subtracts 1 on a box number.
@@ -18,7 +18,7 @@ deployment yet.
 - `gameKey`, `teams`, `sources`, `sourceTeams`, `sponsors` — the canonical game key and
   `GameRecord` seeds, the frozen 32-team table, the score-source ID map shape, each source's
   team-id tables — ESPN ids, Kalshi UUIDs, nflverse codes, the Sportradar abbreviations
-  Polymarket's stream carries, TxODDS team names — the one place a source's
+  Polymarket's stream carries, TxODDS team names, Yahoo ids — the one place a source's
   team id becomes ours, and the sponsor directory
   shape with its validator.
 
@@ -70,6 +70,7 @@ Each takes the client and returns `{ instruction, …derivedAddresses }` plus
 | `createPoolInstruction`         | `create_pool`         | creator           | `config`, `game`    |
 | `buyInstruction`                | `buy`                 | buyer (+gate key) | pool, buyer's ATA   |
 | `sponsorInstruction`            | `sponsor`             | sponsor           | pool, sponsorship   |
+| `sponsorBoxInstruction`         | `sponsor_box`         | sponsor           | pool, sponsorship   |
 | `rotateGateKeyInstruction`      | `rotate_gate_key`     | creator           | —                   |
 | `reclaimInstruction`            | `reclaim`             | box owner         | pool, owner's ATA   |
 | `reclaimSponsorshipInstruction` | `reclaim_sponsorship` | sponsor           | pool, sponsor's ATA |
