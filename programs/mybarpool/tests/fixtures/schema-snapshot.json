@@ -107,7 +107,7 @@
     },
     {
       "name": "PlatformConfig",
-      "size": 698,
+      "size": 992,
       "fields": [
         {
           "name": "admin",
@@ -166,7 +166,7 @@
                   "name": "TokenRule"
                 }
               },
-              3
+              6
             ]
           }
         },
@@ -701,7 +701,7 @@
                   "name": "TokenRule"
                 }
               },
-              3
+              6
             ]
           }
         }
@@ -1878,6 +1878,24 @@
           "optional": true
         },
         {
+          "name": "mint_3",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint_4",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint_5",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
           "name": "system_program",
           "writable": false,
           "signer": false,
@@ -3003,6 +3021,24 @@
         },
         {
           "name": "mint_2",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint_3",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint_4",
+          "writable": false,
+          "signer": false,
+          "optional": true
+        },
+        {
+          "name": "mint_5",
           "writable": false,
           "signer": false,
           "optional": true

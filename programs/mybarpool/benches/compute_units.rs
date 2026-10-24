@@ -40,7 +40,7 @@ fn main() {
         max_own_boxes: Some(p.max_own_boxes),
         preseason_enabled: Some(p.preseason_enabled),
         paused: Some(p.paused),
-        tokens: [Some(p.tokens[0]), Some(p.tokens[1]), Some(p.tokens[2])],
+        tokens: p.tokens.map(Some),
     };
     let update_config_full = update_config_ix(&f.admin, full, None, Some(&f.ore_mint));
     let update_accounts = base_accounts(&f, Some(&config));

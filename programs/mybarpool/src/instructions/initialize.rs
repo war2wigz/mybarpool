@@ -36,7 +36,8 @@ pub struct InitializeParams {
     pub preseason_enabled: bool,
     /// PROGRAM §3.1 `paused`.
     pub paused: bool,
-    /// PROGRAM §3.1 `tokens`, by token index (0 SOL, 1 SKR, 2 ORE).
+    /// PROGRAM §3.1 `tokens`, by token index (0 SOL, 1 SKR, 2 ORE, 3–5 spare; spare slots
+    /// ship as disabled placeholders).
     pub tokens: [TokenRule; TOKEN_COUNT],
 }
 
@@ -46,7 +47,8 @@ pub struct Initialize<'info> {
     /// The program's upgrade authority; pays for the config and becomes `admin`.
     #[account(mut)]
     pub admin: Signer<'info>,
-    /// PROGRAM §3.1 `PlatformConfig`, created here. One per deployment.
+    /// PROGRAM §3.1 `PlatformConfig`, created here. One per deployment. Boxed: with six
+    /// token rules the config, the params and the event together exceed the 4 KiB frame.
     #[account(
         init,
         payer = admin,
@@ -54,7 +56,7 @@ pub struct Initialize<'info> {
         seeds = [CONFIG_SEED],
         bump,
     )]
-    pub config: Account<'info, PlatformConfig>,
+    pub config: Box<Account<'info, PlatformConfig>>,
     /// The program's `ProgramData`; its upgrade authority must be the signer.
     #[account(
         seeds = [crate::ID.as_ref()],
@@ -67,10 +69,31 @@ pub struct Initialize<'info> {
     pub mint_1: Option<InterfaceAccount<'info, Mint>>,
     /// Mint for token index 2 (ORE), when its rule names one.
     pub mint_2: Option<InterfaceAccount<'info, Mint>>,
+    /// Mint for token index 3 (spare), when its rule names one.
+    pub mint_3: Option<InterfaceAccount<'info, Mint>>,
+    /// Mint for token index 4 (spare), when its rule names one.
+    pub mint_4: Option<InterfaceAccount<'info, Mint>>,
+    /// Mint for token index 5 (spare), when its rule names one.
+    pub mint_5: Option<InterfaceAccount<'info, Mint>>,
     pub system_program: Program<'info, System>,
 }
 
-/// `missing_mut_constraint` reads `ctx.accounts.mint_1.as_ref()` as a write; the mints are
+impl<'info> Initialize<'info> {
+    /// The optional mint accounts by token index; index 0 (SOL) has none.
+    #[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
+    fn mints(&self) -> [Option<&InterfaceAccount<'info, Mint>>; TOKEN_COUNT] {
+        [
+            None,
+            self.mint_1.as_ref(),
+            self.mint_2.as_ref(),
+            self.mint_3.as_ref(),
+            self.mint_4.as_ref(),
+            self.mint_5.as_ref(),
+        ]
+    }
+}
+
+/// `missing_mut_constraint` reads `self.mint_1.as_ref()` and friends as writes; the mints are
 /// read-only and `config` is the only account written (it is `init`).
 #[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_initialize(ctx: Context<Initialize>, params: InitializeParams) -> Result<()> {
@@ -92,9 +115,12 @@ pub fn handle_initialize(ctx: Context<Initialize>, params: InitializeParams) -> 
     config.reserved = [0u8; 256];
 
     config.validate()?;
-    check_mint(&config.tokens[1], ctx.accounts.mint_1.as_ref())?;
-    check_mint(&config.tokens[2], ctx.accounts.mint_2.as_ref())?;
+    let mints = ctx.accounts.mints();
+    for (rule, mint) in ctx.accounts.config.tokens.iter().zip(mints).skip(1) {
+        check_mint(rule, mint)?;
+    }
 
+    let config = &ctx.accounts.config;
     let time = Clock::get()?.unix_timestamp;
     emit_cpi!(ConfigUpdated::from_config(config, time));
     Ok(())

@@ -1,3 +1,64 @@
+#### 2026-10-24 23:39:29.184971665 UTC
+
+Solana CLI Version: solana-cli 4.3.2 (src:a2033000; feat:c9ad34d2, client:Agave)
+
+| Name | CUs | Delta |
+|------|------|-------|
+| initialize | 26174 | +5,897 |
+| update_config_full | 21190 | +5,976 |
+| set_wallet_override_create | 13839 | +679 |
+| set_wallet_override_update | 11499 | +679 |
+| close_wallet_override | 10070 | +679 |
+| create_game | 15733 | -2,321 |
+| update_kickoff | 11619 | +679 |
+| post_scores_q1 | 11630 | +679 |
+| post_scores_final | 11642 | +679 |
+| mark_game | 11076 | +679 |
+| create_pool_sol | 43796 | +2,179 |
+| create_pool_sol_5_boxes | 49886 | +2,179 |
+| create_pool_spl | 53548 | +2,179 |
+| buy_1 | 28652 | -821 |
+| buy_3 | 29030 | -821 |
+| buy_25th_locks | 30620 | -821 |
+| buy_spl_1 | 30770 | -821 |
+| sponsor_new | 28676 | +2,179 |
+| sponsor_box_new | 28710 | +2,179 |
+| sponsor_top_up | 26279 | +2,179 |
+| rotate_gate_key | 11263 | -- |
+| buy_link_sol | 28854 | -821 |
+| buy_allowlist_sol_depth_1 | 29052 | -821 |
+| buy_allowlist_sol_depth_10 | 30904 | -821 |
+| buy_allowlist_sol_depth_32 | 35412 | -821 |
+| close_counter | 7251 | +679 |
+| set_var | 16824 | +679 |
+| sample_var | 29773 | -- |
+| sample_var_already_sampled | 14493 | -- |
+| draw | 20680 | +679 |
+| replace_var | 17496 | +679 |
+| settle_q1_sol | 27362 | +679 |
+| settle_q2_sol | 22870 | +679 |
+| settle_q4_sol | 22871 | +679 |
+| settle_q1_final_only | 21856 | +679 |
+| settle_q1_sol_integrator | 29262 | +679 |
+| settle_q1_ore | 106591 | +679 |
+| settle_q1_ore_atas_exist | 79348 | +679 |
+| close_pool_sol | 18251 | +679 |
+| close_pool_ore | 50203 | +679 |
+| return_boxes_first_sol_2_owners | 30203 | +679 |
+| return_boxes_25_owners_sol | 136063 | +679 |
+| return_boxes_ore_3_owners_atas_missing | 107688 | +679 |
+| return_boxes_ore_9_owners_atas_missing | 282127 | +679 |
+| return_boxes_ore_11_owners_atas_exist | 254350 | +679 |
+| return_sponsorship_sol | 23649 | +679 |
+| return_sponsorship_ore_ata_missing | 49278 | +679 |
+| cancel_pool_open | 17768 | +679 |
+| split_first_sol_3_owners | 32719 | +679 |
+| split_ore_3_owners_atas_missing | 107494 | +679 |
+| reclaim_sol_open | 21446 | -- |
+| reclaim_ore_locked_ata_missing | 44305 | -- |
+| reclaim_sponsorship_sol | 23245 | -- |
+| close_sponsorship | 14588 | -- |
+
 #### 2026-10-23 16:34:51.611527060 UTC
 
 Solana CLI Version: solana-cli 4.3.2 (src:a2033000; feat:c9ad34d2, client:Agave)

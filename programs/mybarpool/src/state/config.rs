@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 use crate::constants::*;
 use crate::errors::MybarpoolError;
 
-/// PROGRAM §3.1 `TokenRule`: one per token index (0 SOL, 1 SKR, 2 ORE). 98 bytes.
+/// PROGRAM §3.1 `TokenRule`: one per token index (0 SOL, 1 SKR, 2 ORE, 3–5 spare). 98 bytes.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, InitSpace)]
 pub struct TokenRule {
     /// Pools may be created in this token.
@@ -29,6 +29,20 @@ pub struct TokenRule {
 impl TokenRule {
     /// Serialized size: 1 + 32 + 32 + 1 + 8 × 4.
     pub const SIZE: usize = Self::INIT_SPACE;
+
+    /// A disabled slot with no mint (PROGRAM §3.1): how SKR ships until its mint is known and
+    /// how the spare indices ship until a token is added. The ladder is the smallest one
+    /// `validate_ladder` accepts, so the whole config validates with placeholders in it.
+    pub const PLACEHOLDER: TokenRule = TokenRule {
+        enabled: false,
+        mint: Pubkey::new_from_array([0u8; 32]),
+        token_program: Pubkey::new_from_array([0u8; 32]),
+        decimals: 0,
+        min_price: 1,
+        step: 1,
+        max_price: 1,
+        max_sponsorship: 1,
+    };
 
     /// A rule with no mint: SOL (index 0) or a disabled placeholder.
     pub fn has_default_mint(&self) -> bool {
@@ -83,13 +97,13 @@ impl TokenRule {
     }
 }
 
-/// PROGRAM §3.1 `PlatformConfig`: the account the rest of the program reads. 698 bytes.
+/// PROGRAM §3.1 `PlatformConfig`: the account the rest of the program reads. 992 bytes.
 ///
 /// Layout (offsets from the start of the account data): discriminator 0 (8); `admin` 8;
 /// `score_authority` 40; `entropy_provider` 72; `fee_wallet` 104; `platform_bps` 136;
 /// `creator_bps` 138; `addon_budget_bps` 140; `default_preset` 142; `max_open_pools` 143;
-/// `max_own_boxes` 144; `preseason_enabled` 145; `paused` 146; `tokens` 147 (three
-/// `TokenRule` of 98 bytes at 147, 245, 343); `bump` 441; `reserved` 442 (256).
+/// `max_own_boxes` 144; `preseason_enabled` 145; `paused` 146; `tokens` 147 (six
+/// `TokenRule` of 98 bytes at 147, 245, 343, 441, 539, 637); `bump` 735; `reserved` 736 (256).
 #[account]
 #[derive(InitSpace, Debug, PartialEq, Eq)]
 pub struct PlatformConfig {
@@ -117,7 +131,7 @@ pub struct PlatformConfig {
     pub preseason_enabled: bool,
     /// PROGRAM §3.1: when true, `create_pool`, `buy` and `sponsor` fail; nothing else is affected.
     pub paused: bool,
-    /// PROGRAM §3.1: indexed by token index (0 SOL, 1 SKR, 2 ORE).
+    /// PROGRAM §3.1: indexed by token index (0 SOL, 1 SKR, 2 ORE, 3–5 spare).
     pub tokens: [TokenRule; TOKEN_COUNT],
     /// PDA bump.
     pub bump: u8,
@@ -126,7 +140,7 @@ pub struct PlatformConfig {
 }
 
 impl PlatformConfig {
-    /// Account size: 8-byte discriminator + 690.
+    /// Account size: 8-byte discriminator + 984.
     pub const SIZE: usize = 8 + Self::INIT_SPACE;
 
     /// Byte offset of `tokens` within the account data (discriminator included).

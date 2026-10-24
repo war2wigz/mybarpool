@@ -1296,7 +1296,8 @@
         {
           "name": "config",
           "docs": [
-            "PROGRAM §3.1 `PlatformConfig`, created here. One per deployment."
+            "PROGRAM §3.1 `PlatformConfig`, created here. One per deployment. Boxed: with six",
+            "token rules the config, the params and the event together exceed the 4 KiB frame."
           ],
           "writable": true,
           "pda": {
@@ -1410,6 +1411,27 @@
           "name": "mint_2",
           "docs": [
             "Mint for token index 2 (ORE), when its rule names one."
+          ],
+          "optional": true
+        },
+        {
+          "name": "mint_3",
+          "docs": [
+            "Mint for token index 3 (spare), when its rule names one."
+          ],
+          "optional": true
+        },
+        {
+          "name": "mint_4",
+          "docs": [
+            "Mint for token index 4 (spare), when its rule names one."
+          ],
+          "optional": true
+        },
+        {
+          "name": "mint_5",
+          "docs": [
+            "Mint for token index 5 (spare), when its rule names one."
           ],
           "optional": true
         },
@@ -3731,7 +3753,8 @@
         {
           "name": "config",
           "docs": [
-            "PROGRAM §3.1 `PlatformConfig`."
+            "PROGRAM §3.1 `PlatformConfig`. Boxed: with six token rules the config, the params and",
+            "the event together exceed the 4 KiB frame."
           ],
           "writable": true,
           "pda": {
@@ -3761,6 +3784,27 @@
           "name": "mint_2",
           "docs": [
             "Mint for token index 2 (ORE), required when `tokens[2]` is `Some` with a non-default mint."
+          ],
+          "optional": true
+        },
+        {
+          "name": "mint_3",
+          "docs": [
+            "Mint for token index 3 (spare), required when `tokens[3]` is `Some` with a non-default mint."
+          ],
+          "optional": true
+        },
+        {
+          "name": "mint_4",
+          "docs": [
+            "Mint for token index 4 (spare), required when `tokens[4]` is `Some` with a non-default mint."
+          ],
+          "optional": true
+        },
+        {
+          "name": "mint_5",
+          "docs": [
+            "Mint for token index 5 (spare), required when `tokens[5]` is `Some` with a non-default mint."
           ],
           "optional": true
         },
@@ -4991,7 +5035,7 @@
                     "name": "TokenRule"
                   }
                 },
-                3
+                6
               ]
             }
           }
@@ -5608,7 +5652,8 @@
           {
             "name": "tokens",
             "docs": [
-              "PROGRAM §3.1 `tokens`, by token index (0 SOL, 1 SKR, 2 ORE)."
+              "PROGRAM §3.1 `tokens`, by token index (0 SOL, 1 SKR, 2 ORE, 3–5 spare; spare slots",
+              "ship as disabled placeholders)."
             ],
             "type": {
               "array": [
@@ -5617,7 +5662,7 @@
                     "name": "TokenRule"
                   }
                 },
-                3
+                6
               ]
             }
           }
@@ -5770,13 +5815,13 @@
     {
       "name": "PlatformConfig",
       "docs": [
-        "PROGRAM §3.1 `PlatformConfig`: the account the rest of the program reads. 698 bytes.",
+        "PROGRAM §3.1 `PlatformConfig`: the account the rest of the program reads. 992 bytes.",
         "",
         "Layout (offsets from the start of the account data): discriminator 0 (8); `admin` 8;",
         "`score_authority` 40; `entropy_provider` 72; `fee_wallet` 104; `platform_bps` 136;",
         "`creator_bps` 138; `addon_budget_bps` 140; `default_preset` 142; `max_open_pools` 143;",
-        "`max_own_boxes` 144; `preseason_enabled` 145; `paused` 146; `tokens` 147 (three",
-        "`TokenRule` of 98 bytes at 147, 245, 343); `bump` 441; `reserved` 442 (256)."
+        "`max_own_boxes` 144; `preseason_enabled` 145; `paused` 146; `tokens` 147 (six",
+        "`TokenRule` of 98 bytes at 147, 245, 343, 441, 539, 637); `bump` 735; `reserved` 736 (256)."
       ],
       "type": {
         "kind": "struct",
@@ -5868,7 +5913,7 @@
           {
             "name": "tokens",
             "docs": [
-              "PROGRAM §3.1: indexed by token index (0 SOL, 1 SKR, 2 ORE)."
+              "PROGRAM §3.1: indexed by token index (0 SOL, 1 SKR, 2 ORE, 3–5 spare)."
             ],
             "type": {
               "array": [
@@ -5877,7 +5922,7 @@
                     "name": "TokenRule"
                   }
                 },
-                3
+                6
               ]
             }
           },
@@ -6942,7 +6987,7 @@
     {
       "name": "TokenRule",
       "docs": [
-        "PROGRAM §3.1 `TokenRule`: one per token index (0 SOL, 1 SKR, 2 ORE). 98 bytes."
+        "PROGRAM §3.1 `TokenRule`: one per token index (0 SOL, 1 SKR, 2 ORE, 3–5 spare). 98 bytes."
       ],
       "type": {
         "kind": "struct",
@@ -7136,7 +7181,7 @@
                     }
                   }
                 },
-                3
+                6
               ]
             }
           }

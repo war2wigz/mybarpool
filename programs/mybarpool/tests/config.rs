@@ -7,6 +7,7 @@ use anchor_spl::token_2022::spl_token_2022::extension::ExtensionType;
 use anchor_spl::token_2022::spl_token_2022::state::AccountState;
 use common::*;
 use mollusk_svm::result::Check;
+use mybarpool::constants::TOKEN_COUNT;
 use mybarpool::{ConfigUpdated, MybarpoolError as E, OverrideClosed, OverrideSet, TokenRule};
 use solana_account::Account;
 use solana_pubkey::Pubkey;
@@ -28,7 +29,7 @@ fn initialize_by_the_upgrade_authority_writes_every_field_and_emits_config_updat
     assert_eq!(config.admin, to_a(&f.admin)); // PROGRAM §4.1: the signer becomes admin
     assert_eq!(config.bump, config_pda().1);
     assert!(config.reserved.iter().all(|&b| b == 0));
-    assert_eq!(account_of(&result, &config_pda().0).data.len(), 698); // PROGRAM §3.1 size
+    assert_eq!(account_of(&result, &config_pda().0).data.len(), 992); // PROGRAM §3.1 size
 
     let event: ConfigUpdated = emitted_event(&result).expect("ConfigUpdated self-CPI");
     assert_eq!(event.admin, to_a(&f.admin));
@@ -557,10 +558,8 @@ fn expect_mint(
         &[check()],
     );
     // update_config: the rule in slot 1 with `mint_1`.
-    let params = mybarpool::UpdateConfigParams {
-        tokens: [None, Some(rule_2022(f, &mint)), None],
-        ..no_update()
-    };
+    let mut params = no_update();
+    params.tokens[1] = Some(rule_2022(f, &mint));
     let mut accounts = base_accounts(f, Some(&f.expected_config()));
     accounts.push((mint, mint_account));
     m.process_and_validate_instruction(
@@ -669,6 +668,91 @@ fn token_shape_rules() {
         |p| p.tokens[1].token_program = anchor_spl::token::ID,
         err(E::InvalidConfig),
     );
+    // The spare slots (3–5) follow the same placeholder rule.
+    for i in 3..TOKEN_COUNT {
+        expect_initialize_error(move |p| p.tokens[i].enabled = true, err(E::InvalidConfig));
+        expect_initialize_error(
+            move |p| p.tokens[i].token_program = anchor_spl::token_2022::ID,
+            err(E::InvalidConfig),
+        );
+        expect_update_error(
+            move |p| {
+                let mut rule = TokenRule::PLACEHOLDER;
+                rule.enabled = true;
+                p.tokens[i] = Some(rule);
+            },
+            err(E::InvalidConfig),
+        );
+    }
+}
+
+#[test]
+fn a_spare_slot_is_filled_by_update_config_with_its_mint() {
+    // PROGRAM §2 "Token index": slots 3–5 ship as disabled placeholders so a token is added
+    // by `update_config` (admin) rather than by an upgrade. The rule's mint rides in the
+    // matching `mint_N` account and is checked like SKR's and ORE's; without it the
+    // instruction is refused, and the other slots are untouched.
+    let f = Fixture::new();
+    let m = mollusk();
+    let mint = Pubkey::new_unique();
+    let mint_account = token_2022_mint_account(6, &[ExtensionType::MetadataPointer]);
+    for i in 3..TOKEN_COUNT {
+        let mut params = no_update();
+        params.tokens[i] = Some(rule_2022(&f, &mint));
+
+        // Without the mint account.
+        m.process_and_validate_instruction(
+            &update_config_ix(&f.admin, params.clone(), None, None),
+            &base_accounts(&f, Some(&f.expected_config())),
+            &[Check::err(custom(err(E::InvalidConfig)))],
+        );
+
+        // With it, in the slot's own position.
+        let mut mints: Mints = [None; TOKEN_COUNT];
+        mints[i] = Some(&mint);
+        let mut accounts = base_accounts(&f, Some(&f.expected_config()));
+        accounts.push((mint, mint_account.clone()));
+        let result = m.process_and_validate_instruction(
+            &update_config_ix_with_mints(&f.admin, params, mints),
+            &accounts,
+            &[Check::success()],
+        );
+        let config = decode_config(account_of(&result, &config_pda().0));
+        let mut expected = f.expected_config();
+        expected.tokens[i] = rule_2022(&f, &mint);
+        assert_eq!(config, expected);
+        let event: ConfigUpdated = emitted_event(&result).expect("ConfigUpdated self-CPI");
+        assert_eq!(event.tokens, expected.tokens);
+
+        // The mint in a different slot's position does not count.
+        let mut elsewhere: Mints = [None; TOKEN_COUNT];
+        elsewhere[if i == 3 { 4 } else { 3 }] = Some(&mint);
+        let mut params = no_update();
+        params.tokens[i] = Some(rule_2022(&f, &mint));
+        m.process_and_validate_instruction(
+            &update_config_ix_with_mints(&f.admin, params, elsewhere),
+            &accounts,
+            &[Check::err(custom(err(E::InvalidConfig)))],
+        );
+    }
+
+    // `initialize` accepts a filled spare slot the same way.
+    let mut params = f.initialize_params();
+    params.tokens[5] = rule_2022(&f, &mint);
+    let mut accounts = base_accounts(&f, None);
+    accounts.push((mint, mint_account));
+    let result = m.process_and_validate_instruction(
+        &initialize_ix_with_mints(
+            &f.admin,
+            params,
+            [None, None, Some(&f.ore_mint), None, None, Some(&mint)],
+        ),
+        &accounts,
+        &[Check::success()],
+    );
+    let config = decode_config(account_of(&result, &config_pda().0));
+    assert_eq!(config.tokens[5], rule_2022(&f, &mint));
+    assert_eq!(config.tokens[2], f.ore_rule());
 }
 
 // ---------------------------------------------------------------------------

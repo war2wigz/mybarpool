@@ -35,7 +35,7 @@ use mybarpool::entropy::{expected_value, VAR_LEN, VAR_SEED};
 use mybarpool::{
     constants::{
         PayoutPreset, BOXES, CONFIG_SEED, COUNTER_SEED, ENTROPY_PROGRAM, GAME_SEED, NO_WINNING_BOX,
-        OVERRIDE_SEED, POOL_SEED, QUARTERS, SPONSORSHIP_SEED, VAULT_SEED,
+        OVERRIDE_SEED, POOL_SEED, QUARTERS, SPONSORSHIP_SEED, TOKEN_COUNT, VAULT_SEED,
     },
     AccessType, CreatePoolParams, CreatorCounter, GameKey, GameRecord, GameStatus, PlatformConfig,
     Pool, PoolStatus, Sponsorship, TokenRule, WalletOverride,
@@ -506,7 +506,14 @@ impl Fixture {
             max_own_boxes: 5,
             preseason_enabled: false,
             paused: false,
-            tokens: [Self::sol_rule(), Self::skr_placeholder(), self.ore_rule()],
+            tokens: [
+                Self::sol_rule(),
+                Self::skr_placeholder(),
+                self.ore_rule(),
+                TokenRule::PLACEHOLDER,
+                TokenRule::PLACEHOLDER,
+                TokenRule::PLACEHOLDER,
+            ],
         }
     }
 
@@ -555,7 +562,7 @@ pub fn no_update() -> mybarpool::UpdateConfigParams {
         max_own_boxes: None,
         preseason_enabled: None,
         paused: None,
-        tokens: [None, None, None],
+        tokens: [None; TOKEN_COUNT],
     }
 }
 
@@ -621,20 +628,36 @@ pub fn instruction<A: ToAccountMetas, D: InstructionData>(accounts: A, data: D) 
     )
 }
 
-/// Build `initialize`, with the ORE mint attached and SKR's slot filled by the program id
-/// (Anchor's convention for an absent optional account).
+/// The optional mint accounts of `initialize` / `update_config` by token index. Index 0 (SOL)
+/// is never read; an absent mint is filled by the program id (Anchor's convention for an
+/// absent optional account).
+pub type Mints<'a> = [Option<&'a Pubkey>; TOKEN_COUNT];
+
+/// Build `initialize`, with the ORE mint attached and every other mint slot absent.
 pub fn initialize_ix(
     signer: &Pubkey,
     params: mybarpool::InitializeParams,
     mint_2: Option<&Pubkey>,
+) -> Instruction {
+    initialize_ix_with_mints(signer, params, [None, None, mint_2, None, None, None])
+}
+
+/// Build `initialize` with mints by token index.
+pub fn initialize_ix_with_mints(
+    signer: &Pubkey,
+    params: mybarpool::InitializeParams,
+    mints: Mints,
 ) -> Instruction {
     instruction(
         mybarpool::accounts::Initialize {
             admin: to_a(signer),
             config: to_a(&config_pda().0),
             program_data: to_a(&program_data_pda()),
-            mint_1: None,
-            mint_2: mint_2.map(to_a),
+            mint_1: mints[1].map(to_a),
+            mint_2: mints[2].map(to_a),
+            mint_3: mints[3].map(to_a),
+            mint_4: mints[4].map(to_a),
+            mint_5: mints[5].map(to_a),
             system_program: anchor_lang::system_program::ID,
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,
@@ -643,18 +666,31 @@ pub fn initialize_ix(
     )
 }
 
+/// Build `update_config` with the SKR and ORE mints; the spare slots' mints absent.
 pub fn update_config_ix(
     signer: &Pubkey,
     params: mybarpool::UpdateConfigParams,
     mint_1: Option<&Pubkey>,
     mint_2: Option<&Pubkey>,
 ) -> Instruction {
+    update_config_ix_with_mints(signer, params, [None, mint_1, mint_2, None, None, None])
+}
+
+/// Build `update_config` with mints by token index.
+pub fn update_config_ix_with_mints(
+    signer: &Pubkey,
+    params: mybarpool::UpdateConfigParams,
+    mints: Mints,
+) -> Instruction {
     instruction(
         mybarpool::accounts::UpdateConfig {
             admin: to_a(signer),
             config: to_a(&config_pda().0),
-            mint_1: mint_1.map(to_a),
-            mint_2: mint_2.map(to_a),
+            mint_1: mints[1].map(to_a),
+            mint_2: mints[2].map(to_a),
+            mint_3: mints[3].map(to_a),
+            mint_4: mints[4].map(to_a),
+            mint_5: mints[5].map(to_a),
             event_authority: to_a(&event_authority_pda()),
             program: mybarpool::ID,
         },

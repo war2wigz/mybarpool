@@ -127,8 +127,10 @@ pub const AXIS_LABEL_AWAY: &[u8] = b"away";
 #[constant]
 pub const SOL_DECIMALS: u8 = 9;
 
-/// Number of token rules in the config (PROGRAM §2: SOL, SKR, ORE).
-pub const TOKEN_COUNT: usize = 3;
+/// Number of token rules in the config (PROGRAM §2): indices 0 SOL, 1 SKR, 2 ORE, and three
+/// spare slots (3–5) that ship as disabled placeholders so a token can be added by
+/// `update_config` rather than by an upgrade.
+pub const TOKEN_COUNT: usize = 6;
 
 /// PROGRAM §1 payout presets; the discriminant is the on-chain value. On `Pool`, in
 /// `CreatePoolParams` and in `PoolCreated` it is the enum itself (one byte), so the IDL carries

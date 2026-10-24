@@ -51,8 +51,8 @@ fn token_rule_is_98_bytes() {
 }
 
 #[test]
-fn platform_config_is_698_bytes_at_the_documented_offsets() {
-    assert_eq!(PlatformConfig::SIZE, 698); // 8 + 690
+fn platform_config_is_992_bytes_at_the_documented_offsets() {
+    assert_eq!(PlatformConfig::SIZE, 992); // 8 + 984
     let config = PlatformConfig {
         admin: key(0xA1),
         score_authority: key(0xA2),
@@ -66,12 +66,19 @@ fn platform_config_is_698_bytes_at_the_documented_offsets() {
         max_own_boxes: 0x66,
         preseason_enabled: true,
         paused: false,
-        tokens: [rule(0x10), rule(0x20), rule(0x30)],
+        tokens: [
+            rule(0x10),
+            rule(0x20),
+            rule(0x30),
+            rule(0x40),
+            rule(0x50),
+            rule(0x60),
+        ],
         bump: 0xBB,
         reserved: [0xEE; 256],
     };
     let data = serialize(&config);
-    assert_eq!(data.len(), 698);
+    assert_eq!(data.len(), 992);
     assert_eq!(&data[0..8], PlatformConfig::DISCRIMINATOR);
     assert_eq!(&data[8..40], &[0xA1u8; 32]); // admin
     assert_eq!(&data[40..72], &[0xA2u8; 32]); // score_authority
@@ -86,7 +93,7 @@ fn platform_config_is_698_bytes_at_the_documented_offsets() {
     assert_eq!(data[145], 1); // preseason_enabled
     assert_eq!(data[146], 0); // paused
     assert_eq!(PlatformConfig::TOKENS_OFFSET, 147);
-    for (i, seed) in [0x10u8, 0x20, 0x30].iter().enumerate() {
+    for (i, seed) in [0x10u8, 0x20, 0x30, 0x40, 0x50, 0x60].iter().enumerate() {
         let at = 147 + i * 98;
         assert_eq!(
             &data[at + 1..at + 33],
@@ -95,8 +102,8 @@ fn platform_config_is_698_bytes_at_the_documented_offsets() {
             at + 1
         );
     }
-    assert_eq!(data[441], 0xBB); // bump
-    assert_eq!(&data[442..698], &[0xEEu8; 256]); // reserved
+    assert_eq!(data[735], 0xBB); // bump
+    assert_eq!(&data[736..992], &[0xEEu8; 256]); // reserved
 }
 
 #[test]

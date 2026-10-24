@@ -46,21 +46,43 @@ pub struct UpdateConfigParams {
 pub struct UpdateConfig<'info> {
     /// `config.admin`.
     pub admin: Signer<'info>,
-    /// PROGRAM §3.1 `PlatformConfig`.
+    /// PROGRAM §3.1 `PlatformConfig`. Boxed: with six token rules the config, the params and
+    /// the event together exceed the 4 KiB frame.
     #[account(
         mut,
         seeds = [CONFIG_SEED],
         bump = config.bump,
         has_one = admin @ MybarpoolError::Unauthorized,
     )]
-    pub config: Account<'info, PlatformConfig>,
+    pub config: Box<Account<'info, PlatformConfig>>,
     /// Mint for token index 1 (SKR), required when `tokens[1]` is `Some` with a non-default mint.
     pub mint_1: Option<InterfaceAccount<'info, Mint>>,
     /// Mint for token index 2 (ORE), required when `tokens[2]` is `Some` with a non-default mint.
     pub mint_2: Option<InterfaceAccount<'info, Mint>>,
+    /// Mint for token index 3 (spare), required when `tokens[3]` is `Some` with a non-default mint.
+    pub mint_3: Option<InterfaceAccount<'info, Mint>>,
+    /// Mint for token index 4 (spare), required when `tokens[4]` is `Some` with a non-default mint.
+    pub mint_4: Option<InterfaceAccount<'info, Mint>>,
+    /// Mint for token index 5 (spare), required when `tokens[5]` is `Some` with a non-default mint.
+    pub mint_5: Option<InterfaceAccount<'info, Mint>>,
 }
 
-/// `missing_mut_constraint` reads `ctx.accounts.mint_1.as_ref()` as a write; the mints are
+impl<'info> UpdateConfig<'info> {
+    /// The optional mint accounts by token index; index 0 (SOL) has none.
+    #[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
+    fn mints(&self) -> [Option<&InterfaceAccount<'info, Mint>>; TOKEN_COUNT] {
+        [
+            None,
+            self.mint_1.as_ref(),
+            self.mint_2.as_ref(),
+            self.mint_3.as_ref(),
+            self.mint_4.as_ref(),
+            self.mint_5.as_ref(),
+        ]
+    }
+}
+
+/// `missing_mut_constraint` reads `self.mint_1.as_ref()` and friends as writes; the mints are
 /// read-only and `config` (declared `mut`) is the only account written.
 #[cfg_attr(dylint_lib = "missing_mut_constraint", allow(missing_mut_constraint))]
 pub fn handle_update_config(ctx: Context<UpdateConfig>, params: UpdateConfigParams) -> Result<()> {
@@ -108,13 +130,22 @@ pub fn handle_update_config(ctx: Context<UpdateConfig>, params: UpdateConfigPara
     }
 
     config.validate()?;
-    if params.tokens[1].is_some() {
-        check_mint(&config.tokens[1], ctx.accounts.mint_1.as_ref())?;
-    }
-    if params.tokens[2].is_some() {
-        check_mint(&config.tokens[2], ctx.accounts.mint_2.as_ref())?;
+    let mints = ctx.accounts.mints();
+    for ((rule, mint), changed) in ctx
+        .accounts
+        .config
+        .tokens
+        .iter()
+        .zip(mints)
+        .zip(params.tokens.iter())
+        .skip(1)
+    {
+        if changed.is_some() {
+            check_mint(rule, mint)?;
+        }
     }
 
+    let config = &ctx.accounts.config;
     let time = Clock::get()?.unix_timestamp;
     emit_cpi!(ConfigUpdated::from_config(config, time));
     Ok(())
