@@ -53,7 +53,7 @@ The mapping from each source's IDs to a `GameKey` lives in `packages/shared` and
 `ARI, ATL, BAL, BUF, CAR, CHI, CIN, CLE, DAL, DEN, DET, GB, HOU, IND, JAX, KC, LAC, LAR, LV, MIA, MIN, NE, NO, NYG, NYJ, PHI, PIT, SEA, SF, TB, TEN, WAS` = indices 0–31.
 
 ### Token index
-`0` = SOL (native), `1` = SKR, `2` = ORE. The config holds one `TokenRule` per index; a pool stores the index and the mint.
+`0` = SOL (native), `1` = SKR, `2` = ORE, `3`–`5` spare. The config holds one `TokenRule` per index (`TOKEN_COUNT` = 6); a pool stores the index and the mint. A slot without a token ships as a disabled placeholder (default mint and program, decimals 0, ladder `1 / 1 / 1`, `max_sponsorship` 1), which is how SKR shipped before its mint was known and how 3–5 ship at launch; a token is added by `update_config` writing that slot's rule with its mint account attached, not by an upgrade. An index is never reused for a different mint: a token that is retired is disabled in place.
 
 ## 3. Accounts
 
@@ -77,9 +77,11 @@ One per deployment.
 | `max_own_boxes` | u8 | Creator's boxes in own pool; initial 5 |
 | `preseason_enabled` | bool | Initial false; `create_game` rejects weeks ≥ 101 when false |
 | `paused` | bool | When true, `create_pool`, `buy` and `sponsor` fail; nothing else is affected |
-| `tokens` | [TokenRule; 3] | Indexed by token index |
-| `bump` | u8 | |
-| `reserved` | [u8; 256] | |
+| `tokens` | [TokenRule; 6] | Indexed by token index (§2); 98 bytes each at offsets 147, 245, 343, 441, 539, 637 |
+| `bump` | u8 | Offset 735 |
+| `reserved` | [u8; 256] | Offset 736 |
+
+992 bytes (8-byte discriminator + 984).
 
 `TokenRule`:
 
@@ -230,10 +232,10 @@ Each entry: who signs, what is checked, what changes, what is emitted. "Admin" i
 ### 4.1 Administration
 
 **`initialize(params)`** — signer: the deploying key, which becomes `admin` until changed. "The deploying key" is the program's upgrade authority, checked against the `ProgramData` account of this program (its `upgrade_authority_address`), so nobody else can create the single `["config"]` account first.
-Creates `PlatformConfig` with the given fields; enforces the §3.1 invariants. Emits `ConfigUpdated`.
+Creates `PlatformConfig` with the given fields; enforces the §3.1 invariants. `params.tokens` is all six rules; the optional accounts `mint_1` … `mint_5` carry the mint of each rule at index 1–5 that names one (index 0 is SOL), checked against the rule's key, program and decimals and for the §5.4 extensions. Emits `ConfigUpdated`.
 
 **`update_config(params)`** — signer: admin.
-Any subset of: `admin`, `score_authority`, `entropy_provider`, `fee_wallet`, `platform_bps`, `creator_bps`, `addon_budget_bps`, `default_preset`, `max_open_pools`, `max_own_boxes`, `preseason_enabled`, `paused`, and any `TokenRule`. Enforces the §3.1 invariants; bps may go down or up but never above the constants. Emits `ConfigUpdated` with the full new config. Existing pools are untouched: their fee amounts and price are on their own account.
+Any subset of: `admin`, `score_authority`, `entropy_provider`, `fee_wallet`, `platform_bps`, `creator_bps`, `addon_budget_bps`, `default_preset`, `max_open_pools`, `max_own_boxes`, `preseason_enabled`, `paused`, and any `TokenRule` (`params.tokens` is `[Option<TokenRule>; 6]`; `Some` replaces that slot whole, and a slot whose rule names a mint needs the matching `mint_1` … `mint_5` account, checked as in `initialize` — the way a token is added to a spare slot). Enforces the §3.1 invariants; bps may go down or up but never above the constants. Emits `ConfigUpdated` with the full new config. Existing pools are untouched: their fee amounts and price are on their own account.
 
 **`set_wallet_override(wallet, max_open_pools, max_own_boxes)`** — signer: admin. Creates or updates `WalletOverride`. Emits `OverrideSet`.
 
