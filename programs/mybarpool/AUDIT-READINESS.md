@@ -993,8 +993,13 @@ warnings, every one transitive and the upstream owner's to replace, ignored in
 `anchor-lang`), `derivative` 2.2.0 (RUSTSEC-2024-0388) and `paste` 1.0.15
 (RUSTSEC-2024-0436) (both through the `ark-*` crates under `solana-poseidon` ←
 `solana-syscalls`, dev-side here via Mollusk), `libsecp256k1` 0.7.2 (RUSTSEC-2025-0161,
-`solana-syscalls`, dev-side). A fifth warning fails the Lints workflow. **`npm audit`**: 0
-vulnerabilities with and without dev dependencies; no ignores.
+`solana-syscalls`, dev-side). Added 2026-10-24, after this commit: `crypto-bigint` 0.5.5
+(RUSTSEC-2026-0387, a timing-variability vulnerability patched only in the 0.7 line), reached
+through `solana-syscalls` → `solana-secp256k1-recover` → `k256` 0.13, dev-side only — it is
+in no built program's tree — with no patched version on that path until Agave moves to `k256`
+0.14; ignored with the path recorded. A sixth warning, or a vulnerability on a path that
+reaches the compiled program, fails the Lints workflow. **`npm audit`**: 0 vulnerabilities
+with and without dev dependencies; no ignores.
 
 Dependabot opens version PRs on both the program and the SDK; a person reads every one (the
 pins are deliberate and a major is never merged without a toolchain decision).
