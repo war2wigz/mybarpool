@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MyBarPool — screen mockups</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg0:#0B0B10; --bg1:#13131A; --bg2:#1C1C26; --line:#2A2A38;
     --t1:#F2F2F7; --t2:#9A9AAE;
     --purple:#9945FF; --green:#14F195; --teal:#00C2FF; --amber:#FFB020; --red:#FF4D6D;
-    --num:"Barlow Condensed",sans-serif; --body:"Inter",sans-serif;
+    --num:"Barlow Condensed",sans-serif; --body:"Inter Tight",sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:#050507;color:var(--t1);font-family:var(--body);font-size:15px;-webkit-font-smoothing:antialiased}
@@ -23,232 +23,296 @@
   body.single .label{display:none}
   .num{font-family:var(--num);font-variant-numeric:tabular-nums}
   .t2{color:var(--t2)}
-  .content{flex:1;overflow:hidden;padding:0 16px 0 22px}
+  .content{flex:1;overflow:hidden;padding:0 16px}
 
-  /* header */
-  .top{display:flex;align-items:center;justify-content:space-between;padding:56px 16px 10px}
-  /* Logo: the TeamChip helmet in the brand colors (DESIGN § 1) beside the wordmark in the display face */
-  .logo{display:flex;align-items:center;gap:8px;font:700 22px var(--num);line-height:1;letter-spacing:.01em;color:var(--t1)}
-  .logo .helm{width:30px;height:30px;--c1:#9945FF;--c2:#14F195}
-  .back{color:var(--t2);font-size:14px;display:flex;align-items:center;gap:6px}
-  .wallet{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:6px 10px 6px 6px;font-size:13px;font-weight:500}
-  .avatar{width:22px;height:22px;border-radius:50%;background:conic-gradient(from 90deg,#9945FF,#14F195,#00C2FF,#9945FF)}
+  /* the one top bar (DESIGN § 3, B3): wordmark left, wallet chip right, on every width */
+  .bar{display:flex;align-items:center;justify-content:space-between;padding:52px 16px 12px;border-bottom:1px solid var(--line);flex:none}
+  .logo{display:flex;align-items:center;gap:8px;font:700 20px var(--num);line-height:1;letter-spacing:.01em;color:var(--t1)}
+  .logo .helm{width:26px;height:26px;--c1:#9945FF;--c2:#14F195}
+  .chip{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:7px 12px 7px 8px;font-size:14px;font-weight:500}
+  .chip .avatar{width:20px;height:20px;border-radius:50%;background:var(--purple)}
+  .chip.connect{color:var(--purple);border-color:rgba(153,69,255,.45);padding:7px 14px}
+  /* page title row under the bar: back chevron, matchup in the display face, the share glyph */
+  .ttl{display:flex;align-items:center;justify-content:space-between;padding:16px 0 10px}
+  .ttl h1{display:flex;align-items:center;gap:10px;font:700 26px var(--num);letter-spacing:.01em}
+  .ttl h1 .bk{color:var(--t2);font-size:22px}
+  .ttl .share{color:var(--t2);font-size:20px}
+  .back{color:var(--t2);font-size:14px;padding:14px 0 6px}
+  .back b{color:var(--t1);font-weight:500}
 
   /* pills & chips */
-  .pill{display:inline-flex;align-items:center;gap:6px;font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:4px 8px;border:1px solid transparent}
-  .pill.open{color:var(--purple);border-color:rgba(153,69,255,.5)}
-  .pill.locked{color:var(--amber);border-color:rgba(255,176,32,.5)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;border-radius:7px;padding:5px 9px;border:1px solid transparent;flex:none}
+  .pill.open{color:var(--purple);border-color:rgba(153,69,255,.55)}
+  .pill.locked{color:var(--amber);border-color:rgba(255,176,32,.55)}
   .pill.live{color:var(--teal);background:rgba(0,194,255,.10)}
   .pill.settled{color:var(--green);background:rgba(20,241,149,.10)}
-  .pill.returned{color:var(--red);border-color:rgba(255,77,109,.5)}
-  .dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+  .dot{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
   .team{display:flex;align-items:center;gap:10px}
   /* TeamChip: a generic helmet in the team's colors (--c1 shell, --c2 facemask), never a logo */
-  .helm{width:28px;height:28px;flex:none}
-  .helm.sm{width:22px;height:22px}
-  .helm.lg{width:40px;height:40px}
-  .abbr{font:700 13px var(--num);letter-spacing:.08em;color:var(--t1)}
+  .helm{width:26px;height:26px;flex:none}
+  .helm.sm{width:20px;height:20px}
+  .helm.xs{width:16px;height:16px}
+  .abbr{font:700 13px var(--num);letter-spacing:.1em;color:var(--t1)}
+  .cap{font:600 10px var(--num);letter-spacing:.18em;text-transform:uppercase;color:var(--t2)}
 
-  /* cards */
-  .card{background:var(--bg1);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
-  .row{display:flex;align-items:center;justify-content:space-between}
-  .sect{display:flex;align-items:baseline;justify-content:space-between;margin:18px 0 10px;font:600 13px var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
-  .sect b{color:var(--t1);font-size:17px;letter-spacing:0;text-transform:none}
-  .score{font:700 30px/1 var(--num);letter-spacing:.01em}
+  /* section captions, lines, cards */
+  .sect{display:flex;align-items:center;justify-content:space-between;margin:18px 0 8px;font:600 12px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+  .sect b{color:var(--t1);font:700 18px var(--num);letter-spacing:0;text-transform:none;margin-left:6px}
+  .sect .chev{color:var(--t2);font-size:12px}
+  .h2{font:700 20px var(--num);letter-spacing:.01em}
+  .h2 .t2{font:400 14px var(--body)}
+  .card{background:var(--bg1);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .line{font-size:14px;color:var(--t2);margin-top:6px}
+  .line b{font:600 14px var(--num);letter-spacing:.02em;color:var(--t1)}
+  .line .t1{color:var(--t1)}
   .kick{font:600 15px var(--num);color:var(--t2);letter-spacing:.02em}
-  .fill{display:grid;grid-template-columns:repeat(25,1fr);gap:2px;height:6px;margin-top:10px}
+  .score{font:700 26px/1 var(--num)}
+  .fill{display:grid;grid-template-columns:repeat(25,1fr);gap:2px;height:6px;flex:1}
   .fill i{background:var(--line);border-radius:1px}
   .fill i.on{background:var(--purple)}
-  .meta{display:flex;gap:6px;flex-wrap:wrap;color:var(--t2);font-size:13px;margin-top:8px}
-  .meta span+span::before{content:"·";margin-right:6px;color:var(--line)}
-  .lines{display:grid;grid-template-columns:auto repeat(4,32px);gap:2px 8px;font:600 15px var(--num);color:var(--t2);margin-top:8px}
-  .lines .h{font-size:12px;letter-spacing:.08em}
-  .lines .v{color:var(--t1)}
+  .cnt{font:600 14px var(--num);color:var(--t2);letter-spacing:.02em;flex:none}
+  .btn{height:48px;border-radius:12px;background:var(--purple);color:#fff;font:600 16px var(--body);display:flex;align-items:center;justify-content:center;gap:8px;padding:0 18px}
+  .btn.sm{height:38px;font-size:15px;border-radius:10px;padding:0 16px;flex:none}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--t1)}
+  .btn.outline{background:transparent;border:1px solid var(--purple);color:var(--purple)}
+  .btn.full{width:100%;margin:8px 0 12px}
+  .textlink{color:var(--purple);font-size:14px;font-weight:500}
+  .seg{display:flex;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:3px;flex:none}
+  .seg span{padding:7px 12px;border-radius:8px;font-weight:500;font-size:13px;color:var(--t2)}
+  .seg span.on{background:var(--bg1);color:var(--t1)}
+  .weeknav{display:flex;align-items:center;justify-content:space-between;margin:12px 0 10px}
+  .weeknav .wk{display:flex;align-items:center;gap:12px;font:700 24px var(--num)}
+  .weeknav .wk .yr{font-size:16px;color:var(--t2)}
+  .weeknav .wk .ar{color:var(--t2);font-size:16px}
+  .summ{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;font-size:13px;color:var(--t2)}
+  .summ .amt{font:600 13px var(--num);color:var(--t2)}
 
-  /* tabs */
-  .tabs{display:flex;border-top:1px solid var(--line);padding:10px 8px 26px;background:var(--bg0)}
-  .tabs a{flex:1;text-align:center;color:var(--t2);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;display:flex;flex-direction:column;gap:6px;align-items:center}
-  .tabs a.on{color:var(--t1)}
-  .tabs .ic{width:22px;height:22px;border-radius:6px;border:2px solid currentColor}
-  .tabs a.on .ic{background:var(--purple);border-color:var(--purple)}
+  /* score strip (live, settled) and the quarter strip */
+  .strip{display:flex;align-items:center;justify-content:space-between;background:var(--bg1);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:6px}
+  .strip .s{font:700 30px/1 var(--num)}
+  .strip .mid{font:600 13px var(--num);color:var(--t2);letter-spacing:.04em;text-align:center}
+  .strip .mid.live{color:var(--teal)}
+  .strip .side{display:flex;align-items:center;gap:12px}
+  .qstrip{display:flex;gap:8px;margin-top:8px}
+  .qstrip span{flex:1;background:var(--bg1);border:1px solid var(--line);border-radius:10px;padding:8px 0;text-align:center;font:600 10px var(--num);letter-spacing:.12em;color:var(--t2)}
+  .qstrip span b{display:block;font:700 14px var(--num);letter-spacing:.02em;color:var(--t1);margin-top:2px}
+  .qstrip span.live b{color:var(--teal)}
+  .qstrip span.on{border-color:var(--purple)}
+  .statusrow{display:flex;align-items:center;gap:10px;margin-top:4px}
+  .statusrow .txt{font-size:14px;color:var(--t2)}
+  .statusrow .txt.locked{color:var(--amber)}
+  .hintrow{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:14px;color:var(--t2)}
+  .hintrow .cd{font-weight:600;color:var(--t1)}
+  .sponsor{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--t2)}
+  .sponsor .sav{width:18px;height:18px;border-radius:50%;background:var(--bg2);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .sponsor .sav .helm{width:11px;height:11px;--c1:#3a3a4a;--c2:#9A9AAE}
+  .sponsor .slogo{width:20px;height:20px;border-radius:5px;background:#1E3A2F;border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font:700 10px var(--num);color:var(--green);flex:none}
 
-  /* grid */
+  /* the grid: two digits per lane, the home rail across the top, the away rail down the side */
   .gridwrap{margin-top:14px}
-  .axis-top{display:grid;grid-template-columns:34px repeat(5,1fr);gap:4px;margin-bottom:4px;margin-left:34px}
-  .axis-top .d,.axis-side .d{font:700 15px var(--num);color:var(--t1);text-align:center;letter-spacing:.06em}
+  .toplbl{display:flex;align-items:center;justify-content:center;gap:6px;margin-left:66px;margin-bottom:6px}
+  .toprule{height:2px;background:var(--hc,#9A9AAE);margin:0 0 6px 66px;border-radius:1px}
+  .axis-top{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-left:66px;margin-bottom:6px}
+  .axis-top .d{font:700 15px var(--num);color:var(--t1);text-align:center;letter-spacing:.3em;padding-left:.3em}
   .axis-top .d.q,.axis-side .d.q{color:var(--t2)}
-  .board{display:grid;grid-template-columns:30px 34px 1fr;gap:4px}
-  .sidelbl{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
-  .sidelbl .abbr{font-size:12px}
+  .board{display:grid;grid-template-columns:26px 2px 30px 1fr;gap:0 4px}
+  .siderule{background:var(--ac,#9A9AAE);border-radius:1px}
+  .sidelbl{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+  .sidelbl .rot{writing-mode:vertical-rl;transform:rotate(180deg);display:flex;align-items:center;gap:6px}
+  .sidelbl .rot .cap{letter-spacing:.14em}
   .axis-side{display:grid;grid-template-rows:repeat(5,1fr);gap:4px}
-  .axis-side .d{display:flex;align-items:center;justify-content:center}
+  .axis-side .d{display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 15px/1.2 var(--num);color:var(--t1)}
   .boxes{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:4px;aspect-ratio:1}
-  .box{background:var(--bg2);border:1px solid var(--line);border-radius:8px;position:relative;padding:6px;font-size:11px;font-weight:500;display:flex;align-items:flex-end;overflow:hidden;color:var(--t1)}
+  .box{background:var(--bg2);border:1px solid var(--line);border-radius:8px;position:relative;padding:6px;font-size:12px;font-weight:500;display:flex;align-items:flex-end;overflow:hidden;color:var(--t1)}
   .box .n{position:absolute;top:4px;left:6px;font:600 10px var(--num);color:var(--t2)}
+  .box .mark{position:absolute;top:18px;left:6px;font:600 8px var(--num);letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
   .box.o1{background:#1a1f3a} .box.o2{background:#2a1a2a} .box.o3{background:#1a2a24} .box.o4{background:#2a2418} .box.o5{background:#241a3a}
   .box.you{background:rgba(153,69,255,.28);border-color:var(--purple);font-weight:700}
-  .box.lead{border:1.5px dotted var(--teal);box-shadow:0 0 0 1px rgba(0,194,255,.2) inset}
-  .box.lead .tag,.box.won .tag{position:absolute;top:3px;right:4px;font:700 9px var(--body);letter-spacing:.04em;text-transform:uppercase}
-  .box .star{position:absolute;top:1px;right:4px;font:15px/1 var(--body);color:var(--amber);text-shadow:0 0 6px rgba(255,176,32,.55)}
-  .box.won .star{right:34px}
-  .box.won{background:rgba(20,241,149,.18);border-color:var(--green)}
-  .box.won .tag{color:var(--green)}
-  .teamlbl{display:flex;align-items:center;gap:6px}
-  .teamlbl.top{justify-content:center;margin-left:72px;margin-bottom:6px}
+  .box.lead{border:1.5px dotted var(--teal)}
+  .box .star{position:absolute;top:2px;right:5px;font:14px/1 var(--body);color:var(--amber);text-shadow:0 0 6px rgba(255,176,32,.55)}
+  .box.won{background:rgba(20,241,149,.16);border-color:var(--green)}
+  .box.won .tag{position:absolute;top:4px;right:5px;font:700 9px var(--body);letter-spacing:.04em;color:var(--green)}
+  .box.dim{opacity:.35}
+  .fullscreen{text-align:right;margin-top:10px;font-size:14px;color:var(--t2)}
+  .dim .box{opacity:.6}
 
-  /* pool header */
-  .poolhead{padding-top:6px}
-  .poolhead .big{font:700 22px var(--num);letter-spacing:.01em;margin-top:6px}
-  .scorestrip{display:flex;align-items:center;gap:12px;margin-top:8px;padding:10px 12px;background:var(--bg1);border:1px solid var(--line);border-radius:12px}
-  .scorestrip .s{font:700 26px/1 var(--num)}
-  .scorestrip .clk{margin-left:auto;color:var(--teal);font:600 14px var(--num);letter-spacing:.04em;display:flex;align-items:center;gap:6px}
-
-  /* tables */
+  /* tables & lists */
   .tbl{width:100%;border-collapse:collapse;font-size:14px}
-  .tbl td{padding:8px 0;border-bottom:1px solid var(--line)}
-  .tbl td:last-child{text-align:right}
-  .tbl .amt{font:600 16px var(--num);letter-spacing:.02em}
+  .tbl td{padding:10px 0;border-bottom:1px solid var(--line);vertical-align:middle}
+  .tbl td:last-child{text-align:right;color:var(--t2)}
+  .tbl .amt{font:600 16px var(--num);letter-spacing:.02em;color:var(--t1)}
   .tbl .win{color:var(--green)}
+  .tbl .lead{color:var(--teal)}
+  .tbl tr.foot td{border-bottom:0;padding-top:10px;color:var(--t2);font-size:13px;text-align:left}
   .link{color:var(--t2);font-size:12px}
   .link::after{content:" ↗"}
+  .list .li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;font-size:14px}
+  .list .li .when{font:600 12px var(--num);color:var(--t2);flex:none}
+  .list .li .arrow{color:var(--purple);font-size:12px}
+  .holders .hr{display:grid;grid-template-columns:14px 1fr auto auto;gap:10px;align-items:center;padding:9px 0;font-size:14px}
+  .holders .hr .sw{width:10px;height:10px;border-radius:3px;border:1px solid var(--line)}
+  .holders .hr .n{color:var(--t2)}
+  .holders .hr .ids{font:600 13px var(--num);letter-spacing:.02em;text-align:right}
+  .acti{display:flex;align-items:center;gap:8px;margin:18px 0 6px}
+  .acti .h2{font-size:20px}
+  .acti .t2{font:600 14px var(--num)}
+  .stack{display:flex;align-items:center;margin-left:4px}
+  .stack .mav{width:22px;height:22px;border:2px solid var(--bg0);margin-left:-8px}
+  .stack .mav:first-child{margin-left:0}
+  .stack .more{display:flex;align-items:center;justify-content:center;width:26px;height:22px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);color:var(--t2);font:600 10px var(--body);margin-left:-6px}
+  .mav{width:26px;height:26px;border-radius:50%;background:var(--bg2);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .mav .helm{width:14px;height:14px;--c1:#9945FF;--c2:#14F195}
+  .mav.lg{width:36px;height:36px} .mav.lg .helm{width:20px;height:20px}
+  .mav.photo{background:conic-gradient(from 90deg,#9945FF,#14F195,#00C2FF,#9945FF);border:0}
+  .mav.sm{width:20px;height:20px} .mav.sm .helm{width:11px;height:11px}
+  .details{display:flex;justify-content:space-between;align-items:center;padding:14px 0;font:600 12px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
 
-  /* sticky buy */
+  /* the buy bar (phone): stepper, boxes left, the button */
   .buybar{position:absolute;left:0;right:0;bottom:0;padding:12px 16px 30px;background:linear-gradient(180deg,rgba(11,11,16,0),var(--bg0) 30%)}
   .buybar .inner{display:flex;gap:10px;align-items:center}
-  .step{display:flex;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:12px;height:52px}
-  .step b{width:40px;text-align:center;font:600 20px var(--num)}
-  .step span{width:40px;text-align:center;color:var(--t2);font-size:20px}
-  .btn{flex:1;height:52px;border-radius:12px;background:var(--purple);color:#fff;font:600 16px var(--body);display:flex;align-items:center;justify-content:center;gap:8px}
-  .btn .num{font-weight:700;font-size:18px}
-  .btn.ghost{background:var(--bg2);border:1px solid var(--line);color:var(--t1)}
+  .step{display:flex;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:12px;height:48px}
+  .step b{width:40px;text-align:center;font:700 22px var(--num)}
+  .step span{width:40px;text-align:center;color:var(--t1);font-size:20px}
+  .buybar .left{color:var(--t2);font-size:14px}
+  .buybar .btn{flex:1}
 
-  /* sheet */
-  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
-  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg1);border-top-left-radius:22px;border-top-right-radius:22px;padding:14px 20px 34px;border-top:1px solid var(--line)}
-  .sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px}
+  /* sheets: the app's sheets are cards on a scrim */
+  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg1);border-top-left-radius:22px;border-top-right-radius:22px;padding:22px 20px 34px;border-top:1px solid var(--line)}
   .sheet h3{font:700 24px var(--num);letter-spacing:.01em}
-  .kv{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
-  .kv .num{font-size:17px;font-weight:600}
-  .kv.total{border:0;padding-top:12px}
-  .kv.total .num{font-size:24px;font-weight:700}
-  .note{color:var(--t2);font-size:13px;line-height:1.45;margin:14px 0}
-  .progress{display:flex;gap:6px;margin:6px 0 16px}
-  .progress i{flex:1;height:3px;border-radius:2px;background:var(--line)}
-  .progress i.on{background:var(--purple)}
-  .field{margin-top:14px}
-  .field label{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
-  .seg{display:flex;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:3px}
-  .seg span{flex:1;text-align:center;padding:9px 0;border-radius:8px;font-weight:600;font-size:14px;color:var(--t2)}
-  .seg span.on{background:var(--bg1);color:var(--t1);box-shadow:0 1px 0 var(--line)}
-  .input{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:0 14px;height:50px}
-  .input .num{font-size:22px;font-weight:700}
-  .input .unit{color:var(--t2);font-weight:600}
-  .hint{color:var(--t2);font-size:12px;margin-top:6px}
-  .radio{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
-  .radio .r{width:18px;height:18px;border-radius:50%;border:2px solid var(--line)}
-  .radio.on .r{border-color:var(--purple);background:radial-gradient(circle,var(--purple) 45%,transparent 50%)}
-  .cta{height:52px;border-radius:12px;background:var(--purple);color:#fff;font:600 16px var(--body);display:flex;align-items:center;justify-content:center;margin-top:18px}
-  .result{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 6px}
-  .check{width:64px;height:64px;border-radius:50%;background:rgba(20,241,149,.14);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:14px;box-shadow:0 0 30px rgba(20,241,149,.25)}
-  .boxids{display:flex;gap:8px;margin:12px 0 4px}
-  .boxids b{width:44px;height:44px;border-radius:10px;background:rgba(153,69,255,.28);border:1px solid var(--purple);display:flex;align-items:center;justify-content:center;font:700 18px var(--num)}
-  .actions{display:flex;gap:10px;width:100%;margin-top:16px}
-  .actions .btn{height:48px;font-size:15px}
-  .list .li{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
-  .list .li .num{font-size:15px;font-weight:600}
-  .owner{display:flex;align-items:center;gap:8px}
-  .sw{width:10px;height:10px;border-radius:3px}
-  .won-total{color:var(--green);font:700 16px var(--num)}
-
-  /* sponsorship & sharing */
-  .sponsor{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--t2)}
-  .sponsor b{color:var(--t1);font:600 14px var(--num);letter-spacing:.02em}
-  .tbl tr.foot td{border-bottom:0;padding-top:8px;color:var(--t2);font-size:12px;text-align:left}
-  .textlink{color:var(--purple);font-size:14px;font-weight:500}
-  .sheet .kv .t1{color:var(--t1)}
-  .acts{margin-top:8px}
-  .acts .a{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font-size:15px;font-weight:500}
+  .sheet .x{position:absolute;top:22px;right:20px;color:var(--t2);font-size:20px}
+  .steprow{display:flex;align-items:center;gap:14px;margin:16px 0 14px}
+  .steprow .sq{width:48px;height:48px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font:600 20px var(--num)}
+  .steprow .sq.off{opacity:.4}
+  .steprow .cnt{font:700 28px var(--num);color:var(--t1);width:34px;text-align:center}
+  .steprow .t2{font-size:14px}
+  .hair{height:1px;background:var(--line);margin:4px 0 10px}
+  .kv{display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:15px}
+  .kv .num{font-size:20px;font-weight:600}
+  .kv .mono{font:600 13px var(--num);color:var(--t1);letter-spacing:.02em}
+  .note{color:var(--t2);font-size:14px;line-height:1.45;margin:8px 0 14px}
+  .note.ok{color:var(--green)} .note.err{color:var(--red)}
+  .notebox{background:var(--bg2);border-radius:10px;padding:12px 14px;color:var(--t2);font-size:14px;line-height:1.6;margin:10px 0 14px}
+  .cta{height:52px;border-radius:12px;background:var(--purple);color:#fff;font:600 16px var(--body);display:flex;align-items:center;justify-content:center;margin-top:6px}
+  .cta.ghost{background:transparent;border:1px solid var(--line);color:var(--t1)}
+  .toggle{display:flex;justify-content:space-between;align-items:center;padding:12px 0 14px;font-size:15px}
+  .toggle .sw{width:40px;height:22px;border-radius:11px;background:var(--bg2);border:1px solid var(--line);position:relative}
+  .toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--t2)}
+  .field{margin-top:12px}
+  .field label{display:block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
+  .input{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:0 14px;height:50px;font-size:16px}
+  .hint{color:var(--t2);font-size:13px;margin-top:6px;line-height:1.4}
+  .acts .a{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);font-size:16px}
   .acts .a:last-child{border-bottom:0}
-  .acts .a .t2{font-size:12px;font-weight:400}
-  .shareprev{display:flex;gap:12px;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:12px}
-  .shareprev .thumb{width:54px;height:54px;border-radius:8px;background:var(--bg0);border:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:5px;flex:none}
-  .shareprev .thumb i{background:var(--line);border-radius:1px}
-  .shareprev .thumb i.y{background:var(--purple)} .shareprev .thumb i.o{background:#2a2a45}
-  .shareprev p{font-size:13px;line-height:1.4;color:var(--t1)}
-  .shareprev p .t2{font-size:12px}
-  .sbtn{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:10px;background:var(--bg2);border:1px solid var(--line);font-size:14px;font-weight:500;margin-top:10px}
+  .acts .a .t2{font-size:14px}
+  .prev{background:var(--bg2);border-radius:10px;padding:12px 14px;margin:14px 0;font-size:15px;line-height:1.4}
+  .prev .t2{font-size:13px;display:block;margin-top:4px}
+  .wopt{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;font-size:16px;font-weight:600}
+  .wopt .wl{display:flex;align-items:center;gap:12px}
+  .wopt .wl i{width:28px;height:28px;border-radius:8px;background:#23232e;display:inline-block}
+  .wopt .rec{color:var(--green);font-size:13px;font-weight:500;margin-right:14px}
+  .wopt .ar{color:var(--t2)}
 
-  /* profile & thread (DESIGN 4.9) */
-  .pav{width:64px;height:64px;border-radius:50%;background:conic-gradient(from 90deg,#9945FF,#14F195,#00C2FF,#9945FF);flex:none}
-  .pav.empty{background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
-  .pav.empty .helm{width:30px;height:30px;--c1:#9945FF;--c2:#14F195}
-  .mav{width:26px;height:26px;border-radius:50%;background:conic-gradient(from 90deg,#9945FF,#14F195,#00C2FF,#9945FF);flex:none}
-  .mav.m2{background:conic-gradient(from 0deg,#FFB020,#FF4D6D,#FFB020)} .mav.m3{background:conic-gradient(from 180deg,#00C2FF,#9945FF,#00C2FF)}
-  .mav.empty{background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
-  .mav.empty .helm{width:14px;height:14px;--c1:#9945FF;--c2:#14F195}
-  .stack{display:flex;align-items:center}
-  .stack .mav{width:22px;height:22px;border:2px solid var(--bg0);margin-left:-8px} .stack .mav:first-child{margin-left:0}
-  .stack .more{color:var(--t2);font:600 12px var(--body);margin-left:6px}
-  .thread{margin-top:4px}
-  .msg{display:flex;gap:10px;align-items:flex-start;padding:8px 0}
-  .msg .who{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
-  .msg .who .t2{font-weight:400;font-size:12px}
-  .msg .who .ctag{font:600 9px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--purple);border:1px solid rgba(153,69,255,.5);border-radius:4px;padding:1px 5px}
-  .msg p{font-size:14px;line-height:1.4;margin-top:2px}
-  .msg p .at{color:var(--purple);font-weight:500}
-  .sys{display:flex;justify-content:space-between;align-items:center;padding:7px 0 7px 36px;color:var(--t2);font-size:13px}
-  .sys .t1{color:var(--t1)} .sys .win{color:var(--green)}
-  .pinned{display:flex;gap:10px;align-items:flex-start;background:var(--bg1);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0 4px;font-size:13px;line-height:1.4}
-  .pinned .pin{color:var(--t2);font-size:12px;flex:none;margin-top:1px}
-  .pinned b{font-weight:600}
-  .composer{display:flex;gap:8px;align-items:center;margin-top:8px}
-  .composer .in{flex:1;height:44px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;padding:0 14px;color:var(--t2);font-size:14px}
+  /* create sheet (as a card) */
+  .cs .k{font:600 11px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin:6px 0 10px}
+  .cs .fr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0}
+  .cs .fr .lbl{font-size:15px;color:var(--t2)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .chips span{border:1px solid var(--line);background:var(--bg2);border-radius:999px;padding:7px 12px;font-size:13px;color:var(--t1);font-weight:500}
+  .chips span.on{border-color:var(--purple);color:var(--purple)}
+  .cs .price{display:flex;align-items:center;gap:12px}
+  .cs .price .sq{width:40px;height:40px;border-radius:10px;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .cs .price .sq.off{opacity:.4}
+  .cs .price b{font:700 24px var(--num)}
+  .cs .pot{font:600 22px var(--num)}
+  .cs .fee{border-top:1px solid var(--line);margin-top:14px;padding-top:14px;font-size:14px;color:var(--t2)}
+  .cs .fee b{font:700 18px var(--num);color:var(--t1)}
+  .cs .nav{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}
+  .cs .nav .btn{height:48px}
+
+  /* profile sheet, join card, result card, thread (DESIGN 4.9) */
+  .pav{width:76px;height:76px;border-radius:50%;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:none}
+  .pav .helm{width:44px;height:44px;--c1:#9945FF;--c2:#14F195}
+  .mini{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
+  .mini .row b{font:700 15px var(--num);letter-spacing:.02em}
+  .mini .l2{font-size:13px;color:var(--t2);margin-top:4px}
+  .devrow{display:flex;justify-content:space-between;align-items:center;padding:14px 0 0;border-top:1px solid var(--line);font-size:14px;margin-top:14px}
+  .thread{margin-top:2px}
+  .msg{display:flex;gap:10px;align-items:flex-start;padding:7px 0}
+  .msg .who{font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px;justify-content:space-between}
+  .msg .who .nm{font-weight:600;color:var(--t2)}
+  .msg .who .ctag{font:600 8px var(--num);letter-spacing:.12em;text-transform:uppercase;color:var(--t2);border:1px solid var(--line);border-radius:4px;padding:2px 5px}
+  .msg .who .tm{font:600 12px var(--num);color:var(--t2)}
+  .msg .body{flex:1}
+  .msg p{font-size:15px;line-height:1.35;margin-top:1px}
+  .msg p .at{color:var(--purple)}
+  .sys{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;color:var(--t2);font-size:14px}
+  .sys .when{font:600 12px var(--num);flex:none}
+  .sys .arrow{color:var(--purple);font-size:12px}
+  .composer{display:flex;gap:8px;align-items:center;margin-top:10px}
+  .composer .in{flex:1;height:44px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;padding:0 14px;color:var(--t2);font-size:15px}
   .composer .send{width:44px;height:44px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--t2)}
-  .chips{display:flex;gap:8px;margin-top:10px}
-  .chips span{border:1px solid var(--line);background:var(--bg1);border-radius:999px;padding:7px 12px;font-size:13px;color:var(--t1)}
+  .quick{display:flex;gap:8px;margin-top:10px}
+  .quick span{border:1px solid var(--line);background:var(--bg1);border-radius:999px;padding:7px 12px;font-size:13px}
   .joincard{background:var(--bg1);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px}
-  .joincard .cta{margin-top:12px;height:46px;font-size:15px}
-  .resultcard{background:var(--bg1);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
-  .resultcard .qrow{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
-  .resultcard .qrow:last-of-type{border-bottom:0}
-  .resultcard .qrow .owner{gap:10px}
-  .plist .pr{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
-  .plist .pr:last-child{border-bottom:0}
-  .plist .pr .t2{font-size:12px}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.01em}
-  .devrow{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--line);font-size:14px;margin-top:10px}
+  .joincard .cta{margin-top:12px;height:50px}
+  .resultcard{background:var(--bg1);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px}
+  .resultcard .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .resultcard .hd b{font:700 22px var(--num)}
+  .resultcard .hd .paid{font:600 14px var(--num);color:var(--green)}
+  .resultcard .qrow{display:grid;grid-template-columns:34px 1fr auto auto;gap:10px;align-items:center;padding:7px 0;font-size:15px}
+  .resultcard .qrow .q{font:600 11px var(--num);letter-spacing:.06em;color:var(--t2);line-height:1.2}
+  .resultcard .qrow .nm{display:flex;align-items:center;gap:8px}
+  .resultcard .qrow .bx{color:var(--t2);font-size:14px}
+  .resultcard .qrow .amt{font:600 15px var(--num);color:var(--green);letter-spacing:.02em}
+  .resultcard .nav{display:flex;gap:10px;margin-top:12px}
+  .resultcard .nav .btn{flex:1;height:50px}
+  .replay{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg1);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:8px;font-size:14px}
+  .replay b{font:700 15px var(--num);display:block}
 
-  /* wide layout (DESIGN 4.11) */
-  .frame.wide{width:1280px;height:800px;border-radius:16px;flex-direction:row}
+  /* How to play, pool cards on the game page */
+  .htp{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);font:600 12px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+  .pc .hd{display:flex;align-items:center;gap:10px}
+  .pc .hd .pr{font:700 17px var(--num);letter-spacing:.01em}
+  .pc .hd .pr small{font-size:12px;font-weight:600;color:var(--t2)}
+  .pc .l{font-size:14px;color:var(--t2);margin-top:6px}
+  .pc .l b{font:600 14px var(--num);color:var(--t1)}
+
+  /* my boxes */
+  .mb .card{padding:12px 14px}
+  .mb .card .hd{display:flex;align-items:center;gap:10px}
+  .mb .card .hd .sc{font:700 16px var(--num);letter-spacing:.02em;flex:1}
+  .mb .card .hd .wh{font:600 13px var(--num);color:var(--t2)}
+  .mb .card .l{font-size:14px;color:var(--t2);margin-top:6px}
+  .mb .sec{display:flex;justify-content:space-between;align-items:baseline;font:600 12px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin:16px 0 8px}
+  .mb .sec .tot{font:600 14px var(--num);color:var(--green);letter-spacing:.02em;text-transform:none}
+  .mb .wr{display:grid;grid-template-columns:30px 1fr auto 12px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .mb .wr .q{font:600 12px var(--num);color:var(--t2);letter-spacing:.06em}
+  .mb .wr .amt{font:600 15px var(--num);color:var(--green)}
+  .mb .col{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);font:600 12px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+  .mb .me{color:var(--t2);font-size:12px;margin-top:16px;text-align:center}
+
+  /* wide layout (DESIGN 4.11): the rail collapsed to helmet pairs, the page column, the thread */
+  .frame.wide{width:1280px;height:800px;border-radius:16px}
   body.single .frame.wide{border-radius:0;height:100vh}
-  .rail{width:280px;flex:none;border-right:1px solid var(--line);padding:28px 16px;display:flex;flex-direction:column;gap:6px}
-  .rail .nav{display:flex;gap:16px;font:600 12px var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin-bottom:14px}
-  .rail .nav b{color:var(--t1)}
-  .rail .wk{font:700 18px var(--num);margin-bottom:10px}
-  .rail .g{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13px}
-  .rail .g.on{background:var(--bg1);border:1px solid var(--line)}
-  .rail .g .pair{display:flex;gap:4px;flex:none}
-  .rail .g .nm{flex:1;font-weight:600}
-  .rail .g .sc{font:600 13px var(--num);color:var(--t2)}
-  .rail .g.live .sc{color:var(--teal)}
-  .rail .g .cnt{color:var(--t2);font-size:12px}
+  .frame.wide .bar{padding:16px 24px}
+  .wrow{display:flex;flex:1;min-height:0}
+  .rail{width:44px;flex:none;border-right:1px solid var(--line);padding:12px 0;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .rail .pair{display:flex;gap:1px;padding:5px 0;border-radius:8px}
+  .rail .pair.on{background:var(--bg2)}
   .rail .foot{margin-top:auto;color:var(--t2);font-size:14px}
-  .page{flex:1;display:flex;justify-content:center;position:relative}
-  .page .col{width:600px;position:relative;display:flex;flex-direction:column}
-  .page .col .top{padding:28px 0 10px}
-  .page .col .content{padding:0}
-  .page .col .buybar{left:0;right:0;padding-left:0;padding-right:0}
-  .side{width:360px;flex:none;border-left:1px solid var(--line);padding:28px 20px;display:flex;flex-direction:column}
-  .side .sect{margin-top:0}
-  .side .thread{flex:1}
-  .wideboard{display:flex;justify-content:center}
-  .wideboard .gridwrap{width:520px}
-  /* no-wallet sheet (DESIGN 4.10) */
-  .wopt{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;font-size:15px;font-weight:500}
-  .wopt .wl{display:flex;align-items:center;gap:10px}
-  .wopt .wl i{width:28px;height:28px;border-radius:8px;background:#AB9FF2;display:inline-block}
-  .wopt .wl i.sf{background:linear-gradient(135deg,#FC7227,#FFC10B)}
-  .wopt .t2{font-size:12px}
+  .page{flex:1;display:flex;justify-content:center;position:relative;overflow:hidden}
+  .page .col{width:640px;position:relative;display:flex;flex-direction:column;padding:0 20px}
+  .page .col .ttl{padding-top:14px}
+  .wideboard .gridwrap{margin-top:8px}
+  .wideboard .boxes{aspect-ratio:auto;grid-template-rows:repeat(5,92px)}
+  .wideboard .box{font-size:13px;padding:8px}
+  .wideboard .box .n{font-size:11px;top:6px;left:8px}
+  .wideboard .box .mark{top:22px;left:8px}
+  .aside{width:300px;flex:none;border-left:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column}
+  .aside .acti{margin-top:0}
+  .aside .sys,.aside .msg p{font-size:13px}
 </style>
 </head>
 <body class="overview">
@@ -263,102 +327,107 @@
 <!-- ============ 1. GAMES ============ -->
 <div class="frame" id="games">
   <div class="label">1 · Games (home)</div>
-  <div class="top"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="row" style="margin:6px 0 12px">
-      <div class="num" style="font-size:22px;font-weight:700">Week 4 <span class="t2" style="font-size:16px">▾</span></div>
-      <span class="pill live"><i class="dot"></i>1 live</span>
+    <div class="weeknav">
+      <div class="wk"><span class="ar">‹</span>Week 7 <span class="yr">2026</span><span class="ar">›</span></div>
+      <div class="seg"><span class="on">This week</span><span>Open pools</span></div>
+    </div>
+    <div class="btn full">Create a pool</div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:6px"><span class="pill live"><i class="dot"></i>Live · Q2 9:41</span></div>
+      <div class="row" style="margin-bottom:6px"><div class="team"><svg class="helm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><b>Baltimore Ravens</b></div><div class="score t2">10</div></div>
+      <div class="row"><div class="team"><svg class="helm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><b>Kansas City Chiefs</b></div><div class="score">14</div></div>
+      <div class="summ"><span>6 pools · <span class="amt">38.2 SOL in pots</span></span></div>
     </div>
 
     <div class="card">
-      <div class="row" style="margin-bottom:10px"><span class="pill live"><i class="dot"></i>Live · Q2 4:12</span><span class="t2" style="font-size:12px">CBS</span></div>
-      <div class="row" style="margin-bottom:8px"><div class="team"><svg class="helm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><b>Chiefs</b></div><div class="score">14</div></div>
-      <div class="row"><div class="team"><svg class="helm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><b>Ravens</b></div><div class="score t2">10</div></div>
-      <div class="meta"><span>6 pools</span><span>2 open</span><span class="num" style="color:var(--t1);font-weight:600">38.2 SOL in pots</span></div>
+      <div class="row" style="margin-bottom:6px"><span class="kick">Sun 1:00 PM ET</span></div>
+      <div class="row" style="margin-bottom:6px"><div class="team"><svg class="helm" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg><b>Dallas Cowboys</b></div></div>
+      <div class="row"><div class="team"><svg class="helm" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><b>Philadelphia Eagles</b></div></div>
+      <div class="summ"><span>3 pools · 3 open · <span class="amt">4.1 SOL in pots</span></span><span class="btn sm">Join</span></div>
     </div>
 
     <div class="card">
-      <div class="row" style="margin-bottom:10px"><span class="kick">SUN 1:00 PM</span><span class="t2" style="font-size:12px">FOX</span></div>
-      <div class="row" style="margin-bottom:8px"><div class="team"><svg class="helm" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><b>Eagles</b></div></div>
-      <div class="row"><div class="team"><svg class="helm" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg><b>Cowboys</b></div></div>
-      <div class="meta"><span>3 pools</span><span>3 open</span><span class="num" style="color:var(--t1);font-weight:600">4.1 SOL in pots</span></div>
+      <div class="row" style="margin-bottom:6px"><span class="kick">Sun 4:25 PM ET</span></div>
+      <div class="row" style="margin-bottom:6px"><div class="team"><svg class="helm" style="--c1:#002244;--c2:#69BE28"><use href="#helmet"/></svg><b>Seattle Seahawks</b></div></div>
+      <div class="row"><div class="team"><svg class="helm" style="--c1:#AA0000;--c2:#B3995D"><use href="#helmet"/></svg><b>San Francisco 49ers</b></div></div>
+      <div class="summ"><span>No pools yet</span><span class="btn sm ghost">Create</span></div>
     </div>
 
     <div class="card">
-      <div class="row" style="margin-bottom:10px"><span class="kick">SUN 4:25 PM</span><span class="t2" style="font-size:12px">FOX</span></div>
-      <div class="row" style="margin-bottom:8px"><div class="team"><svg class="helm" style="--c1:#AA0000;--c2:#B3995D"><use href="#helmet"/></svg><b>49ers</b></div></div>
-      <div class="row"><div class="team"><svg class="helm" style="--c1:#002244;--c2:#69BE28"><use href="#helmet"/></svg><b>Seahawks</b></div></div>
-      <div class="meta"><span>No pools yet</span><span style="color:var(--purple)">Create one →</span></div>
-    </div>
-
-    <div class="card">
-      <div class="row" style="margin-bottom:10px"><span class="kick">SUN 8:20 PM</span><span class="t2" style="font-size:12px">NBC</span></div>
-      <div class="row" style="margin-bottom:8px"><div class="team"><svg class="helm" style="--c1:#203731;--c2:#FFB612"><use href="#helmet"/></svg><b>Packers</b></div></div>
-      <div class="row"><div class="team"><svg class="helm" style="--c1:#0076B6;--c2:#B0B7BC"><use href="#helmet"/></svg><b>Lions</b></div></div>
-      <div class="meta"><span>9 pools</span><span>5 open</span><span class="num" style="color:var(--t1);font-weight:600">6.4 SOL · 2.5 ORE in pots</span></div>
+      <div class="row" style="margin-bottom:6px"><span class="kick">Sun 8:20 PM ET</span></div>
+      <div class="row" style="margin-bottom:6px"><div class="team"><svg class="helm" style="--c1:#0076B6;--c2:#B0B7BC"><use href="#helmet"/></svg><b>Detroit Lions</b></div></div>
+      <div class="row"><div class="team"><svg class="helm" style="--c1:#203731;--c2:#FFB612"><use href="#helmet"/></svg><b>Green Bay Packers</b></div></div>
+      <div class="summ"><span>9 pools · 5 open · <span class="amt">6.4 SOL in pots</span></span><span class="btn sm">Join</span></div>
     </div>
   </div>
-  <div class="tabs"><a class="on"><i class="ic"></i>Games</a><a><i class="ic"></i>My Boxes</a><a><i class="ic"></i>Create</a></div>
 </div>
 
 <!-- ============ 2. GAME ============ -->
 <div class="frame" id="game">
   <div class="label">2 · Game</div>
-  <div class="top"><div class="back">‹ Week 4</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="row" style="margin-bottom:8px"><div class="team"><svg class="helm lg" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><div><b style="font-size:17px">Chiefs</b><div class="t2" style="font-size:12px">3–0 · Home</div></div></div><div class="score" style="font-size:36px">14</div></div>
-    <div class="row"><div class="team"><svg class="helm lg" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><div><b style="font-size:17px">Ravens</b><div class="t2" style="font-size:12px">2–1 · Away</div></div></div><div class="score t2" style="font-size:36px">10</div></div>
-    <div class="row" style="margin-top:12px"><span class="pill live"><i class="dot"></i>Q2 4:12</span><span class="t2" style="font-size:12px">Arrowhead · CBS</span></div>
-    <div class="lines"><span class="h"></span><span class="h">Q1</span><span class="h">Q2</span><span class="h">Q3</span><span class="h">Q4</span>
-      <span class="h">KC</span><span class="v">7</span><span class="v">7</span><span>–</span><span>–</span>
-      <span class="h">BAL</span><span class="v">3</span><span class="v">7</span><span>–</span><span>–</span></div>
+    <div class="back">‹ 2026 · Week 7</div>
+    <div class="strip">
+      <div class="side"><svg class="helm" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg><span class="abbr">DAL</span><span class="s t2">–</span></div>
+      <div class="mid">Sun 1:00 PM ET</div>
+      <div class="side"><span class="s t2">–</span><span class="abbr">PHI</span><svg class="helm" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg></div>
+    </div>
+    <div style="text-align:center;font-size:15px;font-weight:600;margin:12px 0 2px">Kickoff in 19h 45m</div>
+    <div class="htp"><span>How to play</span><span>▸</span></div>
 
-    <div class="sect"><b>Pools on this game</b><span style="color:var(--purple);text-transform:none;letter-spacing:0;font-size:14px">+ Create</span></div>
+    <div class="sect"><span>Pools on this game <b>3</b></span><span class="btn sm outline" style="text-transform:none;letter-spacing:0">+ Create</span></div>
 
-    <div class="card">
-      <div class="row"><span class="pill open">Open</span><span class="num" style="font-weight:700;font-size:18px">0.05 SOL <span class="t2" style="font-weight:500;font-size:13px">/ box</span></span></div>
-      <div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="meta"><span class="num" style="color:var(--t1);font-weight:600">19/25</span><span>Pot 1.25 SOL</span><span>20/20/20/40</span><span>Fee 10%</span><span>mike.skr</span></div>
+    <div class="card pc">
+      <div class="hd"><span class="pill open">Open</span><span class="pr">0.05 SOL<small>/box</small></span><div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="cnt">19/25</span></div>
+      <div class="l">Pot 1.25 SOL · 20/20/20/40</div>
+      <div class="l">Fee 10% · by mike.skr</div>
     </div>
 
-    <div class="card">
-      <div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="num" style="font-weight:700;font-size:18px">1.00 SOL <span class="t2" style="font-weight:500;font-size:13px">/ box</span></span></div>
-      <div class="meta"><span>Pot 25 SOL</span><span>Q4 100%</span><span>Fee 12%</span><span>bigmikes.skr</span></div>
-      <div class="row" style="margin-top:10px;font-size:13px"><span style="color:var(--teal)">Leading · final</span><span>box 7 · a3f9</span></div>
+    <div class="card pc">
+      <div class="hd"><span class="pill open">Open</span><span class="pr">0.05 SOL<small>/box</small></span><div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="cnt">13/25</span></div>
+      <div class="l">Pot 1.25 SOL · 20/20/20/40</div>
+      <div class="l">Sponsored · <b>+0.20 SOL</b></div>
+      <div class="l">Fee 10% · by 9aEs…rQkd</div>
     </div>
 
-    <div class="card">
-      <div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="num" style="font-weight:700;font-size:18px">0.10 SOL <span class="t2" style="font-weight:500;font-size:13px">/ box</span></span></div>
-      <div class="meta"><span>Pot 2.5 SOL</span><span>25/25/25/25</span><span>Fee 10%</span><span>jon.skr</span></div>
-      <div class="row" style="margin-top:10px;font-size:13px"><span class="t2">Q1 won</span><span style="color:var(--green)">sara.skr · 0.5625 SOL ↗</span></div>
+    <div class="card pc">
+      <div class="hd"><span class="pill locked">Locked</span><span class="pr">1.00 SOL<small>/box</small></span><span class="cnt" style="margin-left:auto">25/25</span></div>
+      <div class="l">Pot 25.00 SOL · 0/0/0/100</div>
+      <div class="l">Fee 12% · by bigmikes.skr</div>
+      <div class="l" style="color:var(--amber)">Locked · waiting for kickoff</div>
     </div>
 
-    <div class="card">
-      <div class="row"><span class="pill open">Open</span><span class="num" style="font-weight:700;font-size:18px">0.05 ORE <span class="t2" style="font-weight:500;font-size:13px">/ box</span></span></div>
-      <div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="meta"><span class="num" style="color:var(--t1);font-weight:600">6/25</span><span>Pot 1.25 ORE</span><span>25/25/25/25</span><span>Fee 15%</span><span>sara.skr</span></div>
+    <div class="card pc">
+      <div class="hd"><span class="pill open">Open</span><span class="pr">100 SKR<small>/box</small></span><div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="cnt">6/25</span></div>
+      <div class="l">Pot 2 500 SKR · 25/25/25/25</div>
+      <div class="l">Fee 15% · by sara.skr</div>
     </div>
   </div>
-  <div class="tabs"><a class="on"><i class="ic"></i>Games</a><a><i class="ic"></i>My Boxes</a><a><i class="ic"></i>Create</a></div>
 </div>
 
 <!-- ============ 3. POOL (OPEN) ============ -->
 <div class="frame" id="pool-open">
   <div class="label">3 · Pool — open</div>
-  <div class="top"><div class="back">‹ KC vs BAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>ana.skr</div><span class="t2">⇪</span></div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill open">Open · locks when full</span><span class="num" style="font-weight:700;font-size:18px">19<span class="t2">/25</span></span></div>
-      <div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="big">0.05 SOL <span class="t2" style="font-size:15px;font-weight:500">/ box</span> <span style="margin-left:10px">Pot 1.25 SOL</span></div>
-      <div class="meta"><span>Split 20 / 20 / 20 / 40</span><span>Fee 10%</span><span>by mike.skr</span></div>
-    </div>
+    <div class="ttl"><h1><span class="bk">‹</span>DAL vs PHI</h1><span class="share">⇪</span></div>
+    <div class="statusrow"><span class="pill open">Open</span><div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="cnt">19/25</span></div>
+    <div class="hintrow"><span>locks when full · Sun 1:00 PM ET</span><span class="cd">Closes in 19h 45m</span></div>
+    <div class="line"><b>0.05 SOL / box</b> · Pot 1.25 SOL</div>
+    <div class="line">Split 20/20/20/40 · Fee 10%</div>
 
     <div class="gridwrap">
-      <div class="teamlbl top"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="abbr">KC</span></div>
-      <div class="axis-top"><span></span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
-      <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span></div>
-        <div class="axis-side"><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+      <div class="toplbl"><svg class="helm xs" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><span class="abbr">PHI</span><span class="cap">Home</span></div>
+      <div class="toprule" style="--hc:#004C54"></div>
+      <div class="axis-top"><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span></div>
+      <div class="board">
+        <div class="sidelbl"><div class="rot"><span class="abbr">DAL</span><span class="cap">Away</span></div><svg class="helm xs" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg></div>
+        <div class="siderule" style="--ac:#003594"></div>
+        <div class="axis-side"><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span></div>
         <div class="boxes">
           <div class="box o1"><i class="n">1</i>mike</div><div class="box"><i class="n">2</i></div><div class="box you"><i class="n">3</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box"><i class="n">5</i></div>
           <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2"><i class="n">7</i>jon</div><div class="box"><i class="n">8</i></div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
@@ -367,80 +436,80 @@
           <div class="box"><i class="n">21</i></div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o3"><i class="n">24</i>a3f9</div><div class="box you"><i class="n">25</i>YOU</div>
         </div>
       </div>
-      <div class="hint" style="text-align:center;margin-top:10px">Numbers are drawn when the 25th box sells.</div>
+      <div class="fullscreen">↗ Full screen</div>
     </div>
 
-    <div class="sect"><b>Payouts</b><span>per quarter</span></div>
+    <div class="sect"><span>Payouts</span></div>
     <table class="tbl">
-      <tr><td class="t2">Q1</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
-      <tr><td class="t2">Q2</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
-      <tr><td class="t2">Q3</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
-      <tr><td class="t2">Q4 · final</td><td class="amt">0.45 SOL</td><td class="t2">—</td></tr>
+      <tr><td class="t2">Q1</td><td class="amt">0.225 SOL</td><td>–</td></tr>
+      <tr><td class="t2">Q2</td><td class="amt">0.225 SOL</td><td>–</td></tr>
+      <tr><td class="t2">Q3</td><td class="amt">0.225 SOL</td><td>–</td></tr>
+      <tr><td class="t2">Q4 · Final</td><td class="amt">0.45 SOL</td><td>–</td></tr>
     </table>
   </div>
-  <div class="buybar"><div class="inner"><div class="step"><span>−</span><b>3</b><span>+</span></div><div class="btn">Buy 3 <span class="num">0.15 SOL</span></div></div></div>
+  <div class="buybar"><div class="inner"><div class="step"><span>−</span><b>3</b><span>+</span></div><span class="left">6 left</span><div class="btn">Buy 3 · 0.15 SOL</div></div></div>
 </div>
 
 <!-- ============ 4. POOL (LIVE) ============ -->
 <div class="frame" id="pool-live">
   <div class="label">4 · Pool — live</div>
-  <div class="top"><div class="back">‹ KC vs BAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>ana.skr</div><span class="t2">⇪</span></div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="t2" style="font-size:13px">25/25 · Pot 1.25 SOL</span></div>
-      <div class="scorestrip">
-        <div class="team"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="s">14</span></div>
-        <div class="team"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="s t2">10</span></div>
-        <div class="clk"><i class="dot"></i>Q2 4:12</div>
-      </div>
+    <div class="ttl"><h1><span class="bk">‹</span>BAL vs KC</h1><span class="share">⇪</span></div>
+    <div class="strip">
+      <div class="side"><svg class="helm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span><span class="s">10</span></div>
+      <div class="mid live">Q2 · 9:41</div>
+      <div class="side"><span class="s">14</span><span class="abbr">KC</span><svg class="helm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg></div>
     </div>
+    <div class="qstrip"><span>Q1<b>3–7</b></span><span class="live">Q2<b>live</b></span><span>Q3<b>–</b></span><span>Final<b>–</b></span></div>
+    <div class="statusrow"><span class="pill live"><i class="dot"></i>Live</span></div>
+    <div class="line"><b>0.05 SOL / box</b> · Pot 1.25 SOL</div>
+    <div class="line">Split 20/20/20/40 · Fee 10%</div>
 
     <div class="gridwrap">
-      <div class="teamlbl top"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="abbr">KC</span></div>
-      <div class="axis-top"><span></span><span class="d">1·9</span><span class="d">5·4</span><span class="d">7·2</span><span class="d">0·6</span><span class="d">8·3</span></div>
-      <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span></div>
-        <div class="axis-side"><span class="d">3·9</span><span class="d">0·6</span><span class="d">7·4</span><span class="d">8·1</span><span class="d">2·5</span></div>
+      <div class="toplbl"><svg class="helm xs" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="abbr">KC</span><span class="cap">Home</span></div>
+      <div class="toprule" style="--hc:#E31837"></div>
+      <div class="axis-top"><span class="d">31</span><span class="d">74</span><span class="d">08</span><span class="d">52</span><span class="d">96</span></div>
+      <div class="board">
+        <div class="sidelbl"><div class="rot"><span class="abbr">BAL</span><span class="cap">Away</span></div><svg class="helm xs" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg></div>
+        <div class="siderule" style="--ac:#241773"></div>
+        <div class="axis-side"><span class="d">8<br>9</span><span class="d">2<br>3</span><span class="d">6<br>7</span><span class="d">0<br>1</span><span class="d">4<br>5</span></div>
         <div class="boxes">
-          <div class="box o1"><i class="n">1</i>mike</div><div class="box you"><i class="n">2</i>YOU</div><div class="box you won"><i class="n">3</i><i class="tag">Q1 ✓</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box o2"><i class="n">5</i>jon</div>
-          <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2 lead"><i class="n">7</i><i class="star" aria-label="Leading at the current score">★</i>jon</div><div class="box o1"><i class="n">8</i>mike</div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
+          <div class="box o1"><i class="n">1</i>mike</div><div class="box you"><i class="n">2</i>YOU</div><div class="box you won"><i class="n">3</i><i class="tag">✓ Q1</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box o2"><i class="n">5</i>jon</div>
+          <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2 lead"><i class="n">7</i><i class="star">★</i>jon</div><div class="box o1"><i class="n">8</i>mike</div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
           <div class="box o4"><i class="n">11</i>sara</div><div class="box you"><i class="n">12</i>YOU</div><div class="box you"><i class="n">13</i>YOU</div><div class="box o4"><i class="n">14</i>sara</div><div class="box o2"><i class="n">15</i>jon</div>
           <div class="box o2"><i class="n">16</i>jon</div><div class="box you"><i class="n">17</i>YOU</div><div class="box o4"><i class="n">18</i>sara</div><div class="box o3"><i class="n">19</i>a3f9</div><div class="box o1"><i class="n">20</i>mike</div>
           <div class="box o4"><i class="n">21</i>sara</div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o3"><i class="n">24</i>a3f9</div><div class="box you"><i class="n">25</i>YOU</div>
         </div>
       </div>
+      <div class="fullscreen">↗ Full screen</div>
     </div>
 
-    <div class="sect"><b>Payouts</b><span>on-chain</span></div>
+    <div class="sect"><span>Payouts</span></div>
     <table class="tbl">
-      <tr><td class="t2">Q1 · 7–3</td><td class="amt win">0.225 SOL</td><td><span style="color:var(--green)">box 3 · YOU</span> <span class="link"></span></td></tr>
-      <tr><td class="t2">Q2</td><td class="amt">0.225 SOL</td><td><span style="color:var(--teal);font-size:13px"><span style="color:var(--amber)">★</span> Leading · box 7 · jon</span></td></tr>
-      <tr><td class="t2">Q3</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
-      <tr><td class="t2">Q4 · final</td><td class="amt">0.45 SOL</td><td class="t2">—</td></tr>
+      <tr><td class="t2">Q1</td><td class="amt">0.225 SOL</td><td class="win">✓ Won · box 3 · You ↗</td></tr>
+      <tr><td class="t2">Q2</td><td class="amt">0.225 SOL</td><td class="lead"><span style="color:var(--amber)">★</span> Leading · box 7 · jon</td></tr>
+      <tr><td class="t2">Q3</td><td class="amt">0.225 SOL</td><td>–</td></tr>
+      <tr><td class="t2">Q4 · Final</td><td class="amt">0.45 SOL</td><td>–</td></tr>
     </table>
-
-    <div class="sect"><b>Activity</b></div>
-    <div class="list">
-      <div class="li"><span><span style="color:var(--green)">Q1 paid</span> · 0.225 SOL → ana.skr</span><span class="link">12m</span></div>
-      <div class="li"><span>Fees paid · 0.0625 SOL platform · 0.0625 SOL creator</span><span class="link">12m</span></div>
-      <div class="li"><span>Numbers drawn</span><span class="link">1h</span></div>
-      <div class="li"><span>Pool locked · 25/25</span><span class="link">1h</span></div>
-    </div>
   </div>
 </div>
 
 <!-- ============ 5. BUY SHEET ============ -->
 <div class="frame" id="buy">
   <div class="label">5 · Buy sheet</div>
-  <div class="top"><div class="back">‹ KC vs BAL</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill open">Open · locks when full</span><span class="num" style="font-weight:700;font-size:18px">19<span class="t2">/25</span></span></div>
-      <div class="big">0.05 SOL <span class="t2" style="font-size:15px;font-weight:500">/ box</span></div>
-    </div>
-    <div class="gridwrap" style="opacity:.9">
-      <div class="axis-top"><span></span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
-      <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span></div>
-        <div class="axis-side"><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+    <div class="ttl"><h1><span class="bk">‹</span>DAL vs PHI</h1><span class="share">⇪</span></div>
+    <div class="statusrow"><span class="pill open">Open</span><div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="cnt">19/25</span></div>
+    <div class="hintrow"><span>locks when full · Sun 1:00 PM ET</span><span class="cd">Closes in 19h 45m</span></div>
+    <div class="line"><b>0.05 SOL / box</b> · Pot 1.25 SOL</div>
+    <div class="gridwrap dim">
+      <div class="axis-top"><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span></div>
+      <div class="board">
+        <div class="sidelbl"><div class="rot"><span class="abbr">DAL</span><span class="cap">Away</span></div></div>
+        <div class="siderule" style="--ac:#003594"></div>
+        <div class="axis-side"><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span></div>
         <div class="boxes">
           <div class="box o1"><i class="n">1</i>mike</div><div class="box"><i class="n">2</i></div><div class="box you"><i class="n">3</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box"><i class="n">5</i></div>
           <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2"><i class="n">7</i>jon</div><div class="box"><i class="n">8</i></div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
@@ -453,30 +522,31 @@
   </div>
   <div class="scrim"></div>
   <div class="sheet">
-    <div class="grab"></div>
-    <h3>Buy 3 boxes</h3>
+    <h3>Buy boxes</h3>
+    <div class="steprow"><span class="sq">−</span><span class="cnt">3</span><span class="sq">+</span><span class="t2">Only 6 left</span></div>
+    <div class="hair"></div>
     <div class="kv"><span class="t2">3 × 0.05 SOL</span><span class="num">0.15 SOL</span></div>
-    <div class="kv"><span class="t2">Network fee</span><span class="num t2" style="font-size:15px">~0.00001 SOL</span></div>
-    <div class="kv"><span class="t2">Your balance</span><span class="num t2" style="font-size:15px">2.31 SOL</span></div>
-    <div class="kv total"><span>Total</span><span class="num">0.15 SOL</span></div>
-    <p class="note">Boxes are assigned at random. All 25 have the same odds until the numbers are drawn.</p>
-    <div class="cta">Confirm in wallet</div>
+    <div class="kv"><span class="t2">Network fee</span><span class="mono">~0.00001 SOL</span></div>
+    <p class="note">3 of the 6 boxes left · numbers are drawn when all 25 sell. Boxes are assigned at random. All 25 have the same odds until the draw.</p>
+    <div class="cta">Buy 3 boxes</div>
   </div>
 </div>
 
 <!-- ============ 6. BUY RESULT ============ -->
 <div class="frame" id="bought">
   <div class="label">6 · Buy — result</div>
-  <div class="top"><div class="back">‹ KC vs BAL</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill open">Open · locks when full</span><span class="num" style="font-weight:700;font-size:18px">22<span class="t2">/25</span></span></div>
-      <div class="big">0.05 SOL <span class="t2" style="font-size:15px;font-weight:500">/ box</span></div>
-    </div>
-    <div class="gridwrap" style="opacity:.9">
-      <div class="axis-top"><span></span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
-      <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span></div>
-        <div class="axis-side"><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+    <div class="ttl"><h1><span class="bk">‹</span>DAL vs PHI</h1><span class="share">⇪</span></div>
+    <div class="statusrow"><span class="pill open">Open</span><div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div><span class="cnt">22/25</span></div>
+    <div class="hintrow"><span>locks when full · Sun 1:00 PM ET</span><span class="cd">Closes in 19h 44m</span></div>
+    <div class="line"><b>0.05 SOL / box</b> · Pot 1.25 SOL</div>
+    <div class="gridwrap dim">
+      <div class="axis-top"><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span></div>
+      <div class="board">
+        <div class="sidelbl"><div class="rot"><span class="abbr">DAL</span><span class="cap">Away</span></div></div>
+        <div class="siderule" style="--ac:#003594"></div>
+        <div class="axis-side"><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span></div>
         <div class="boxes">
           <div class="box o1"><i class="n">1</i>mike</div><div class="box you"><i class="n">2</i>YOU</div><div class="box you"><i class="n">3</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box"><i class="n">5</i></div>
           <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2"><i class="n">7</i>jon</div><div class="box"><i class="n">8</i></div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
@@ -489,131 +559,117 @@
   </div>
   <div class="scrim"></div>
   <div class="sheet">
-    <div class="grab"></div>
-    <div class="result">
-      <div class="check">✓</div>
-      <h3>You own 3 more boxes</h3>
-      <div class="boxids"><b>2</b><b>12</b><b>17</b></div>
-      <p class="note">Positions are random and every box has the same odds. Numbers are drawn when the pool fills.</p>
-      <div class="actions"><div class="btn ghost">View grid</div><div class="btn">Share pool</div></div>
-      <div class="hint" style="text-align:center;margin-top:10px">"I've got boxes 2, 12 and 17 on the Chiefs–Ravens pool · 3 left · mybarpool.com/p/7kq2Xf9a"</div>
-    </div>
+    <h3>Buy boxes</h3>
+    <div class="steprow"><span class="sq off">−</span><span class="cnt">3</span><span class="sq off">+</span><span class="t2">Only 3 left</span></div>
+    <div class="hair"></div>
+    <div class="kv"><span class="t2">3 × 0.05 SOL</span><span class="num">0.15 SOL</span></div>
+    <div class="kv"><span class="t2">Network fee</span><span class="mono">~0.00001 SOL</span></div>
+    <p class="note">Boxes are assigned at random. All 25 have the same odds until the draw.</p>
+    <p class="note ok" style="margin-top:0">Your 3 boxes are on the board ↗</p>
+    <div class="cta ghost">3 left · Share this board</div>
   </div>
 </div>
 
 <!-- ============ 7. CREATE ============ -->
 <div class="frame" id="create">
   <div class="label">7 · Create — step 2</div>
-  <div class="top"><div class="back">✕</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="progress"><i class="on"></i><i class="on"></i><i></i></div>
-    <div class="row" style="margin-bottom:4px"><div class="team"><svg class="helm sm" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg><b>Eagles vs Cowboys</b></div><span class="kick">SUN 1:00</span></div>
-    <h3 class="num" style="font-size:26px;font-weight:700;margin-top:12px">Set up your pool</h3>
-
-    <div class="field"><label>Token</label><div class="seg"><span class="on">SOL</span><span>SKR</span><span>ORE</span></div></div>
-
-    <div class="field"><label>Price per box</label>
-      <div class="input" style="padding:0 6px"><span class="t2" style="width:44px;text-align:center;font-size:22px">−</span><span class="num" style="flex:1;text-align:center">0.05 <span class="unit" style="font-size:14px">SOL</span></span><span class="t2" style="width:44px;text-align:center;font-size:22px">+</span></div>
-      <div class="hint">Steps of 0.05 SOL from 0.05. Full pot <b class="num" style="color:var(--t1)">1.25 SOL</b></div>
+    <div class="card cs" style="margin-top:16px;padding:16px">
+      <div class="h2">Create a pool</div>
+      <div class="k" style="margin-top:10px">Step 2 of 3</div>
+      <div class="fr"><span class="lbl">Token</span><div class="chips"><span class="on">SOL</span><span>SKR</span><span>ORE</span></div></div>
+      <div class="fr"><span class="lbl">Box price</span><div class="price"><span class="sq off">−</span><b>0.05 SOL</b><span class="sq">+</span></div></div>
+      <div class="chips"><span class="on">0.05 SOL</span><span>0.25 SOL</span><span>0.50 SOL</span><span>1.00 SOL</span></div>
+      <div class="hint" style="text-align:right">− and + move in steps of 0.05 SOL</div>
+      <div class="fr"><span class="lbl">Pot (25 boxes)</span><span class="pot">1.25 SOL</span></div>
+      <div class="fr" style="align-items:flex-start"><span class="lbl">Payout</span><div class="chips" style="flex-direction:column;align-items:flex-end"><span class="on">Standard · 20/20/20/40</span><span>Even · 25/25/25/25</span><span>Final only · 0/0/0/100</span></div></div>
+      <div class="fr"><span class="lbl">Access</span><div class="chips"><span class="on">Public</span><span>Link</span><span>Allowlist</span></div></div>
+      <div class="fr" style="align-items:flex-start"><span class="lbl">Creator add-on</span><div class="chips"><span class="on">+0%</span><span>+1%</span><span>+2%</span><span>+3%</span><span>+4%</span><span>+5%</span></div></div>
+      <div class="fee"><b>Fee 10%</b> · Platform 5% · Creator 5%<div style="margin-top:8px">You earn 5% of the pot (0.0625 SOL), paid with the pool's first prize</div></div>
+      <div class="nav"><span class="btn ghost">Back</span><span class="btn">Next</span></div>
     </div>
-
-    <div class="field"><label>Payout split</label>
-      <div class="radio on"><div><b>20 / 20 / 20 / 40</b><div class="hint" style="margin:2px 0 0">Standard. Final quarter pays double.</div></div><i class="r"></i></div>
-      <div class="radio"><div><b>25 / 25 / 25 / 25</b><div class="hint" style="margin:2px 0 0">Even across all four quarters.</div></div><i class="r"></i></div>
-      <div class="radio"><div><b>Q4 · 100%</b><div class="hint" style="margin:2px 0 0">Winner-take-all on the final score.</div></div><i class="r"></i></div>
-    </div>
-
-    <div class="field"><label>Your earnings</label>
-      <div class="kv" style="border:0;padding:6px 0"><span>5% of the pot, paid with the first prize</span><span class="num" style="color:var(--green)">0.0625 SOL</span></div>
-      <div class="hint" style="margin-top:0">Automatic. Already included in the 10% fee buyers see.</div>
-    </div>
-
-    <div class="field"><label>Add more on top</label>
-      <div class="input"><span class="num">0</span><span class="unit">%</span></div>
-      <div class="hint">Optional, up to 5% more for you. Buyers see one total fee.</div>
-    </div>
-
-    <div class="cta">Next · Review</div>
   </div>
 </div>
 
 <!-- ============ 8. MY BOXES ============ -->
 <div class="frame" id="me">
   <div class="label">8 · My Boxes</div>
-  <div class="top"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
-  <div class="content">
-    <div class="num" style="font-size:22px;font-weight:700;margin:6px 0 12px">My Boxes</div>
-
-    <div class="sect" style="margin-top:4px"><b>Active</b><span>2 pools</span></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
+  <div class="content mb">
+    <div class="h2" style="margin:16px 0 4px;font-size:24px">My Boxes</div>
+    <div class="sec"><span>Active</span></div>
     <div class="card">
-      <div class="row"><span class="pill live"><i class="dot"></i>Q2 4:12</span><span class="num" style="font-weight:700;font-size:18px">KC 14 · BAL 10</span></div>
-      <div class="row" style="margin-top:10px;font-size:14px"><span>7 boxes · <b class="num">2, 3, 4, 12, 13, 17, 25</b></span><span style="color:var(--green)">Won Q1 ✓</span></div>
-      <div class="row" style="margin-top:6px;font-size:13px"><span class="t2">0.05 SOL / box</span><span class="t2">Not leading Q2</span></div>
+      <div class="hd"><span class="pill live"><i class="dot"></i>Live</span><span class="sc">BAL 10 – KC 14</span><span class="wh">Q2</span></div>
+      <div class="l">7 boxes · 2, 3, 4, 12, 13, 17, 25</div>
     </div>
     <div class="card">
-      <div class="row"><span class="pill open">Open</span><span class="kick">PHI – DAL · SUN 1:00</span></div>
-      <div class="row" style="margin-top:10px;font-size:14px"><span>1 box · <b class="num">14</b></span><span class="t2 num" style="font-weight:600">19/25 filled</span></div>
+      <div class="hd"><span class="pill open">Open</span><span class="sc">DAL vs PHI</span><span class="wh">Sun 1:00 PM ET</span></div>
+      <div class="l">1 box · 14 · 19/25 filled</div>
     </div>
 
-    <div class="sect"><b>Won</b><span class="won-total">+1.125 SOL</span></div>
-    <div class="list">
-      <div class="li"><span><span class="t2">Q1</span> · KC–BAL · box 3</span><span class="num" style="color:var(--green)">0.225 SOL <span class="link"></span></span></div>
-      <div class="li"><span><span class="t2">Q4</span> · SF–SEA · box 19</span><span class="num" style="color:var(--green)">0.90 SOL <span class="link"></span></span></div>
-    </div>
+    <div class="sec"><span>Won</span><span class="tot">+1.125 SOL all</span></div>
+    <div class="wr"><span class="q">Q1</span><span>BAL vs KC</span><span class="amt">0.225 SOL</span><span class="t2">›</span></div>
+    <div class="wr"><span class="q">Q4</span><span>SEA vs SF</span><span class="amt">0.90 SOL</span><span class="t2">›</span></div>
 
-    <div class="sect"><b>Pools I created</b><span>2</span></div>
-    <div class="sect" style="margin-top:8px"><b>Returned</b><span>1 · 0.15 SOL back</span></div>
+    <div class="col"><span>Pools I created (2)</span><span>▸</span></div>
+    <div class="col"><span>Pools I sponsored (1)</span><span>›</span></div>
+    <div class="col"><span>Returned (1)</span><span>▸</span></div>
+    <div class="me">7ene…L1JA ⧉</div>
   </div>
-  <div class="tabs"><a><i class="ic"></i>Games</a><a class="on"><i class="ic"></i>My Boxes</a><a><i class="ic"></i>Create</a></div>
 </div>
 
 <!-- ============ 9. POOL (SPONSORED, LOCKED) ============ -->
 <div class="frame" id="pool-sponsored">
   <div class="label">9 · Pool — sponsored</div>
-  <div class="top"><div class="back">‹ PHI vs DAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>ana.skr</div><span class="t2">⇪</span></div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill locked">Locked · kickoff Sun 1:00</span><span class="num" style="font-weight:700;font-size:18px">25<span class="t2">/25</span></span></div>
-      <div class="big">0.05 ORE <span class="t2" style="font-size:15px;font-weight:500">/ box</span> <span style="margin-left:10px">Pot 1.25 ORE</span></div>
-      <div class="sponsor">Sponsored by&nbsp;<span class="num">7kq2…9a3f</span>&nbsp;· <b>+1 ORE</b><span style="margin-left:auto">Split 20/20/20/40</span></div>
-    </div>
+    <div class="ttl"><h1><span class="bk">‹</span>DAL vs PHI</h1><span class="share">⇪</span></div>
+    <div class="statusrow"><span class="pill locked">Locked</span><span class="txt locked">Locked · waiting for kickoff</span></div>
+    <div class="hintrow"><span>Sun 1:00 PM ET</span><span class="cd">Kickoff in 19h 45m</span></div>
+    <div class="line"><b>0.05 SOL / box</b> · Pot 1.25 SOL</div>
+    <div class="line">Split 20/20/20/40 · Fee 10%</div>
+    <div class="sponsor"><i class="slogo">M</i>Sponsored by Murphy's Tap · +1.00 SOL</div>
 
-    <div class="gridwrap" style="margin-top:8px">
-      <div class="teamlbl top"><svg class="helm sm" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><span class="abbr">PHI</span></div>
-      <div class="axis-top"><span></span><span class="d">4·0</span><span class="d">7·1</span><span class="d">3·8</span><span class="d">6·2</span><span class="d">9·5</span></div>
-      <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg><span class="abbr">DAL</span></div>
-        <div class="axis-side"><span class="d">1·6</span><span class="d">8·3</span><span class="d">0·7</span><span class="d">5·2</span><span class="d">9·4</span></div>
+    <div class="gridwrap" style="margin-top:12px">
+      <div class="toplbl"><svg class="helm xs" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><span class="abbr">PHI</span><span class="cap">Home</span></div>
+      <div class="toprule" style="--hc:#004C54"></div>
+      <div class="axis-top"><span class="d">40</span><span class="d">71</span><span class="d">38</span><span class="d">62</span><span class="d">95</span></div>
+      <div class="board">
+        <div class="sidelbl"><div class="rot"><span class="abbr">DAL</span><span class="cap">Away</span></div><svg class="helm xs" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg></div>
+        <div class="siderule" style="--ac:#003594"></div>
+        <div class="axis-side"><span class="d">1<br>6</span><span class="d">8<br>3</span><span class="d">0<br>7</span><span class="d">5<br>2</span><span class="d">9<br>4</span></div>
         <div class="boxes">
           <div class="box o1"><i class="n">1</i>mike</div><div class="box o2"><i class="n">2</i>jon</div><div class="box you"><i class="n">3</i>YOU</div><div class="box o4"><i class="n">4</i>sara</div><div class="box o3"><i class="n">5</i>a3f9</div>
           <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o1"><i class="n">7</i>mike</div><div class="box o2"><i class="n">8</i>jon</div><div class="box o1"><i class="n">9</i>mike</div><div class="box you"><i class="n">10</i>YOU</div>
-          <div class="box o4"><i class="n">11</i>sara</div><div class="box o2"><i class="n">12</i>jon</div><div class="box o3"><i class="n">13</i>a3f9</div><div class="box o4"><i class="n">14</i>sara</div><div class="box o1"><i class="n">15</i>mike</div>
+          <div class="box o4"><i class="n">11</i>sara</div><div class="box o2"><i class="n">12</i>jon</div><div class="box o3"><i class="n">13</i>a3f9</div><div class="box o4"><i class="n">14</i><i class="mark">Murphy's</i>sara</div><div class="box o1"><i class="n">15</i>mike</div>
           <div class="box o2"><i class="n">16</i>jon</div><div class="box o4"><i class="n">17</i>sara</div><div class="box o3"><i class="n">18</i>a3f9</div><div class="box you"><i class="n">19</i>YOU</div><div class="box o1"><i class="n">20</i>mike</div>
           <div class="box o3"><i class="n">21</i>a3f9</div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o4"><i class="n">24</i>sara</div><div class="box o2"><i class="n">25</i>jon</div>
         </div>
       </div>
+      <div class="fullscreen">↗ Full screen</div>
     </div>
 
-    <div class="sect" style="margin-top:12px"><b>Payouts</b><span>per quarter</span></div>
+    <div class="sect"><span>Payouts</span></div>
     <table class="tbl">
-      <tr><td class="t2">Q1</td><td class="amt">0.425 ORE</td><td class="t2">—</td></tr>
-      <tr><td class="t2">Q2</td><td class="amt">0.425 ORE</td><td class="t2">—</td></tr>
-      <tr><td class="t2">Q3</td><td class="amt">0.425 ORE</td><td class="t2">—</td></tr>
-      <tr><td class="t2">Q4 · final</td><td class="amt">0.85 ORE</td><td class="t2">—</td></tr>
-      <tr class="foot"><td colspan="3">Prizes <b class="num" style="color:var(--t1)">2.125 ORE</b> = 1.125 from boxes + 1 sponsored</td></tr>
+      <tr><td class="t2">Q1</td><td class="amt">0.425 SOL</td><td>–</td></tr>
+      <tr><td class="t2">Q2</td><td class="amt">0.425 SOL</td><td>–</td></tr>
+      <tr><td class="t2">Q3</td><td class="amt">0.425 SOL</td><td>–</td></tr>
+      <tr><td class="t2">Q4 · Final</td><td class="amt">0.85 SOL</td><td>–</td></tr>
+      <tr class="foot"><td colspan="3">Prizes 2.125 SOL = 1.125 SOL from boxes + 1.00 SOL sponsored</td></tr>
     </table>
 
-    <div class="sect"><b>Details</b></div>
-    <div class="list">
-      <div class="li"><span class="t2">Fee 10%</span><span>Platform 5% · Creator 5%</span></div>
-      <div class="li"><span class="t2">Sponsored</span><span><span class="num">7kq2…9a3f</span> · +1 ORE <span class="link"></span></span></div>
-      <div class="li"><span class="textlink">Add to the prizes</span><span class="t2" style="font-size:12px">until kickoff</span></div>
+    <div class="sect"><span>Boxes (25)</span></div>
+    <div class="holders">
+      <div class="hr"><i class="sw" style="background:#1a1f3a"></i><span>mike.skr</span><span class="n">6 boxes</span><span class="ids">1, 7, 9, 15, 20, 22</span></div>
+      <div class="hr"><i class="sw" style="background:#2a1a2a"></i><span>jon.skr</span><span class="n">6 boxes</span><span class="ids">2, 8, 12, 16, 23, 25</span></div>
     </div>
 
-    <div class="sect"><b>Activity</b></div>
+    <div class="acti"><span class="h2">Activity</span><span class="t2">· 5 holders</span><span class="stack"><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><span class="more">+2</span></span></div>
     <div class="list">
-      <div class="li"><span><span class="num">7kq2…9a3f</span> added 1 ORE to the prizes</span><span class="link">2h</span></div>
-      <div class="li"><span>Numbers drawn</span><span class="link">3h</span></div>
-      <div class="li"><span>Pool locked · 25/25</span><span class="link">3h</span></div>
+      <div class="li"><span>Numbers drawn <span class="arrow">↗</span></span><span class="when">2h</span></div>
+      <div class="li"><span>Pool locked <span class="arrow">↗</span></span><span class="when">2h</span></div>
+      <div class="li"><span>Murphy's Tap added 1.00 SOL to the prizes and sponsored box 14 <span class="arrow">↗</span></span><span class="when">3h</span></div>
     </div>
   </div>
 </div>
@@ -621,56 +677,56 @@
 <!-- ============ 10. SPONSOR SHEET ============ -->
 <div class="frame" id="sponsor">
   <div class="label">10 · Sponsor sheet</div>
-  <div class="top"><div class="back">‹ PHI vs DAL</div><div class="wallet"><i class="avatar"></i>7kq2…9a3f</div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>7kq2…9a3f</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill locked">Locked · kickoff Sun 1:00</span><span class="num" style="font-weight:700;font-size:18px">25<span class="t2">/25</span></span></div>
-      <div class="big">0.05 ORE <span class="t2" style="font-size:15px;font-weight:500">/ box</span> <span style="margin-left:10px">Pot 1.25 ORE</span></div>
-      <div class="meta"><span>Split 20 / 20 / 20 / 40</span><span>Fee 10%</span><span>by mike.skr</span></div>
-    </div>
-    <div class="gridwrap" style="opacity:.9">
-      <div class="axis-top"><span></span><span class="d">4·0</span><span class="d">7·1</span><span class="d">3·8</span><span class="d">6·2</span><span class="d">9·5</span></div>
-      <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg><span class="abbr">DAL</span></div>
-        <div class="axis-side"><span class="d">1·6</span><span class="d">8·3</span><span class="d">0·7</span><span class="d">5·2</span><span class="d">9·4</span></div>
+    <div class="ttl"><h1><span class="bk">‹</span>DAL vs PHI</h1><span class="share">⇪</span></div>
+    <div class="statusrow"><span class="pill open">Open</span><div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="cnt">19/25</span></div>
+    <div class="hintrow"><span>locks when full · Sun 1:00 PM ET</span><span class="cd">Closes in 19h 45m</span></div>
+    <div class="line"><b>0.05 SOL / box</b> · Pot 1.25 SOL</div>
+    <div class="line">Split 20/20/20/40 · Fee 10%</div>
+    <div class="gridwrap dim">
+      <div class="axis-top"><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span></div>
+      <div class="board">
+        <div class="sidelbl"><div class="rot"><span class="abbr">DAL</span><span class="cap">Away</span></div></div>
+        <div class="siderule" style="--ac:#003594"></div>
+        <div class="axis-side"><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span></div>
         <div class="boxes">
-          <div class="box o1"><i class="n">1</i>mike</div><div class="box o2"><i class="n">2</i>jon</div><div class="box o5"><i class="n">3</i>ana</div><div class="box o4"><i class="n">4</i>sara</div><div class="box o3"><i class="n">5</i>a3f9</div>
-          <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o1"><i class="n">7</i>mike</div><div class="box o2"><i class="n">8</i>jon</div><div class="box o1"><i class="n">9</i>mike</div><div class="box o5"><i class="n">10</i>ana</div>
-          <div class="box o4"><i class="n">11</i>sara</div><div class="box o2"><i class="n">12</i>jon</div><div class="box o3"><i class="n">13</i>a3f9</div><div class="box o4"><i class="n">14</i>sara</div><div class="box o1"><i class="n">15</i>mike</div>
-          <div class="box o2"><i class="n">16</i>jon</div><div class="box o4"><i class="n">17</i>sara</div><div class="box o3"><i class="n">18</i>a3f9</div><div class="box o5"><i class="n">19</i>ana</div><div class="box o1"><i class="n">20</i>mike</div>
-          <div class="box o3"><i class="n">21</i>a3f9</div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o4"><i class="n">24</i>sara</div><div class="box o2"><i class="n">25</i>jon</div>
+          <div class="box o1"><i class="n">1</i>mike</div><div class="box"><i class="n">2</i></div><div class="box o5"><i class="n">3</i>ana</div><div class="box o5"><i class="n">4</i>ana</div><div class="box"><i class="n">5</i></div>
+          <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2"><i class="n">7</i>jon</div><div class="box"><i class="n">8</i></div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
+          <div class="box o4"><i class="n">11</i>sara</div><div class="box"><i class="n">12</i></div><div class="box o5"><i class="n">13</i>ana</div><div class="box o4"><i class="n">14</i>sara</div><div class="box o2"><i class="n">15</i>jon</div>
+          <div class="box o2"><i class="n">16</i>jon</div><div class="box"><i class="n">17</i></div><div class="box o4"><i class="n">18</i>sara</div><div class="box o3"><i class="n">19</i>a3f9</div><div class="box o1"><i class="n">20</i>mike</div>
+          <div class="box"><i class="n">21</i></div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o3"><i class="n">24</i>a3f9</div><div class="box o5"><i class="n">25</i>ana</div>
         </div>
       </div>
     </div>
   </div>
   <div class="scrim"></div>
   <div class="sheet">
-    <div class="grab"></div>
     <h3>Add to the prizes</h3>
-    <div class="field" style="margin-top:12px"><label>Amount</label>
-      <div class="input"><span class="num">1</span><span class="unit">ORE</span></div>
-      <div class="hint">At least 0.05 ORE (one box). This pool can take up to 25 ORE.</div>
-    </div>
-    <div class="kv" style="margin-top:8px"><span class="t2">Prizes now</span><span class="num t2" style="font-size:15px">1.125 ORE</span></div>
-    <div class="kv"><span class="t2">Prizes after</span><span class="num" style="color:var(--green)">2.125 ORE</span></div>
-    <div class="kv"><span class="t2">Shown as</span><span>Sponsored by <span class="num">7kq2…9a3f</span></span></div>
-    <p class="note">No fee is taken on this. If the pool doesn't play, it comes back to you. Once the first prize is paid it belongs to the winners.</p>
-    <div class="cta">Confirm in wallet</div>
+    <div class="kv" style="margin-top:10px"><span class="t2">Amount</span><span class="num">1.00 SOL</span></div>
+    <p class="note" style="margin:0 0 6px">At least 0.05 SOL, the same as a box.</p>
+    <div class="notebox">No fee is taken on this.<br>If the pool doesn't play, it comes back to you.<br>Once the first prize is paid it belongs to the winners.</div>
+    <div class="toggle"><span>Put your name on a box</span><i class="sw"></i></div>
+    <div class="cta">Confirm</div>
   </div>
 </div>
 
 <!-- ============ 11. SHARE SHEET ============ -->
 <div class="frame" id="share">
   <div class="label">11 · Share sheet</div>
-  <div class="top"><div class="back">‹ KC vs BAL</div><div class="wallet"><i class="avatar"></i>ana.skr</div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill open">Open · locks when full</span><span class="num" style="font-weight:700;font-size:18px">19<span class="t2">/25</span></span></div>
-      <div class="big">0.05 SOL <span class="t2" style="font-size:15px;font-weight:500">/ box</span> <span style="margin-left:10px">Pot 1.25 SOL</span></div>
-    </div>
-    <div class="gridwrap" style="opacity:.9">
-      <div class="axis-top"><span></span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
-      <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span></div>
-        <div class="axis-side"><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+    <div class="ttl"><h1><span class="bk">‹</span>DAL vs PHI</h1><span class="share">⇪</span></div>
+    <div class="statusrow"><span class="pill open">Open</span><div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="cnt">19/25</span></div>
+    <div class="hintrow"><span>locks when full · Sun 1:00 PM ET</span><span class="cd">Closes in 19h 45m</span></div>
+    <div class="line"><b>0.05 SOL / box</b> · Pot 1.25 SOL</div>
+    <div class="line">Split 20/20/20/40 · Fee 10%</div>
+    <div class="gridwrap dim">
+      <div class="axis-top"><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span></div>
+      <div class="board">
+        <div class="sidelbl"><div class="rot"><span class="abbr">DAL</span><span class="cap">Away</span></div></div>
+        <div class="siderule" style="--ac:#003594"></div>
+        <div class="axis-side"><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span></div>
         <div class="boxes">
           <div class="box o1"><i class="n">1</i>mike</div><div class="box"><i class="n">2</i></div><div class="box you"><i class="n">3</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box"><i class="n">5</i></div>
           <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2"><i class="n">7</i>jon</div><div class="box"><i class="n">8</i></div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
@@ -683,15 +739,11 @@
   </div>
   <div class="scrim"></div>
   <div class="sheet">
-    <div class="grab"></div>
     <h3>Share this pool</h3>
-    <div class="shareprev">
-      <div class="thumb"><i class="o"></i><i></i><i class="y"></i><i class="y"></i><i></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i class="y"></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i class="y"></i></div>
-      <p>I've got boxes 3, 4, 13 and 25 on the Chiefs–Ravens pool · 6 left<br><span class="t2">mybarpool.com/p/7kq2Xf9a · grid image attached</span></p>
-    </div>
-    <div class="cta" style="margin-top:12px">Share</div>
-    <div class="acts">
-      <div class="a"><span>Copy link</span><span class="t2">mybarpool.com/p/7kq2Xf9a</span></div>
+    <div class="prev">I've got boxes 3, 4, 13, 25 on the DAL vs PHI pool · 6 left<span class="t2">mybarpool.com/p/7kq2Nn3b</span></div>
+    <div class="cta">Share</div>
+    <div class="acts" style="margin-top:6px">
+      <div class="a"><span>Copy link</span><span class="t2">mybarpool.com/p/7kq2Nn3b</span></div>
       <div class="a"><span>Show QR</span><span class="t2">for the table</span></div>
       <div class="a"><span>Save image</span><span class="t2">1080 × 1080 · story</span></div>
       <div class="a"><span>Print board</span><span class="t2">Letter · A4</span></div>
@@ -702,226 +754,223 @@
 <!-- ============ 12. PROFILE SHEET (DESIGN 4.9) ============ -->
 <div class="frame" id="profile">
   <div class="label">12 · Profile sheet</div>
-  <div class="top"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="wallet"><i class="avatar"></i>Ana</div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="sect" style="margin-top:4px"><b>This week</b><span>Week 7 · 14 games</span></div>
-    <div class="card"><div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="num" style="font-weight:700;font-size:18px">KC 14 · BAL 10</span></div></div>
-    <div class="card"><div class="row"><span class="kick">SUN 1:00</span><span class="num" style="font-weight:700;font-size:18px">PHI – DAL</span></div></div>
+    <div class="weeknav">
+      <div class="wk"><span class="ar">‹</span>Week 7 <span class="yr">2026</span><span class="ar">›</span></div>
+      <div class="seg"><span class="on">This week</span><span>Open pools</span></div>
+    </div>
+    <div class="btn full">Create a pool</div>
+    <div class="card">
+      <div class="row" style="margin-bottom:6px"><span class="pill live"><i class="dot"></i>Live · Q2 9:41</span></div>
+      <div class="row" style="margin-bottom:6px"><div class="team"><svg class="helm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><b>Baltimore Ravens</b></div><div class="score t2">10</div></div>
+      <div class="row"><div class="team"><svg class="helm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><b>Kansas City Chiefs</b></div><div class="score">14</div></div>
+    </div>
   </div>
-  <div class="tabs"><a class="on"><i class="ic"></i>Games</a><a><i class="ic"></i>My Boxes</a><a><i class="ic"></i>Create</a></div>
   <div class="scrim"></div>
-  <div class="sheet">
-    <div class="grab"></div>
-    <div style="display:flex;gap:14px;align-items:center">
-      <i class="pav"></i>
-      <div><div style="font:700 20px var(--num)">Ana</div><div class="textlink" style="margin-top:4px">Change photo</div></div>
+  <div class="sheet" style="padding-top:26px">
+    <span class="x">✕</span>
+    <div style="display:flex;gap:16px;align-items:center;margin-top:10px">
+      <i class="pav"><svg class="helm"><use href="#helmet"/></svg></i>
+      <span class="textlink" style="font-size:16px">Change photo</span>
     </div>
-    <div class="field"><label>Username</label><div class="input" style="height:46px"><span style="font-size:16px;font-weight:500">Ana</span><span class="t2" style="font-size:12px">Sign to save — no fee</span></div><div class="hint">Shown on grids and in chat. Optional</div></div>
-    <div class="field"><label>Wallet</label><div class="row" style="font-size:14px"><span class="mono">7Yx1gAn7…2SNTV</span><span class="t2">⧉ &nbsp;·&nbsp; ana.skr</span></div></div>
-    <div class="sect" style="margin:16px 0 8px"><b>My Boxes</b><span>2 active</span></div>
-    <div class="plist">
-      <div class="pr"><span><span class="pill live" style="margin-right:8px"><i class="dot"></i>Q2</span>KC 14 · BAL 10</span><span class="num" style="font-weight:600">7 boxes</span></div>
-      <div class="pr"><span><span class="pill open" style="margin-right:8px">Open</span>PHI – DAL · Sun 1:00</span><span class="num" style="font-weight:600">1 box</span></div>
-    </div>
-    <div class="textlink" style="margin-top:10px">All my boxes ›</div>
-    <div class="devrow"><span>Devices <span class="t2">· 1 can post as you</span></span><span class="t2">Remove all</span></div>
-    <div class="row" style="padding-top:12px;border-top:1px solid var(--line);font-size:14px"><span class="t2">Disconnect</span><span></span></div>
+    <div class="field" style="margin-top:18px"><label style="text-transform:none;letter-spacing:0;font-size:15px;font-weight:400">Username</label><div class="input"><span>ana.skr</span></div><div class="hint">Shown on grids and in chat. Optional · Sign to save — no fee</div></div>
+    <div class="kv" style="margin-top:6px;border-bottom:1px solid var(--line)"><span class="t2">Wallet</span><span><span class="mono">7ene…L1JA</span> <span class="t2">⧉</span> <span style="color:var(--teal)">ana.skr</span></span></div>
+    <div class="h2" style="margin-top:14px;font-size:18px">My Boxes</div>
+    <div class="mini"><div class="row"><span><span class="pill live" style="margin-right:8px"><i class="dot"></i>Live</span><b>BAL – KC</b></span><span class="num" style="font-weight:600;color:var(--t2)">10 – 14 · Q2</span></div><div class="l2">7 boxes · 2, 3, 4, 12, 13, 17, 25</div></div>
+    <div class="mini"><div class="row"><span><span class="pill open" style="margin-right:8px">Open</span><b>DAL – PHI</b></span><span class="num" style="font-weight:600;color:var(--t2)">Sun 1:00</span></div><div class="l2">1 box · 14 · 19/25 filled</div></div>
+    <div class="textlink" style="margin-top:12px">All my boxes ›</div>
+    <div class="devrow"><span class="t2">Devices (1) <span class="textlink">Remove all</span></span><span>Disconnect</span></div>
   </div>
 </div>
 
 <!-- ============ 13. POOL — LIVE, WITH THE THREAD AS ACTIVITY (DESIGN 4.3, 4.9) ============ -->
 <div class="frame" id="pool-chat">
   <div class="label">13 · Pool — live, thread</div>
-  <div class="top"><div class="back">‹ KC vs BAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>Ana</div><span class="t2">⇪</span></div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="t2" style="font-size:13px">25/25 · Pot 1.25 SOL</span></div>
-      <div class="scorestrip">
-        <div class="team"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="s">14</span></div>
-        <div class="team"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="s t2">10</span></div>
-        <div class="clk"><i class="dot"></i>Q2 4:12</div>
-      </div>
+    <div class="ttl"><h1><span class="bk">‹</span>BAL vs KC</h1><span class="share">⇪</span></div>
+    <div class="strip">
+      <div class="side"><svg class="helm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span><span class="s">10</span></div>
+      <div class="mid live">Q2 · 9:41</div>
+      <div class="side"><span class="s">14</span><span class="abbr">KC</span><svg class="helm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg></div>
     </div>
-    <div class="sect" style="margin-top:14px"><b>Payouts</b><span>Q1 paid · box 3 · <span style="color:var(--green)">YOU</span></span></div>
+    <div class="qstrip"><span>Q1<b>3–7</b></span><span class="live">Q2<b>live</b></span><span>Q3<b>–</b></span><span>Final<b>–</b></span></div>
 
-    <div class="sect" style="margin-top:14px"><b>Activity</b><span class="stack" style="text-transform:none;letter-spacing:0"><i class="mav"></i><i class="mav m2"></i><i class="mav m3"></i><i class="mav empty"><svg class="helm"><use href="#helmet"/></svg></i><span class="more">13 holders</span></span></div>
-    <div class="pinned"><span class="pin">▸ pinned</span><span><b>mike</b> · Payouts hit your wallet on their own, nothing to claim. Drinks on the Q4 winner.</span></div>
+    <div class="acti"><span class="h2">Activity</span><span class="t2">· 13 holders</span><span class="stack"><i class="mav photo"></i><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><span class="more">+9</span></span></div>
     <div class="thread">
-      <div class="sys"><span>Pool locked · 25/25</span><span>1h</span></div>
-      <div class="sys"><span>Numbers drawn</span><span>1h</span></div>
-      <div class="msg"><i class="mav m2"></i><div><div class="who">mike <span class="ctag">Creator</span><span class="t2">48m</span></div><p>Numbers are in. 7–3 for Q1, who's got it</p></div></div>
-      <div class="msg"><i class="mav"></i><div><div class="who">Ana <span class="t2">47m</span></div><p>box 3, that's me</p></div></div>
-      <div class="sys"><span><span class="win">Q1 · box 3 wins 0.225 SOL</span> · Ana</span><span>12m</span></div>
-      <div class="sys"><span>Fees paid · 0.0625 SOL platform · 0.0625 SOL creator</span><span>12m</span></div>
-      <div class="msg"><i class="mav m3"></i><div><div class="who">jon <span class="t2">9m</span></div><p><span class="at">@Ana</span> congrats. 7 is leading Q2, don't jinx it</p></div></div>
-      <div class="msg"><i class="mav empty"><svg class="helm"><use href="#helmet"/></svg></i><div><div class="who">a3f9…k2Qe <span class="t2">2m</span></div><p>need a safety</p></div></div>
+      <div class="sys"><span>Pool locked <span class="arrow">↗</span></span><span class="when">1h</span></div>
+      <div class="sys"><span>Numbers drawn <span class="arrow">↗</span></span><span class="when">1h</span></div>
+      <div class="msg"><i class="mav lg"><svg class="helm"><use href="#helmet"/></svg></i><div class="body"><div class="who"><span><span class="nm">mike</span> <span class="ctag">Creator</span></span><span class="tm">48m</span></div><p>Numbers are in. 7–3 for Q1, who's got it</p></div></div>
+      <div class="msg"><i class="mav lg photo"></i><div class="body"><div class="who"><span class="nm">ana.skr</span><span class="tm">47m</span></div><p>box 3, that's me</p></div></div>
+      <div class="sys"><span><span style="color:var(--green)">Q1 · box 3 wins 0.225 SOL</span> · ana.skr <span class="arrow">↗</span></span><span class="when">12m</span></div>
+      <div class="msg"><i class="mav lg"><svg class="helm"><use href="#helmet"/></svg></i><div class="body"><div class="who"><span class="nm">jon</span><span class="tm">9m</span></div><p><span class="at">@ana.skr</span> congrats. 7 is leading Q2, don't jinx it</p></div></div>
+      <div class="msg"><i class="mav lg"><svg class="helm"><use href="#helmet"/></svg></i><div class="body"><div class="who"><span class="nm">a3f9…k2Qe</span><span class="tm">2m</span></div><p>need a safety</p></div></div>
     </div>
     <div class="composer"><div class="in">Say something…</div><div class="send">↑</div></div>
-    <div class="chips"><span>Let's go</span><span>Nice box</span><span>GIF</span></div>
+    <div class="quick"><span>Let's go</span><span>Nice box</span><span>GIF</span></div>
   </div>
 </div>
 
 <!-- ============ 14. POOL — OPEN, FIRST VISIT: THE JOIN CARD (DESIGN 4.9) ============ -->
 <div class="frame" id="join">
   <div class="label">14 · Pool — join the chat</div>
-  <div class="top"><div class="back">‹ PHI vs DAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar" style="background:var(--bg2);border:1px solid var(--line)"></i>7kq2…9a3f</div><span class="t2">⇪</span></div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>7kq2…9a3f</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill open">Open · locks when full</span><span class="t2 num" style="font-weight:600;font-size:14px">19/25</span></div>
-      <div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="meta"><span>0.05 SOL a box</span><span>Pot 1.25 SOL</span><span>Fee 12%</span><span>Sun 1:00</span></div>
-    </div>
-    <div class="sect" style="margin-top:16px"><b>Boxes</b><span>19 · yours: 14 · tap the grid ▸</span></div>
-    <div class="sect" style="margin-top:14px"><b>Activity</b><span class="stack" style="text-transform:none;letter-spacing:0"><i class="mav m2"></i><i class="mav"></i><i class="mav m3"></i><span class="more">9 holders</span></span></div>
+    <div class="ttl"><h1><span class="bk">‹</span>DAL vs PHI</h1><span class="share">⇪</span></div>
+    <div class="statusrow"><span class="pill open">Open</span><div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="cnt">19/25</span></div>
+    <div class="hintrow"><span>locks when full · Sun 1:00 PM ET</span><span class="cd">Closes in 19h 45m</span></div>
+    <div class="line"><b>0.05 SOL / box</b> · Pot 1.25 SOL</div>
+    <div class="line">Split 20/20/20/40 · Fee 12%</div>
+
+    <div class="sect"><span>Boxes (19)</span><span class="chev">yours: 14 · tap the grid ▸</span></div>
+    <div class="acti"><span class="h2">Activity</span><span class="t2">· 9 holders</span><span class="stack"><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><i class="mav photo"></i><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><span class="more">+6</span></span></div>
     <div class="thread">
-      <div class="sys"><span>Pool created by <span class="t1">mike</span> · 0.05 SOL a box</span><span>Tue</span></div>
-      <div class="msg"><i class="mav m2"></i><div><div class="who">mike <span class="ctag">Creator</span><span class="t2">Tue</span></div><p>Murphy's board for Sunday. 6 left</p></div></div>
-      <div class="sys"><span><span class="t1">Ana</span> bought boxes 3, 4, 13</span><span>Wed</span></div>
-      <div class="sys"><span><span class="t1">You</span> bought box 14</span><span>now</span></div>
+      <div class="sys"><span>Pool created by mike · 0.05 SOL a box <span class="arrow">↗</span></span><span class="when">Tue</span></div>
+      <div class="msg"><i class="mav lg"><svg class="helm"><use href="#helmet"/></svg></i><div class="body"><div class="who"><span><span class="nm">mike</span> <span class="ctag">Creator</span></span><span class="tm">Tue</span></div><p>Murphy's board for Sunday. 6 left</p></div></div>
+      <div class="sys"><span>ana.skr bought boxes 3, 4, 13 <span class="arrow">↗</span></span><span class="when">Wed</span></div>
+      <div class="sys"><span>You bought box 14 <span class="arrow">↗</span></span><span class="when">now</span></div>
     </div>
     <div class="joincard">
       <div style="display:flex;gap:12px;align-items:center">
-        <i class="pav empty" style="width:48px;height:48px"><svg class="helm" style="width:24px;height:24px"><use href="#helmet"/></svg></i>
-        <div style="font-size:14px;line-height:1.4">Set a name so people know who's talking</div>
+        <i class="mav lg" style="width:44px;height:44px"><svg class="helm" style="width:24px;height:24px"><use href="#helmet"/></svg></i>
+        <div style="font-size:15px;font-weight:600;line-height:1.35">Set a name so people know who's talking</div>
       </div>
-      <div class="input" style="height:46px;margin-top:12px"><span class="t2" style="font-size:15px">Username</span><span class="t2" style="font-size:12px">optional</span></div>
+      <div class="input" style="height:48px;margin-top:12px"><span>ana</span></div>
       <div class="cta">Join the chat</div>
-      <div class="hint" style="text-align:center;margin-top:8px">One wallet signature, once per device · no fee</div>
+      <div class="hint" style="margin-top:10px">Let MyBarPool post messages as you from this device — no fee</div>
     </div>
     <div style="height:110px"></div>
   </div>
-  <div class="buybar"><div class="inner"><div class="step"><span>−</span><b>1</b><span>+</span></div><div class="btn">Buy 1 · <span class="num">0.05 SOL</span></div></div></div>
+  <div class="buybar"><div class="inner"><div class="step"><span>−</span><b>1</b><span>+</span></div><span class="left">6 left</span><div class="btn">Buy 1 · 0.05 SOL</div></div></div>
 </div>
 
 <!-- ============ 15. POOL — SETTLED: THE RESULT CARD (DESIGN 4.9) ============ -->
 <div class="frame" id="pool-settled">
   <div class="label">15 · Pool — settled</div>
-  <div class="top"><div class="back">‹ KC vs BAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>Ana</div><span class="t2">⇪</span></div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill settled">All quarters paid</span><span class="t2" style="font-size:13px">1.125 SOL paid out</span></div>
-      <div class="scorestrip">
-        <div class="team"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="s">27</span></div>
-        <div class="team"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="s t2">20</span></div>
-        <div class="clk" style="color:var(--t2)">Final</div>
-      </div>
+    <div class="ttl"><h1><span class="bk">‹</span>BAL vs KC</h1><span class="share">⇪</span></div>
+    <div class="strip">
+      <div class="side"><svg class="helm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span><span class="s">20</span></div>
+      <div class="mid">Final</div>
+      <div class="side"><span class="s">27</span><span class="abbr">KC</span><svg class="helm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg></div>
     </div>
+    <div class="qstrip"><span>Q1<b>3–7</b></span><span>Q2<b>10–14</b></span><span>Q3<b>17–20</b></span><span>Final<b>20–27</b></span></div>
+    <div class="statusrow"><span class="pill settled">Settled</span><span class="txt">All quarters paid · 1.125 SOL</span></div>
     <div class="resultcard">
-      <div class="qrow"><span class="t2">Q1 · 7–3</span><span class="owner"><i class="mav"></i>Ana</span><span class="amt num win" style="color:var(--green);font-weight:600">0.225 SOL</span></div>
-      <div class="qrow"><span class="t2">Q2 · 14–10</span><span class="owner"><i class="mav m3"></i>jon</span><span class="amt num" style="color:var(--green);font-weight:600">0.225 SOL</span></div>
-      <div class="qrow"><span class="t2">Q3 · 20–17</span><span class="owner"><i class="mav m2"></i>mike</span><span class="amt num" style="color:var(--green);font-weight:600">0.225 SOL</span></div>
-      <div class="qrow"><span class="t2">Final · 27–20</span><span class="owner"><i class="mav empty"><svg class="helm"><use href="#helmet"/></svg></i>sara</span><span class="amt num" style="color:var(--green);font-weight:600">0.45 SOL</span></div>
-      <div class="actions"><div class="btn ghost">Share</div><div class="btn">Run it back</div></div>
+      <div class="hd"><b>Settled</b><span class="paid">1.125 SOL paid</span></div>
+      <div class="qrow"><span class="q">Q1</span><span class="nm"><i class="mav sm photo"></i><span style="color:var(--purple)">YOU</span></span><span class="bx">box 3</span><span class="amt">0.225 SOL</span></div>
+      <div class="qrow"><span class="q">Q2</span><span class="nm"><i class="mav sm"><svg class="helm"><use href="#helmet"/></svg></i>jon</span><span class="bx">box 7</span><span class="amt">0.225 SOL</span></div>
+      <div class="qrow"><span class="q">Q3</span><span class="nm"><i class="mav sm"><svg class="helm"><use href="#helmet"/></svg></i>mike</span><span class="bx">box 1</span><span class="amt">0.225 SOL</span></div>
+      <div class="qrow"><span class="q">Final<br>(incl.<br>OT)</span><span class="nm"><i class="mav sm"><svg class="helm"><use href="#helmet"/></svg></i>sara</span><span class="bx">box 19</span><span class="amt">0.45 SOL</span></div>
+      <div class="nav"><span class="btn ghost">Share</span><span class="btn">Run it back</span></div>
     </div>
 
-    <div class="sect" style="margin-top:16px"><b>Activity</b><span class="stack" style="text-transform:none;letter-spacing:0"><i class="mav"></i><i class="mav m2"></i><i class="mav m3"></i><span class="more">13 holders · 29 days left</span></span></div>
+    <div class="acti"><span class="h2">Activity</span><span class="t2">· 13 holders</span><span class="stack"><i class="mav photo"></i><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><span class="more">+10</span></span></div>
     <div class="thread">
-      <div class="sys"><span><span class="win">Final · box 19 wins 0.45 SOL</span> · sara</span><span>3m</span></div>
-      <div class="msg"><i class="mav m2"></i><div><div class="who">mike <span class="ctag">Creator</span><span class="t2">2m</span></div><p>sara with the 7–0, unreal. same time next week</p></div></div>
-      <div class="msg"><i class="mav"></i><div><div class="who">Ana <span class="t2">1m</span></div><p>I'm in. make it 0.1</p></div></div>
+      <div class="sys"><span><span style="color:var(--green)">Q4 · box 19 wins 0.45 SOL</span> · sara <span class="arrow">↗</span></span><span class="when">3m</span></div>
+      <div class="msg"><i class="mav lg"><svg class="helm"><use href="#helmet"/></svg></i><div class="body"><div class="who"><span><span class="nm">mike</span> <span class="ctag">Creator</span></span><span class="tm">2m</span></div><p>sara with the 7–0, unreal. same time next week</p></div></div>
     </div>
-    <div class="composer"><div class="in">Say something…</div><div class="send">↑</div></div>
-    <div class="chips"><span>Congrats sara</span><span>Run it back</span><span>GIF</span></div>
   </div>
 </div>
 
 <!-- ============ 16. NO WALLET YET (DESIGN 4.10) ============ -->
 <div class="frame" id="nowallet">
   <div class="label">16 · No wallet yet</div>
-  <div class="top"><div class="back">‹ PHI vs DAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet" style="color:var(--t2)">Connect</div><span class="t2">⇪</span></div></div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip connect">Connect</div></div>
   <div class="content">
-    <div class="poolhead">
-      <div class="row"><span class="pill open">Open · locks when full</span><span class="t2 num" style="font-weight:600;font-size:14px">19/25</span></div>
-      <div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="meta"><span>0.05 SOL a box</span><span>Pot 1.25 SOL</span><span>Fee 12%</span><span>Sun 1:00</span></div>
-    </div>
+    <div class="ttl"><h1><span class="bk">‹</span>DAL vs PHI</h1><span class="share">⇪</span></div>
+    <div class="statusrow"><span class="pill open">Open</span><div class="fill"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="cnt">19/25</span></div>
+    <div class="hintrow"><span>locks when full · Sun 1:00 PM ET</span><span class="cd">Closes in 19h 45m</span></div>
+    <div class="line"><b>0.05 SOL / box</b> · Pot 1.25 SOL</div>
+    <div class="line">Split 20/20/20/40 · Fee 12%</div>
     <div class="gridwrap">
-      <div class="teamlbl top"><svg class="helm sm" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><span class="abbr">PHI</span></div>
-      <div class="axis-top"><span></span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
-      <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg><span class="abbr">DAL</span></div>
-        <div class="axis-side"><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span><span class="d q">?</span></div>
+      <div class="toplbl"><svg class="helm xs" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><span class="abbr">PHI</span><span class="cap">Home</span></div>
+      <div class="toprule" style="--hc:#004C54"></div>
+      <div class="axis-top"><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span><span class="d q">??</span></div>
+      <div class="board">
+        <div class="sidelbl"><div class="rot"><span class="abbr">DAL</span><span class="cap">Away</span></div><svg class="helm xs" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg></div>
+        <div class="siderule" style="--ac:#003594"></div>
+        <div class="axis-side"><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span><span class="d q">?<br>?</span></div>
         <div class="boxes">
-          <div class="box o1"><i class="n">1</i>mike</div><div class="box o1"><i class="n">2</i>mike</div><div class="box o3"><i class="n">3</i>Ana</div><div class="box o3"><i class="n">4</i>Ana</div><div class="box"><i class="n">5</i></div>
+          <div class="box o1"><i class="n">1</i>mike</div><div class="box o1"><i class="n">2</i>mike</div><div class="box o3"><i class="n">3</i>ana.skr</div><div class="box o3"><i class="n">4</i>ana.skr</div><div class="box"><i class="n">5</i></div>
           <div class="box o2"><i class="n">6</i>jon</div><div class="box"><i class="n">7</i></div><div class="box o1"><i class="n">8</i>mike</div><div class="box o4"><i class="n">9</i>sara</div><div class="box"><i class="n">10</i></div>
-          <div class="box o4"><i class="n">11</i>sara</div><div class="box o2"><i class="n">12</i>jon</div><div class="box o3"><i class="n">13</i>Ana</div><div class="box o5"><i class="n">14</i>7kq2</div><div class="box"><i class="n">15</i></div>
+          <div class="box o4"><i class="n">11</i>sara</div><div class="box o2"><i class="n">12</i>jon</div><div class="box o3"><i class="n">13</i>ana.skr</div><div class="box o5"><i class="n">14</i>7kq2</div><div class="box"><i class="n">15</i></div>
           <div class="box o2"><i class="n">16</i>jon</div><div class="box o1"><i class="n">17</i>mike</div><div class="box o4"><i class="n">18</i>sara</div><div class="box"><i class="n">19</i></div><div class="box o5"><i class="n">20</i>7kq2</div>
-          <div class="box o4"><i class="n">21</i>sara</div><div class="box o2"><i class="n">22</i>jon</div><div class="box"><i class="n">23</i></div><div class="box o5"><i class="n">24</i>7kq2</div><div class="box o3"><i class="n">25</i>Ana</div>
+          <div class="box o4"><i class="n">21</i>sara</div><div class="box o2"><i class="n">22</i>jon</div><div class="box"><i class="n">23</i></div><div class="box o5"><i class="n">24</i>7kq2</div><div class="box o3"><i class="n">25</i>ana.skr</div>
         </div>
       </div>
     </div>
   </div>
   <div class="scrim"></div>
   <div class="sheet">
-    <div class="grab"></div>
+    <span class="x">✕</span>
     <h3>You'll need a wallet</h3>
-    <p class="note" style="margin:8px 0 4px">A wallet holds your SOL and signs your boxes. Free, two minutes.</p>
-    <div class="wopt"><span class="wl"><i></i>Phantom</span><span class="t2">Recommended · App Store</span></div>
-    <div class="wopt"><span class="wl"><i class="sf"></i>Solflare</span><span class="t2">App Store</span></div>
-    <p class="note">Then come back to this page — it'll be right here. You'll need about 0.051 SOL in it.</p>
-    <div class="row" style="font-size:14px;padding-top:4px"><span class="t2">Already have one?</span><span class="textlink">Open in Phantom ›</span></div>
+    <p class="note" style="color:var(--t1);font-size:16px;margin:10px 0 6px">A wallet holds your SOL and signs your boxes. Free, two minutes.</p>
+    <div class="wopt"><span class="wl"><i></i>Phantom</span><span><span class="rec">Recommended</span><span class="ar">↗</span></span></div>
+    <div class="wopt"><span class="wl"><i></i>Solflare</span><span class="ar">↗</span></div>
+    <p class="note" style="margin:14px 0 4px">You'll need about 0.051 SOL in it</p>
+    <p class="note" style="margin:6px 0 10px">Then come back to this page — it'll be right here.</p>
+    <div class="textlink" style="font-size:15px">Already have one? Open in Phantom ›</div>
   </div>
 </div>
 
 <!-- ============ 17. POOL, LIVE, WIDE (DESIGN 4.11) ============ -->
 <div class="frame wide" id="pool-wide">
   <div class="label">17 · Pool — live, 1280 wide</div>
-  <div class="rail">
-    <div class="nav"><b>Games</b><span>My Boxes</span><span>Create</span></div>
-    <div class="wk">Week 7 ▾</div>
-    <div class="g live on"><span class="pair"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg></span><span class="nm">KC – BAL</span><span class="sc">14–10 · Q2</span></div>
-    <div class="g live"><span class="pair"><svg class="helm sm" style="--c1:#0B2265;--c2:#A71930"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#203731;--c2:#FFB612"><use href="#helmet"/></svg></span><span class="nm">NYG – GB</span><span class="sc">7–3 · Q1</span></div>
-    <div class="g"><span class="pair"><svg class="helm sm" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg></span><span class="nm">PHI – DAL</span><span class="cnt">Sun 1:00 · 3 open</span></div>
-    <div class="g"><span class="pair"><svg class="helm sm" style="--c1:#002244;--c2:#69BE28"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#AA0000;--c2:#B3995D"><use href="#helmet"/></svg></span><span class="nm">SEA – SF</span><span class="cnt">Sun 4:25 · 1 open</span></div>
-    <div class="g"><span class="pair"><svg class="helm sm" style="--c1:#0076B6;--c2:#B0B7BC"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#4F2683;--c2:#FFC62F"><use href="#helmet"/></svg></span><span class="nm">DET – MIN</span><span class="cnt">Sun 4:25</span></div>
-    <div class="g"><span class="pair"><svg class="helm sm" style="--c1:#0085CA;--c2:#101820"><use href="#helmet"/></svg><svg class="helm sm" style="--c1:#D50A0A;--c2:#FF7900"><use href="#helmet"/></svg></span><span class="nm">CAR – TB</span><span class="cnt">Sun 8:20</span></div>
-    <div class="foot">‹ &nbsp;Collapse</div>
-  </div>
-  <div class="page"><div class="col">
-    <div class="top"><div class="back">‹ KC vs BAL</div><div style="display:flex;gap:8px;align-items:center"><div class="wallet"><i class="avatar"></i>Ana</div><span class="t2">⇪</span></div></div>
-    <div class="content">
-      <div class="poolhead">
-        <div class="row"><span class="pill live"><i class="dot"></i>Live</span><span class="t2" style="font-size:13px">25/25 · Pot 1.25 SOL · Fee 12% · 20/20/20/40</span></div>
-        <div class="scorestrip">
-          <div class="team"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="s">14</span></div>
-          <div class="team"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="s t2">10</span></div>
-          <div class="clk"><i class="dot"></i>Q2 4:12</div>
-        </div>
+  <div class="bar"><div class="logo"><svg class="helm"><use href="#helmet"/></svg>My Bar Pool</div><div class="chip"><i class="avatar"></i>ana.skr</div></div>
+  <div class="wrow">
+    <div class="rail">
+      <div class="pair on"><svg class="helm xs" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><svg class="helm xs" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg></div>
+      <div class="pair"><svg class="helm xs" style="--c1:#0B2265;--c2:#A71930"><use href="#helmet"/></svg><svg class="helm xs" style="--c1:#203731;--c2:#FFB612"><use href="#helmet"/></svg></div>
+      <div class="pair"><svg class="helm xs" style="--c1:#003594;--c2:#869397"><use href="#helmet"/></svg><svg class="helm xs" style="--c1:#004C54;--c2:#A5ACAF"><use href="#helmet"/></svg></div>
+      <div class="pair"><svg class="helm xs" style="--c1:#002244;--c2:#69BE28"><use href="#helmet"/></svg><svg class="helm xs" style="--c1:#AA0000;--c2:#B3995D"><use href="#helmet"/></svg></div>
+      <div class="pair"><svg class="helm xs" style="--c1:#0076B6;--c2:#B0B7BC"><use href="#helmet"/></svg><svg class="helm xs" style="--c1:#4F2683;--c2:#FFC62F"><use href="#helmet"/></svg></div>
+      <div class="pair"><svg class="helm xs" style="--c1:#0085CA;--c2:#101820"><use href="#helmet"/></svg><svg class="helm xs" style="--c1:#D50A0A;--c2:#FF7900"><use href="#helmet"/></svg></div>
+      <div class="foot">›</div>
+    </div>
+    <div class="page"><div class="col">
+      <div class="ttl"><h1>BAL vs KC</h1><span class="share">⇪</span></div>
+      <div class="strip">
+        <div class="side"><svg class="helm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span><span class="s">10</span></div>
+        <div class="mid live">Q2 · 9:41</div>
+        <div class="side"><span class="s">14</span><span class="abbr">KC</span><svg class="helm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg></div>
       </div>
+      <div class="qstrip"><span>Q1<b>3–7</b></span><span class="live">Q2<b>live</b></span><span>Q3<b>–</b></span><span>Final<b>–</b></span></div>
+      <div class="statusrow"><span class="pill live"><i class="dot"></i>Live</span></div>
+      <div class="line"><b>0.05 SOL / box</b> · Pot 1.25 SOL</div>
+      <div class="line">Split 20/20/20/40 · Fee 10%</div>
       <div class="wideboard"><div class="gridwrap">
-        <div class="teamlbl top"><svg class="helm sm" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="abbr">KC</span></div>
-        <div class="axis-top"><span></span><span class="d">1·9</span><span class="d">5·4</span><span class="d">7·2</span><span class="d">0·6</span><span class="d">8·3</span></div>
-        <div class="board"><div class="sidelbl"><svg class="helm sm" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg><span class="abbr">BAL</span></div>
-          <div class="axis-side"><span class="d">3·9</span><span class="d">0·6</span><span class="d">7·4</span><span class="d">8·1</span><span class="d">2·5</span></div>
+        <div class="toplbl"><svg class="helm xs" style="--c1:#E31837;--c2:#FFB81C"><use href="#helmet"/></svg><span class="abbr">KC</span><span class="cap">Home</span></div>
+        <div class="toprule" style="--hc:#E31837"></div>
+        <div class="axis-top"><span class="d">31</span><span class="d">74</span><span class="d">08</span><span class="d">52</span><span class="d">96</span></div>
+        <div class="board">
+          <div class="sidelbl"><div class="rot"><span class="abbr">BAL</span><span class="cap">Away</span></div><svg class="helm xs" style="--c1:#241773;--c2:#9E7C0C"><use href="#helmet"/></svg></div>
+          <div class="siderule" style="--ac:#241773"></div>
+          <div class="axis-side"><span class="d">8<br>9</span><span class="d">2<br>3</span><span class="d">6<br>7</span><span class="d">0<br>1</span><span class="d">4<br>5</span></div>
           <div class="boxes">
-            <div class="box o1"><i class="n">1</i>mike</div><div class="box you"><i class="n">2</i>YOU</div><div class="box you won"><i class="n">3</i><i class="tag">Q1 ✓</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box o2"><i class="n">5</i>jon</div>
-            <div class="box o3"><i class="n">6</i>a3f9</div><div class="box o2 lead"><i class="n">7</i><i class="star">★</i>jon</div><div class="box o1"><i class="n">8</i>mike</div><div class="box o1"><i class="n">9</i>mike</div><div class="box o3"><i class="n">10</i>a3f9</div>
-            <div class="box o4"><i class="n">11</i>sara</div><div class="box you"><i class="n">12</i>YOU</div><div class="box you"><i class="n">13</i>YOU</div><div class="box o4"><i class="n">14</i>sara</div><div class="box o2"><i class="n">15</i>jon</div>
-            <div class="box o2"><i class="n">16</i>jon</div><div class="box you"><i class="n">17</i>YOU</div><div class="box o4"><i class="n">18</i>sara</div><div class="box o3"><i class="n">19</i>a3f9</div><div class="box o1"><i class="n">20</i>mike</div>
-            <div class="box o4"><i class="n">21</i>sara</div><div class="box o1"><i class="n">22</i>mike</div><div class="box o2"><i class="n">23</i>jon</div><div class="box o3"><i class="n">24</i>a3f9</div><div class="box you"><i class="n">25</i>YOU</div>
+            <div class="box o1"><i class="n">1</i>mike.skr</div><div class="box you"><i class="n">2</i>YOU</div><div class="box you won"><i class="n">3</i><i class="tag">✓ Q1</i>YOU</div><div class="box you"><i class="n">4</i>YOU</div><div class="box o2"><i class="n">5</i>jon.skr</div>
+            <div class="box o3"><i class="n">6</i>a3f9…k2Qe</div><div class="box o2 lead"><i class="n">7</i><i class="star">★</i>jon.skr</div><div class="box o1"><i class="n">8</i>mike.skr</div><div class="box o1"><i class="n">9</i>mike.skr</div><div class="box o3"><i class="n">10</i>a3f9…k2Qe</div>
+            <div class="box o4"><i class="n">11</i>sara.skr</div><div class="box you"><i class="n">12</i>YOU</div><div class="box you"><i class="n">13</i>YOU</div><div class="box o4"><i class="n">14</i><i class="mark">Murphy's</i>sara.skr</div><div class="box o2"><i class="n">15</i>jon.skr</div>
+            <div class="box o2"><i class="n">16</i>jon.skr</div><div class="box you"><i class="n">17</i>YOU</div><div class="box o4"><i class="n">18</i>sara.skr</div><div class="box o3"><i class="n">19</i>a3f9…k2Qe</div><div class="box o1"><i class="n">20</i>mike.skr</div>
+            <div class="box o4"><i class="n">21</i>sara.skr</div><div class="box o1"><i class="n">22</i>mike.skr</div><div class="box o2"><i class="n">23</i>jon.skr</div><div class="box o3"><i class="n">24</i>a3f9…k2Qe</div><div class="box you"><i class="n">25</i>YOU</div>
           </div>
         </div>
       </div></div>
-      <div class="sect"><b>Payouts</b><span>on-chain</span></div>
-      <table class="tbl">
-        <tr><td class="t2">Q1 · 7–3</td><td class="amt win">0.225 SOL</td><td><span style="color:var(--green)">box 3 · YOU</span> <span class="link"></span></td></tr>
-        <tr><td class="t2">Q2</td><td class="amt">0.225 SOL</td><td><span style="color:var(--teal);font-size:13px"><span style="color:var(--amber)">★</span> Leading · box 7 · jon</span></td></tr>
-        <tr><td class="t2">Q3</td><td class="amt">0.225 SOL</td><td class="t2">—</td></tr>
-        <tr><td class="t2">Q4 · final</td><td class="amt">0.45 SOL</td><td class="t2">—</td></tr>
-      </table>
+    </div></div>
+    <div class="aside">
+      <div class="acti"><span class="h2">Activity</span><span class="t2">· 13 holders</span><span class="stack"><i class="mav photo"></i><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><span class="more">+10</span></span></div>
+      <div class="thread">
+        <div class="sys"><span>Pool locked <span class="arrow">↗</span></span><span class="when">1h</span></div>
+        <div class="sys"><span>Numbers drawn <span class="arrow">↗</span></span><span class="when">1h</span></div>
+        <div class="msg"><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><div class="body"><div class="who"><span><span class="nm">mike</span> <span class="ctag">Creator</span></span><span class="tm">48m</span></div><p>Numbers are in. 7–3 for Q1, who's got it</p></div></div>
+        <div class="msg"><i class="mav photo"></i><div class="body"><div class="who"><span class="nm">ana.skr</span><span class="tm">47m</span></div><p>box 3, that's me</p></div></div>
+        <div class="sys"><span><span style="color:var(--green)">Q1 · box 3 wins 0.225 SOL</span> · ana.skr <span class="arrow">↗</span></span><span class="when">12m</span></div>
+        <div class="msg"><i class="mav"><svg class="helm"><use href="#helmet"/></svg></i><div class="body"><div class="who"><span class="nm">jon</span><span class="tm">9m</span></div><p><span class="at">@ana.skr</span> congrats. 7 is leading Q2</p></div></div>
+      </div>
+      <div class="composer"><div class="in">Say something…</div><div class="send">↑</div></div>
     </div>
-  </div></div>
-  <div class="side">
-    <div class="sect"><b>Activity</b><span class="stack" style="text-transform:none;letter-spacing:0"><i class="mav"></i><i class="mav m2"></i><i class="mav m3"></i><span class="more">13 holders</span></span></div>
-    <div class="pinned"><span class="pin">▸ pinned</span><span><b>mike</b> · Payouts hit your wallet on their own, nothing to claim.</span></div>
-    <div class="thread">
-      <div class="sys"><span>Pool locked · 25/25</span><span>1h</span></div>
-      <div class="sys"><span>Numbers drawn</span><span>1h</span></div>
-      <div class="msg"><i class="mav m2"></i><div><div class="who">mike <span class="ctag">Creator</span><span class="t2">48m</span></div><p>Numbers are in. 7–3 for Q1, who's got it</p></div></div>
-      <div class="msg"><i class="mav"></i><div><div class="who">Ana <span class="t2">47m</span></div><p>box 3, that's me</p></div></div>
-      <div class="sys"><span><span class="win">Q1 · box 3 wins 0.225 SOL</span> · Ana</span><span>12m</span></div>
-      <div class="msg"><i class="mav m3"></i><div><div class="who">jon <span class="t2">9m</span></div><p><span class="at">@Ana</span> congrats. 7 is leading Q2</p></div></div>
-    </div>
-    <div class="composer"><div class="in">Say something…</div><div class="send">↑</div></div>
   </div>
 </div>
 

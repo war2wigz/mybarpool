@@ -89,15 +89,17 @@ To re-render after editing the HTML:
 
 ```bash
 cd docs/mockups
+CHROME="chrome --headless=new --hide-scrollbars --virtual-time-budget=8000"
 for s in games game pool-open pool-live buy bought create me pool-sponsored sponsor share profile pool-chat join pool-settled nowallet; do
-  chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=390,844 \
-    --virtual-time-budget=8000 --screenshot=png/$s.png "file://$PWD/screens.html?screen=$s"
+  $CHROME --force-device-scale-factor=2 --window-size=390,844 --screenshot=png/$s.png "file://$PWD/screens.html?screen=$s"
 done
-chrome --headless=new --hide-scrollbars --window-size=4690,930 --virtual-time-budget=8000 \
-  --screenshot=png/overview.png "file://$PWD/screens.html"
+$CHROME --force-device-scale-factor=2 --window-size=1280,800 --screenshot=png/pool-wide.png "file://$PWD/screens.html?screen=pool-wide"
+$CHROME --window-size=8112,924 --screenshot=png/overview.png "file://$PWD/screens.html"
 ```
 
-The overview is 11 frames × 390 px plus gaps and padding; widen it by 422 px per frame added.
+The overview is 16 phone frames × 390 px plus the 1280 px wide frame, 32 px gaps and 40 px padding (8112 × 924); widen it by 422 px per phone frame added. On a machine where `chrome` is a wrapper that opens a remote-debugging port (the cloud agent image does this), call the binary directly with `--no-sandbox --disable-gpu --user-data-dir=$(mktemp -d)` so the render does not collide with a running browser.
+
+The mockups were redrawn on 2026-10-24 to match the shipped app (B3 shell: one top bar with the helmet wordmark and the wallet chip, no bottom tabs; the two-digits-per-lane grid with the home rail across the top and the away rail down the side; the "Activity · N holders" thread; the card-style sheets). Frame 9 shows a directory-listed sponsor (a square logo in the sponsor line and the sponsored-box mark), frame 10 a wallet sponsoring without a listing. When a screen changes, the frame changes with it, not the other way round.
 
 ### Wireframes
 Wireframes are mobile (390px) since that is the primary target. Wide screens are the same content in columns, section 4.11.

@@ -199,7 +199,7 @@ The app is dark, numbers-first, and calm: a helmet mark in purple and green for 
 <tr><td align="center"><img src="docs/mockups/png/create.png" width="390" alt="Create"><br><sub>Creating a pool</sub></td><td align="center"><img src="docs/mockups/png/pool-sponsored.png" width="390" alt="Pool sponsored"><br><sub>A sponsored pool</sub></td></tr>
 </table>
 
-All eleven frames, including the share sheet, the sponsor sheet and My Boxes, are in [docs/DESIGN.md](docs/DESIGN.md#rendered-mockups). Design principles, the full information architecture and every flow, including how a pool is shared (link, preview, QR, printable board), are in [docs/DESIGN.md](docs/DESIGN.md).
+All seventeen frames, including the share sheet, the sponsor sheet, My Boxes, the result card and the wide layout, are in [docs/DESIGN.md](docs/DESIGN.md#rendered-mockups). Design principles, the full information architecture and every flow, including how a pool is shared (link, preview, QR, printable board), are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Toolchain
 
