@@ -924,7 +924,7 @@ describe("pool instructions (Surfpool, mainnet fork)", () => {
     expect(IDL.instructions).toHaveLength(27); // 13 after Step 4, + the four draw instructions, + settle, close_pool, + the seven §4.6 instructions, + sponsor_box
     expect(IDL.accounts).toHaveLength(6);
     expect(IDL.events).toHaveLength(25); // 12 after Step 4, + the four draw events, + QuarterSettled, PoolClosed, + the six §4.6 events, + BoxSponsored
-    expect(IDL.errors).toHaveLength(69);
+    expect(IDL.errors).toHaveLength(71);
     const types = IDL.types.map((t) => t.name);
     for (const t of [
       "Pool",

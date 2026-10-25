@@ -600,11 +600,11 @@ describe("settlement (Surfpool, the platform's Entropy deployment)", () => {
     }
   });
 
-  it("9. the IDL has 27 instructions, 6 accounts, 25 events, 69 errors, docs on each new item", () => {
+  it("9. the IDL has 27 instructions, 6 accounts, 25 events, 71 errors, docs on each new item", () => {
     expect(IDL.instructions).toHaveLength(27);
     expect(IDL.accounts).toHaveLength(6);
     expect(IDL.events).toHaveLength(25);
-    expect(IDL.errors).toHaveLength(69);
+    expect(IDL.errors).toHaveLength(71);
     const idl = IDL as unknown as {
       instructions: {
         name: string;

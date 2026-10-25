@@ -689,11 +689,11 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     expect(measured["sample_var"]!).toBeLessThan(250_000n);
   });
 
-  it("10. the IDL has 27 instructions, 6 accounts, 25 events, 69 errors, the Step 5b fields with docs", () => {
+  it("10. the IDL has 27 instructions, 6 accounts, 25 events, 71 errors, the Step 5b fields with docs", () => {
     expect(IDL.instructions).toHaveLength(27); // 19 after Step 6, + the seven §4.6 instructions, + sponsor_box
     expect(IDL.accounts).toHaveLength(6);
     expect(IDL.events).toHaveLength(25); // 18 after Step 6, + the six §4.6 events, + BoxSponsored
-    expect(IDL.errors).toHaveLength(69);
+    expect(IDL.errors).toHaveLength(71);
     const idl = IDL as unknown as {
       instructions: {
         name: string;
