@@ -90,16 +90,17 @@ describe("lifecycle 05: suspended after Q2 (Surfpool)", { timeout: 120_000 }, ()
 
   it("the game is marked Suspended: Q3 cannot settle; return_sponsorship is FeesAlreadyPaid", async () => {
     await L.markGame(GameStatus.Suspended);
-    // No Q3 score exists (a suspended game gets no further posts, §4.2), so settle stops at
-    // ScoresNotPosted 6043 before anything else.
+    // A suspended game's unpaid quarters are split, never settled (§4.5, the 2026-10-24
+    // audit): settle stops at GameSuspended 6070 right after the Drawn check, before the
+    // ordering and scores checks.
     const winner = await L.expectedWinner(refs.pool, 3);
     expect(
       await sendExpectingError(L.keeper, [
         setComputeUnitLimit(CU_LIMIT),
         await settleInstruction(L.keeper, refs, 3, winner, L.feeWallet),
       ]),
-    ).toBe(errorCode("ScoresNotPosted"));
-    expect(errorCode("ScoresNotPosted")).toBe(6043);
+    ).toBe(errorCode("GameSuspended"));
+    expect(errorCode("GameSuspended")).toBe(6070);
     expect(await L.returnSponsorshipError(refs, sponsor)).toBe(errorCode("FeesAlreadyPaid"));
     expect(errorCode("FeesAlreadyPaid")).toBe(6047);
   });

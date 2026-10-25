@@ -152,6 +152,10 @@ export const MYBARPOOL_ERROR__VAR_END_AT_MISMATCH = 0x17b2; // 6066
 export const MYBARPOOL_ERROR__SAMPLE_WINDOW_OPEN = 0x17b3; // 6067
 /** DrawAfterScores: Draw refused after the first score post */
 export const MYBARPOOL_ERROR__DRAW_AFTER_SCORES = 0x17b4; // 6068
+/** DrawAfterKickoff: Draw refused at or after kickoff */
+export const MYBARPOOL_ERROR__DRAW_AFTER_KICKOFF = 0x17b5; // 6069
+/** GameSuspended: Game is suspended; no further settlement */
+export const MYBARPOOL_ERROR__GAME_SUSPENDED = 0x17b6; // 6070
 
 export type MybarpoolError =
   | typeof MYBARPOOL_ERROR__ADDON_BUDGET_EXCEEDED
@@ -160,12 +164,14 @@ export type MybarpoolError =
   | typeof MYBARPOOL_ERROR__BOX_ALREADY_SPONSORED
   | typeof MYBARPOOL_ERROR__BOXES_STILL_OUTSTANDING
   | typeof MYBARPOOL_ERROR__COUNTER_NOT_EMPTY
+  | typeof MYBARPOOL_ERROR__DRAW_AFTER_KICKOFF
   | typeof MYBARPOOL_ERROR__DRAW_AFTER_SCORES
   | typeof MYBARPOOL_ERROR__FEE_ACCOUNT_MISMATCH
   | typeof MYBARPOOL_ERROR__FEES_ALREADY_PAID
   | typeof MYBARPOOL_ERROR__FINAL_FLAG_MISMATCH
   | typeof MYBARPOOL_ERROR__GAME_ALREADY_MARKED
   | typeof MYBARPOOL_ERROR__GAME_NOT_SCHEDULED
+  | typeof MYBARPOOL_ERROR__GAME_SUSPENDED
   | typeof MYBARPOOL_ERROR__GATE_KEY_MISSING
   | typeof MYBARPOOL_ERROR__GATE_KEY_NOT_SIGNER
   | typeof MYBARPOOL_ERROR__INTEGRATOR_MISMATCH
@@ -233,12 +239,14 @@ if (process.env["NODE_ENV"] !== "production") {
     [MYBARPOOL_ERROR__BOX_ALREADY_SPONSORED]: `Box already sponsored or box index out of range`,
     [MYBARPOOL_ERROR__BOXES_STILL_OUTSTANDING]: `Boxes still outstanding`,
     [MYBARPOOL_ERROR__COUNTER_NOT_EMPTY]: `Counter is not empty`,
+    [MYBARPOOL_ERROR__DRAW_AFTER_KICKOFF]: `Draw refused at or after kickoff`,
     [MYBARPOOL_ERROR__DRAW_AFTER_SCORES]: `Draw refused after the first score post`,
     [MYBARPOOL_ERROR__FEE_ACCOUNT_MISMATCH]: `Fee account does not match`,
     [MYBARPOOL_ERROR__FEES_ALREADY_PAID]: `Fees already paid`,
     [MYBARPOOL_ERROR__FINAL_FLAG_MISMATCH]: `is_final must be set on the fourth post only; had_overtime needs is_final`,
     [MYBARPOOL_ERROR__GAME_ALREADY_MARKED]: `Game is already marked; marks are irreversible`,
     [MYBARPOOL_ERROR__GAME_NOT_SCHEDULED]: `Game is not scheduled: the record is final or has been marked`,
+    [MYBARPOOL_ERROR__GAME_SUSPENDED]: `Game is suspended; no further settlement`,
     [MYBARPOOL_ERROR__GATE_KEY_MISSING]: `Gate key missing`,
     [MYBARPOOL_ERROR__GATE_KEY_NOT_SIGNER]: `Gate key is not a signer`,
     [MYBARPOOL_ERROR__INTEGRATOR_MISMATCH]: `Integrator and integrator fee do not match`,
