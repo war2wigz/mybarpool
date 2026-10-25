@@ -1,4 +1,4 @@
-//! Harness correctness (build plan Step 8 › Fuzzer): three planted bugs prove the oracle bites,
+//! Harness correctness (build plan Step 8 › Fuzzer): four planted bugs prove the oracle bites,
 //! each against synthetic contexts and outcomes (no program change, no Mollusk).
 //!
 //! 1. A success that moves lamports to a stranger fails O3 (destinations).
