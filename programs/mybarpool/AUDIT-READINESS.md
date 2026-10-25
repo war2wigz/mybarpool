@@ -34,7 +34,7 @@ Solana Foundation's image pinned by digest and compares the hash with the plain 
 | Mollusk unit tests | `cargo test -p mybarpool --locked` | 372 tests over every instruction in isolation and in chains, with the `Clock` and `SlotHashes` sysvars set directly; the Entropy fork's verified bytecode loaded as a second program; the shared vector files cross-checked against the SDK |
 | Compute-unit table | `cargo bench -p mybarpool --locked` | Rewrites `compute_units.md` (54 rows); a changed row is a review item, not a failure |
 | Localnet | `anchor test` (Surfpool 1.7.0 forking mainnet) | 17 files, 130 tests: the per-step suites and eight lifecycle scripts under `tests/lifecycle/`, one per path from creation to `close_pool`, against the real SKR and ORE mints |
-| Fuzzer | `fuzz/` — see its [README](../../fuzz/README.md) | Mollusk fixtures ejected from every unit-test instruction (807), replayed and mutated under proptest for a fixed budget, checked against the §10 Money oracle; CI runs 600 s. At this commit: 2,820,630 cases in 600 s (seed 2114127522115581660) and 4,271,419 in 900 s on the bytecode one doc-comment change earlier (seed 9023521409103873441), both clean; before the audit's fixes, 6,193,692 in 1,200 s (seed 16502337001721866570) |
+| Fuzzer | `fuzz/` — see its [README](../../fuzz/README.md) | Mollusk fixtures ejected from every unit-test instruction (904), replayed and mutated under proptest for a fixed budget, checked against the §10 Money oracle; CI runs the harness's own tests, then 600 s. At this commit: 2,954,050 cases in 600 s (seed 10672233035546288790), clean. On the 2026-10-23 bytecode: 2,820,630 in 600 s (seed 2114127522115581660) and 4,271,419 in 900 s (seed 9023521409103873441), both clean |
 | Schema snapshot | `cargo test -p mybarpool --test schema` | `tests/fixtures/schema-snapshot.json` against the committed IDL: additive changes only (§10 Layout) |
 | Lints | `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace -- --lib` | OtterSec anchor-lints at a pinned commit; see §5 |
 | Dependency audit | `cargo audit --deny warnings` | RustSec against `Cargo.lock`, with the ignores in `.cargo/audit.toml`; see §6 |
@@ -1008,63 +1008,67 @@ pins are deliberate and a major is never merged without a toolchain decision).
 
 Every row of `compute_units.md` with the client-side limit DESIGN §10.4 prescribes
 (`measured × 1.2 + 30,000` for the instructions a wallet may append). A row above 1,000,000
-after the rule would be a finding; the worst is 367,737, a quarter of the 1.4 M transaction
-maximum.
+after the rule would be a finding; the worst is 368,733, a quarter of the 1.4 M transaction
+maximum. Regenerated 2026-10-24 after the six-slot config and the audit fixes: every
+instruction that reads the config pays about 680 CU more for the larger account, `initialize`
+and `update_config_full` about 6,000 more for six rules, and an SPL payout to an existing
+token account no longer runs the no-op `create_idempotent` (§8), which is where the two
+`atas_exist` rows fall.
 
 | Row | CU | Limit to set |
 |---|---|---|
-| `initialize` | 20,277 | 54,332 |
-| `update_config_full` | 15,214 | 48,256 |
-| `set_wallet_override_create` | 13,160 | 45,792 |
-| `set_wallet_override_update` | 10,820 | 42,984 |
-| `close_wallet_override` | 9,391 | 41,269 |
-| `create_game` | 18,054 | 51,664 |
-| `update_kickoff` | 10,940 | 43,128 |
-| `post_scores_q1` | 10,951 | 43,141 |
-| `post_scores_final` | 10,963 | 43,155 |
-| `mark_game` | 10,397 | 42,476 |
-| `create_pool_sol` | 41,617 | 79,940 |
-| `create_pool_sol_5_boxes` | 47,707 | 87,248 |
-| `create_pool_spl` | 51,369 | 91,642 |
-| `buy_1` | 29,473 | 65,367 |
-| `buy_3` | 29,851 | 65,821 |
-| `buy_25th_locks` | 31,441 | 67,729 |
-| `buy_spl_1` | 31,591 | 67,909 |
-| `sponsor_new` | 26,497 | 61,796 |
-| `sponsor_box_new` | 26,531 | 61,837 |
-| `sponsor_top_up` | 24,100 | 58,920 |
+| `initialize` | 26,387 | 61,664 |
+| `update_config_full` | 21,502 | 55,802 |
+| `set_wallet_override_create` | 13,839 | 46,606 |
+| `set_wallet_override_update` | 11,499 | 43,798 |
+| `close_wallet_override` | 10,070 | 42,084 |
+| `create_game` | 15,733 | 48,879 |
+| `update_kickoff` | 11,619 | 43,942 |
+| `post_scores_q1` | 11,630 | 43,956 |
+| `post_scores_final` | 11,642 | 43,970 |
+| `mark_game` | 11,076 | 43,291 |
+| `create_pool_sol` | 43,796 | 82,555 |
+| `create_pool_sol_5_boxes` | 49,886 | 89,863 |
+| `create_pool_spl` | 53,548 | 94,257 |
+| `buy_1` | 28,652 | 64,382 |
+| `buy_3` | 29,030 | 64,836 |
+| `buy_25th_locks` | 30,620 | 66,744 |
+| `buy_spl_1` | 30,770 | 66,924 |
+| `sponsor_new` | 28,676 | 64,411 |
+| `sponsor_box_new` | 28,710 | 64,452 |
+| `sponsor_top_up` | 26,279 | 61,534 |
 | `rotate_gate_key` | 11,263 | 43,515 |
-| `buy_link_sol` | 29,675 | 65,610 |
-| `buy_allowlist_sol_depth_1` | 29,873 | 65,847 |
-| `buy_allowlist_sol_depth_10` | 31,725 | 68,070 |
-| `buy_allowlist_sol_depth_32` | 36,233 | 73,479 |
-| `close_counter` | 6,572 | 37,886 |
-| `set_var` | 16,145 | 49,374 |
+| `buy_link_sol` | 28,854 | 64,624 |
+| `buy_allowlist_sol_depth_1` | 29,052 | 64,862 |
+| `buy_allowlist_sol_depth_10` | 30,904 | 67,084 |
+| `buy_allowlist_sol_depth_32` | 35,412 | 72,494 |
+| `close_counter` | 7,251 | 38,701 |
+| `set_var` | 16,824 | 50,188 |
 | `sample_var` | 29,773 | 65,727 |
 | `sample_var_already_sampled` | 14,493 | 47,391 |
-| `draw` | 20,001 | 54,001 |
-| `replace_var` | 16,817 | 50,180 |
-| `settle_q1_sol` | 26,683 | 62,019 |
-| `settle_q2_sol` | 22,191 | 56,629 |
-| `settle_q4_sol` | 22,192 | 56,630 |
-| `settle_q1_final_only` | 21,177 | 55,412 |
-| `settle_q1_sol_integrator` | 28,583 | 64,299 |
-| `settle_q1_ore` | 105,912 | 157,094 |
-| `settle_q1_ore_atas_exist` | 78,669 | 124,402 |
-| `close_pool_sol` | 17,572 | 51,086 |
-| `close_pool_ore` | 49,524 | 89,428 |
-| `return_boxes_first_sol_2_owners` | 29,524 | 65,428 |
-| `return_boxes_25_owners_sol` | 135,384 | 192,460 |
-| `return_boxes_ore_3_owners_atas_missing` | 107,009 | 158,410 |
-| `return_boxes_ore_9_owners_atas_missing` | 281,448 | 367,737 |
-| `return_boxes_ore_11_owners_atas_exist` | 253,671 | 334,405 |
-| `return_sponsorship_sol` | 22,970 | 57,564 |
-| `return_sponsorship_ore_ata_missing` | 48,599 | 88,318 |
-| `cancel_pool_open` | 17,089 | 50,506 |
-| `split_first_sol_3_owners` | 32,040 | 68,448 |
-| `split_ore_3_owners_atas_missing` | 106,815 | 158,178 |
+| `draw` | 20,694 | 54,832 |
+| `replace_var` | 17,496 | 50,995 |
+| `settle_q1_sol` | 27,344 | 62,812 |
+| `settle_q2_sol` | 22,861 | 57,433 |
+| `settle_q4_sol` | 22,862 | 57,434 |
+| `settle_q1_final_only` | 21,851 | 56,221 |
+| `settle_q1_sol_integrator` | 29,244 | 65,092 |
+| `settle_q1_ore` | 106,618 | 157,941 |
+| `settle_q1_ore_atas_exist` | 42,763 | 81,315 |
+| `close_pool_sol` | 18,251 | 51,901 |
+| `close_pool_ore` | 50,220 | 90,264 |
+| `return_boxes_first_sol_2_owners` | 30,204 | 66,244 |
+| `return_boxes_25_owners_sol` | 136,061 | 193,273 |
+| `return_boxes_ore_3_owners_atas_missing` | 107,737 | 159,284 |
+| `return_boxes_ore_9_owners_atas_missing` | 282,278 | 368,733 |
+| `return_boxes_ore_11_owners_atas_exist` | 122,291 | 176,749 |
+| `return_sponsorship_sol` | 23,649 | 58,378 |
+| `return_sponsorship_ore_ata_missing` | 49,295 | 89,154 |
+| `cancel_pool_open` | 17,768 | 51,321 |
+| `split_first_sol_3_owners` | 32,719 | 69,262 |
+| `split_ore_3_owners_atas_missing` | 107,545 | 159,054 |
 | `reclaim_sol_open` | 21,446 | 55,735 |
-| `reclaim_ore_locked_ata_missing` | 44,305 | 83,166 |
+| `reclaim_ore_locked_ata_missing` | 44,322 | 83,186 |
 | `reclaim_sponsorship_sol` | 23,245 | 57,894 |
 | `close_sponsorship` | 14,588 | 47,505 |
 
@@ -1073,7 +1077,7 @@ lifecycle scripts): a SOL `return_boxes` of 24 owners with the counter is 1,247 
 the 1,232-byte packet, so the keeper pages SOL returns at twelve owners (851 and 819 bytes for
 a full pool). An SPL page whose token accounts must be created costs seven inner instructions
 per owner against the runtime's trace limit of 64; the bench row above measures nine owners as
-a single instruction (`return_boxes_ore_9_owners_atas_missing`, 281,448 CU), but a real
+a single instruction (`return_boxes_ore_9_owners_atas_missing`, 282,278 CU), but a real
 transaction also carries the compute-budget instruction the page needs, and the ninth owner
 takes the trace to 65: `tests/lifecycle/04-postponed-after-draw.test.ts` shows the nine-owner
 page refused with "Max instruction trace length exceeded" and pages eight, eight, eight and
@@ -1100,10 +1104,35 @@ entry (depth 1 → 32: 29,819 → 36,179).
   `rotate_gate_key` kills a leaked link. The creator's `initial_boxes` at creation are not
   gated (the creator sets the gate in that instruction); every later `buy`, the creator's
   included, is.
-- **`create_idempotent` on every associated-token payment.** A payee's token account may be
-  closed between purchase and payout; the program recreates it (rent from the transaction
-  payer) rather than fail a settlement or return. A wrong account in the slot is refused
-  before the create (`RequireKeysEqViolated`).
+- **`create_idempotent` on an associated-token payment, unless the account is already a token
+  account for the mint.** A payee's token account may be closed between purchase and payout;
+  the program recreates it (rent from the transaction payer) rather than fail a settlement or
+  return. A wrong account in the slot is refused before the create (`RequireKeysEqViolated`).
+  The create is skipped when the derived address already holds an initialised token account
+  for the pool's mint under the pool's token program, whoever owns it now (2026-10-24 audit
+  A1): on the legacy Token program an ATA has no `ImmutableOwner`, so a payee can
+  `SetAuthority(AccountOwner)` it away, after which the ATA program's create fails with
+  `InvalidOwner`; with the create always run, one ORE payee could have held every payout of
+  the pool. The transfer goes to the derived address regardless, so the payee has paid whoever
+  they gave the account to. `vault::is_token_account_for` is the check; tests
+  `ore_settle_pays_a_derived_ata_whose_owner_was_reassigned` (the PoC, now expecting success)
+  and `ore_settle_with_a_foreign_token_account_at_the_derived_address_still_fails`.
+- **A SOL ladder has a rent floor.** A SOL payout to a wallet that holds nothing at that
+  moment (a buyer who emptied it since) creates the account, and the runtime refuses an
+  account left below `minimum_balance(0)`, 890,880 lamports, so a share under that floor to
+  such a wallet fails the whole instruction until the wallet is funded or the batch leaves it
+  out. The smallest share is a split's `unpaid_prize_pool / 25`: on the launch ladder (0.05
+  SOL minimum) a split after Q1 pays about 35,000,000 lamports a box, forty times the floor;
+  a `min_price` of 1,000,000 lamports or less would put a split share under it. The admin
+  keeps the SOL ladder well above that; no program check, since the floor depends on the
+  preset, the quarter and the rent schedule, and on SPL pools there is none (the ATA's rent is
+  the payer's).
+- **A Squads-wrapped `update_config` carries one or two token rules.** With six rules the
+  full-params instruction is about 1,017 bytes of inner message, beyond what a legacy
+  transaction can wrap in a Squads proposal; a rule is 98 bytes plus the option byte, so the
+  runbook writes one or two slots per proposal. `initialize` is called directly by the upgrade
+  authority (703 bytes of data; a legacy transaction of about 1,044 bytes with the ORE mint
+  alone, 1,172 with five mints; the limit is 1,232).
 - **No `Paused` check on returns and settlements.** The pause flag blocks the three inflows
   and nothing else, so an incident response can never trap funds (ARCHITECTURE › Trust model).
 - **The keeper's SPL page is eight owners when token accounts must be created** (see §7),
@@ -1111,8 +1140,20 @@ entry (depth 1 → 32: 29,819 → 36,179).
   is idempotent through the `returned` bitmap.
 - **Reclaim is measured from `scheduled_kickoff`**, not `recorded_kickoff`, so an
   `update_kickoff` can never push the thirty-day window out (§10 Timing).
-- **`settle` on a suspended game.** No score is posted after a suspension, so a settle attempt
-  stops at `ScoresNotPosted` (6043) before the game status is consulted; `split` is the path.
+- **`settle` on a suspended game is refused** (`GameSuspended` 6070, 2026-10-24 audit A2),
+  however many quarters are posted: a quarter posted but unsettled at the mark is split with
+  the rest. Before this, a settle attempt stopped at `ScoresNotPosted` only because no score
+  follows a suspension, and a posted-but-unsettled quarter left the keeper a choice between
+  settling it and splitting it.
+- **The draw closes at kickoff** — the earlier of `scheduled_kickoff` and `recorded_kickoff`
+  (`DrawAfterKickoff` 6069, 2026-10-24 audit D1) — not at the first score post. A pool that
+  locks inside the last two minutes before kickoff cannot be drawn and is returned
+  (`return_boxes`' undrawn arm, from the same instant). The keeper can still veto one sample
+  window by closing its own `Var` inside it (Entropy lets the authority `Close` at any time;
+  nobody can sample a closed account) and have the admin replace it after: the same
+  best-of-three ARCHITECTURE › Randomness discloses, by another route, visible as a
+  `VarReplaced` event and a count on the pool; the keeper runbook treats a `Var` that vanished
+  before its sample as an incident.
 - **The `Var` is read after the `Sample` CPI** in `sample_var` through `reload`-equivalent
   re-decoding of the raw account (the only post-CPI read in the program), and `draw` verifies
   the revealed seed against the commit the program recorded at `set_var`, so an upgrade of
@@ -1205,6 +1246,28 @@ has the findings, the fixes and the tests; in one line each:
 | `security.txt` not in the binary. | Medium | `solana_security_txt!` in `lib.rs`. |
 | Frozen destination / freeze authority not refused; one `Var` on two pools; keeper + leader collusion on `end_at`; no status-change event; a closed pool's address re-creatable. | Medium / Low | Documented (PROGRAM §5.4, ARCHITECTURE › Randomness, the report); none changes an instruction. |
 | SOL dust underflow in `close_pool` under a raised rent; gate key equal to the program id; `has_one = game` untested on the return family. | Low | `saturating_sub`; `GateKeyMissing`; four tests. |
+
+### The 2026-10-24 internal audit
+
+Run on the six-token-slot change and, again, on the whole program, by four independent
+reviewers with the same brief as the day before (config and admin; money; the draw; accounts
+and access). The report is
+[`docs/audits/2026-10-24-internal-audit.md`](../../docs/audits/2026-10-24-internal-audit.md);
+in one line each:
+
+| Finding | Severity | Fix |
+|---|---|---|
+| `draw` was accepted at any time before the first score *post*; the keeper holds the seed and posts the scores, so after kickoff it could reveal a pool's value knowing the real score and draw only the pools where a chosen box won, returning the rest. | High | `draw` requires `now < min(scheduled_kickoff, recorded_kickoff)` (`DrawAfterKickoff` 6069) and a `Scheduled` game; `return_boxes` returns a `Locked`, undrawn pool from that instant. |
+| A legacy-Token payee could `SetAuthority(AccountOwner)` their derived ATA; `create_idempotent` then failed with `InvalidOwner` and held every payout of the pool. | High | The create is skipped when the destination is already a token account for the mint; the transfer still goes to the derived address. |
+| `settle` on a `Suspended` game with a posted, unsettled quarter let the keeper choose settle-then-split or split alone. | Low | `GameSuspended` 6070. |
+| PROGRAM §2's "an index is never reused for a different mint" was not enforced; `sponsor` reads `tokens[pool.token]` live, so a re-pointed slot changed existing pools' caps in another token's units; two slots could name one mint. | Low | `update_config` keeps a filled slot's mint (`InvalidConfig` otherwise, placeholder included); `validate()` requires non-default mints unique. |
+| The keeper can veto a sample window by closing its `Var` inside it. | Low | Documented (above, ARCHITECTURE › Randomness, PROGRAM §4.4); the admin's replacement cap and events are the control. |
+| §8 error list and three count assertions stale; a test comment; CU table in this file; `rotate_gate_key` has no status check; `reclaim_sponsorship` on `Settled` says `FeesAlreadyPaid` not `NotReturnable`. | Info | Fixed in the docs and tests; the two behaviours left as they are (harmless; cosmetic). |
+| The fuzz harness's own tests had not compiled since `Pool` gained `sponsored_boxes` (CI ran the fuzzer, never `cargo test -p mybarpool-fuzz`); its O3 oracle judged a token account by its owner field alone, so the A1 fixture read as a violation. | Info | The oracle also permits a permitted wallet's associated token address (§5.4's rule); a fourth planted-bug test; the harness's tests run in the CI fuzz job. |
+
+The money slice found nothing beyond two of the Infos, and re-verified that the 2026-10-23
+fixes hold. No instruction's account list changed, so the schema snapshot was extended, not
+re-frozen: two errors, 6069 and 6070, seventy-one in all.
 
 ## 10. Out of scope
 
