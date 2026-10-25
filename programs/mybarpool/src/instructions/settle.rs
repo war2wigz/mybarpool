@@ -16,7 +16,7 @@ use crate::errors::MybarpoolError;
 use crate::events::QuarterSettled;
 use crate::money::{prize_pool, quarter_prizes, FeeAmounts};
 use crate::payout::{pay_out, Spl};
-use crate::state::{GameRecord, PlatformConfig, Pool, PoolStatus};
+use crate::state::{GameRecord, GameStatus, PlatformConfig, Pool, PoolStatus};
 use crate::vault::pool_signer_seeds;
 use crate::winner::winning_box;
 
@@ -133,6 +133,13 @@ pub fn handle_settle(ctx: Context<Settle>, quarter: u8) -> Result<()> {
 
     // PROGRAM §4.5 checks, in order.
     pool.require_drawn()?;
+    // Once the admin marks the game suspended the remaining quarters are split, never
+    // settled; otherwise the keeper could pick settle-then-split or split alone per pool
+    // (2026-10-24 audit A2).
+    require!(
+        game.status != GameStatus::Suspended,
+        MybarpoolError::GameSuspended
+    );
     let next = pool
         .quarters_settled
         .checked_add(1)

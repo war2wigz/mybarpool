@@ -277,6 +277,13 @@ pub fn transfer_out_spl<'info>(
 /// `create_idempotent` through the pool's token program: a no-op when the account exists with
 /// this wallet and mint, the ATA program's own error when it exists and differs. The caller has
 /// already checked `ata` is the derived address, so a wrong account never reaches here.
+///
+/// The create is skipped when the account is already an initialised token account for this
+/// mint under this token program, whatever its current owner. A classic-Token holder may
+/// `SetAuthority(AccountOwner)` on their derived account; the ATA program's idempotent create
+/// then fails with `InvalidOwner`, which would let one payee hold every payout of the pool.
+/// The transfer still goes to the derived address, so the holder has paid whoever they gave
+/// the account to and nobody else is held (2026-10-24 audit A1).
 /// `arbitrary_cpi_call` names this CPI: its program id is `associated_token_program`, a
 /// parameter, and the lint cannot see that every caller derives it from a
 /// `Program<'info, AssociatedToken>` account, a fixed address by type.
@@ -296,6 +303,9 @@ pub fn create_ata_idempotent<'info>(
     token_program: &AccountInfo<'info>,
     associated_token_program: &AccountInfo<'info>,
 ) -> Result<()> {
+    if is_token_account_for(ata, mint.key, token_program.key) {
+        return Ok(());
+    }
     associated_token::create_idempotent(CpiContext::new(
         associated_token_program.key(),
         associated_token::Create {
@@ -307,6 +317,27 @@ pub fn create_ata_idempotent<'info>(
             token_program: token_program.clone(),
         },
     ))
+}
+
+/// Whether `account` is an initialised token account for `mint` owned by `token_program`,
+/// whoever its authority is now. `StateWithExtensions` unpacks a 165-byte classic account as
+/// well as a Token-2022 one; an uninitialised or empty account is `false`, so a missing ATA
+/// still goes through the create.
+pub fn is_token_account_for(
+    account: &AccountInfo<'_>,
+    mint: &Pubkey,
+    token_program: &Pubkey,
+) -> bool {
+    if account.owner != token_program {
+        return false;
+    }
+    let Ok(data) = account.try_borrow_data() else {
+        return false;
+    };
+    matches!(
+        StateWithExtensions::<TokenAccount2022>::unpack(&data),
+        Ok(state) if state.base.mint == *mint
+    )
 }
 
 /// PROGRAM §5.4: Token-2022's `MemoTransfer` extension, which any token account's owner may

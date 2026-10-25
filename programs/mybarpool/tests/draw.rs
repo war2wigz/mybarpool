@@ -16,7 +16,8 @@ use mybarpool::axes::axis;
 use mybarpool::constants::{AXIS_LABEL_AWAY, AXIS_LABEL_HOME, VAR_END_AT_MAX_LEAD};
 use mybarpool::entropy::fallback_hash;
 use mybarpool::{
-    DigitsDrawn, GameKey, MybarpoolError as E, Pool, PoolStatus, VarReplaced, VarSampled, VarSet,
+    DigitsDrawn, GameKey, GameStatus, MybarpoolError as E, Pool, PoolStatus, VarReplaced,
+    VarSampled, VarSet,
 };
 use solana_pubkey::Pubkey;
 
@@ -1423,6 +1424,122 @@ fn draw_after_the_first_score_post_is_refused() {
         &accounts,
         &[Check::err(custom(anchor(ErrorCode::ConstraintHasOne)))],
     );
+}
+
+/// `draw_mollusk(false)` with the clock moved to `unix_timestamp`.
+fn draw_mollusk_at(unix_timestamp: i64) -> mollusk_svm::Mollusk {
+    let mut m = draw_mollusk(false);
+    m.sysvars.clock.unix_timestamp = unix_timestamp;
+    m
+}
+
+#[test]
+fn draw_at_or_after_kickoff_is_refused_and_the_second_before_is_accepted() {
+    // 2026-10-24 audit D1: from kickoff on the game has a shape the seed holder can read, so
+    // a draw at or after `scheduled_kickoff` is `DrawAfterKickoff` even with nothing posted;
+    // the second before is the last one accepted. Checked after AlreadyDrawn and before the
+    // scores check and the Var reads.
+    let f = Fixture::new();
+    let var = f.var_key();
+    let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
+    for at in [SCHEDULED, SCHEDULED + 1, SCHEDULED + 4 * 3_600] {
+        let m = draw_mollusk_at(at);
+        let accounts = draw_accounts(
+            &f,
+            &m,
+            &pool,
+            Some((&var, &f.revealed_var(END_AT, END_HASH, &SEED))),
+        );
+        let r = m.process_and_validate_instruction(
+            &draw_ix(&f.keeper, &pool, &var),
+            &accounts,
+            &[Check::err(custom(err(E::DrawAfterKickoff)))],
+        );
+        assert_eq!(decode_pool(account_of(&r, &pool_key(&f))), pool, "{at}");
+    }
+    let m = draw_mollusk_at(SCHEDULED - 1);
+    let accounts = draw_accounts(
+        &f,
+        &m,
+        &pool,
+        Some((&var, &f.revealed_var(END_AT, END_HASH, &SEED))),
+    );
+    let r = m.process_and_validate_instruction(
+        &draw_ix(&f.keeper, &pool, &var),
+        &accounts,
+        &[Check::success()],
+    );
+    assert_eq!(
+        decode_pool(account_of(&r, &pool_key(&f))).status,
+        PoolStatus::Drawn
+    );
+}
+
+#[test]
+fn draw_deadline_is_the_earlier_of_the_scheduled_and_recorded_kickoff() {
+    // 2026-10-24 audit D1: a keeper-pushed `recorded_kickoff` cannot reopen the window (the
+    // scheduled time still closes it); a kickoff moved earlier closes it at the recorded time.
+    let f = Fixture::new();
+    let var = f.var_key();
+    let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
+    let revealed = f.revealed_var(END_AT, END_HASH, &SEED);
+    let cases = [
+        (SCHEDULED + 3_600, SCHEDULED, Err(E::DrawAfterKickoff)),
+        (SCHEDULED + 3_600, SCHEDULED - 1, Ok(())),
+        (
+            SCHEDULED - 3_600,
+            SCHEDULED - 3_600,
+            Err(E::DrawAfterKickoff),
+        ),
+        (SCHEDULED - 3_600, SCHEDULED - 3_601, Ok(())),
+    ];
+    for (recorded, at, expected) in cases {
+        let m = draw_mollusk_at(at);
+        let mut accounts = draw_accounts(&f, &m, &pool, Some((&var, &revealed)));
+        set_account(
+            &mut accounts,
+            standard_game(),
+            game_record_account(&moved_record(recorded)),
+        );
+        let check = match expected {
+            Ok(()) => Check::success(),
+            Err(e) => Check::err(custom(err(e))),
+        };
+        m.process_and_validate_instruction(&draw_ix(&f.keeper, &pool, &var), &accounts, &[check]);
+    }
+}
+
+#[test]
+fn draw_on_a_marked_game_is_game_not_scheduled() {
+    // 2026-10-24 audit: a marked game's pools are returned or split, never drawn. Checked
+    // before the deadline, so the error names the status rather than the time.
+    let f = Fixture::new();
+    let m = draw_mollusk(false);
+    let var = f.var_key();
+    let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
+    for status in [
+        GameStatus::Postponed,
+        GameStatus::Cancelled,
+        GameStatus::Suspended,
+    ] {
+        let mut accounts = draw_accounts(
+            &f,
+            &m,
+            &pool,
+            Some((&var, &f.revealed_var(END_AT, END_HASH, &SEED))),
+        );
+        set_account(
+            &mut accounts,
+            standard_game(),
+            game_record_account(&marked_record(status)),
+        );
+        let r = m.process_and_validate_instruction(
+            &draw_ix(&f.keeper, &pool, &var),
+            &accounts,
+            &[Check::err(custom(err(E::GameNotScheduled)))],
+        );
+        assert_eq!(decode_pool(account_of(&r, &pool_key(&f))), pool);
+    }
 }
 
 #[test]

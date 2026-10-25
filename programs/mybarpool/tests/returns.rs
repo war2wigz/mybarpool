@@ -330,21 +330,105 @@ fn return_boxes_duplicates_and_strangers_are_harmless() {
 }
 
 #[test]
-fn return_boxes_locked_or_drawn_on_a_scheduled_game_waits() {
-    // ARCHITECTURE › Returns "Ambiguous game status … stays locked": however late, a Locked
-    // or Drawn pool on a Scheduled game is not returnable.
+fn return_boxes_drawn_on_a_scheduled_game_waits() {
+    // ARCHITECTURE › Returns "Ambiguous game status … stays locked": however late, a Drawn
+    // pool on a Scheduled game is not returnable; a Locked one waits only until the draw
+    // window closes (below).
     let f = Fixture::new();
     let m = mollusk_for_settlement(SCHEDULED + 86_400);
-    for status in [PoolStatus::Locked, PoolStatus::Drawn] {
-        let pool = sol_pool(&f, status, &full_plan(&f));
-        let accounts = setup(&f, &m, &pool, &standard_record(), 0);
-        fails_with(
-            &m,
-            &rb(&f, &pool, None, &[f.creator, f.buyer, f.buyer_2]),
-            &accounts,
-            err(E::NotReturnable),
-        );
-    }
+    let pool = sol_pool(&f, PoolStatus::Drawn, &full_plan(&f));
+    let accounts = setup(&f, &m, &pool, &standard_record(), 0);
+    fails_with(
+        &m,
+        &rb(&f, &pool, None, &[f.creator, f.buyer, f.buyer_2]),
+        &accounts,
+        err(E::NotReturnable),
+    );
+    let early = mollusk_for_settlement(SCHEDULED - 1);
+    let pool = sol_pool(&f, PoolStatus::Locked, &full_plan(&f));
+    let accounts = setup(&f, &early, &pool, &standard_record(), 0);
+    fails_with(
+        &early,
+        &rb(&f, &pool, None, &[f.creator, f.buyer, f.buyer_2]),
+        &accounts,
+        err(E::NotReturnable),
+    );
+}
+
+#[test]
+fn return_boxes_locked_undrawn_at_the_draw_deadline_returns_every_box() {
+    // PROGRAM §4.6 undrawn (2026-10-24 audit D1): a filled pool that never got axes by the
+    // time `draw` closes is returned at the purchase price; the counter is not read (the pool
+    // left Open at the fill), nothing is marked as cancelled.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(SCHEDULED);
+    let pool = sol_pool(&f, PoolStatus::Locked, &full_plan(&f));
+    assert!(!pool.drawn);
+    let accounts = setup(&f, &m, &pool, &standard_record(), 0);
+    let key = pool_key(&pool);
+    let result = ok(
+        &m,
+        &rb(&f, &pool, None, &[f.creator, f.buyer, f.buyer_2]),
+        &accounts,
+    );
+    let after = decode_pool(account_of(&result, &key));
+    let mut expected = pool.clone();
+    expected.status = PoolStatus::Returned;
+    expected.returned = 0x1FF_FFFF;
+    assert_eq!(after, expected, "whole-struct: nothing else changed");
+    assert_eq!(
+        delta(&result, &accounts, &f.creator),
+        i128::from(CREATOR_RETURN)
+    );
+    assert_eq!(
+        delta(&result, &accounts, &f.buyer),
+        i128::from(BUYER_RETURN)
+    );
+    assert_eq!(
+        delta(&result, &accounts, &f.buyer_2),
+        i128::from(BUYER_RETURN)
+    );
+    assert_eq!(
+        account_of(&result, &vault_pda(&key).0).lamports,
+        rent_for(0)
+    );
+    assert_eq!(
+        decode_counter(account_of(&result, &counter(&f))).open_count,
+        0,
+        "the planted counter is untouched"
+    );
+}
+
+#[test]
+fn return_boxes_locked_undrawn_reads_the_earlier_kickoff() {
+    // PROGRAM §4.6 undrawn: the deadline is the earlier of the scheduled and the recorded
+    // kickoff, the same instant `draw` stops accepting. A kickoff moved later does not hold
+    // the pool past the scheduled time; one moved earlier closes it at the recorded time.
+    let f = Fixture::new();
+    let pool = sol_pool(&f, PoolStatus::Locked, &full_plan(&f));
+    let ix = rb(&f, &pool, None, &[f.creator, f.buyer, f.buyer_2]);
+
+    let later = moved_record(SCHEDULED + 3_600);
+    let before = mollusk_for_settlement(SCHEDULED - 1);
+    fails_with(
+        &before,
+        &ix,
+        &setup(&f, &before, &pool, &later, 0),
+        err(E::NotReturnable),
+    );
+    let at = mollusk_for_settlement(SCHEDULED);
+    ok(&at, &ix, &setup(&f, &at, &pool, &later, 0));
+
+    let earlier = moved_record(SCHEDULED - 3_600);
+    let before = mollusk_for_settlement(SCHEDULED - 3_601);
+    fails_with(
+        &before,
+        &ix,
+        &setup(&f, &before, &pool, &earlier, 0),
+        err(E::NotReturnable),
+    );
+    let at = mollusk_for_settlement(SCHEDULED - 3_600);
+    ok(&at, &ix, &setup(&f, &at, &pool, &earlier, 0));
 }
 
 // ---------------------------------------------------------------------------

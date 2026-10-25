@@ -54,8 +54,16 @@ pub fn handle_draw(ctx: Context<Draw>) -> Result<()> {
     // PROGRAM §4.4 checks, in order: the value binding to the recorded Var.
     pool.require_locked()?;
     require!(!pool.drawn, MybarpoolError::AlreadyDrawn);
-    // Once a score is on the record no axes may be chosen against it; a pool still Locked at
-    // the first post is the admin's to cancel (ARCHITECTURE › Randomness).
+    // A marked game's pools are returned or split, never drawn (2026-10-24 audit).
+    game.require_scheduled()?;
+    // The window closes at kickoff: from then on the game has a shape the seed holder could
+    // read before choosing which pools to give axes. A pool still Locked at kickoff is
+    // returned by `return_boxes` (2026-10-24 audit D1; ARCHITECTURE › Randomness).
+    require!(
+        clock.unix_timestamp < game.draw_deadline(),
+        MybarpoolError::DrawAfterKickoff
+    );
+    // Defence in depth behind the deadline: no axes against a posted score (2026-10-23 audit F3).
     require!(game.quarters_posted == 0, MybarpoolError::DrawAfterScores);
     require_keys_neq!(pool.var, Pubkey::default(), MybarpoolError::VarNotSet);
     require_keys_eq!(var.key(), pool.var, MybarpoolError::VarMismatch);

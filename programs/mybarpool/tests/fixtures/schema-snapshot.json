@@ -3376,6 +3376,14 @@
     {
       "name": "DrawAfterScores",
       "code": 6068
+    },
+    {
+      "name": "DrawAfterKickoff",
+      "code": 6069
+    },
+    {
+      "name": "GameSuspended",
+      "code": 6070
     }
   ]
 }

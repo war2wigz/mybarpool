@@ -1115,8 +1115,8 @@ fn buy_gated_is_composable() {
 #[test]
 fn gating_events_and_layout_are_unchanged() {
     // PROGRAM §3.3: Pool::SIZE 1,442, access_type 186, gate_key 187, allowlist_root 219;
-    // §8: 69 errors (6000–6068); the IDL is 27 / 6 / 25 / 69 after the 2026-10-21 `sponsor_box`
-    // and the 2026-10-23 internal audit's three errors
+    // §8: 71 errors (6000–6070); the IDL is 27 / 6 / 25 / 71 after the 2026-10-21 `sponsor_box`,
+    // the 2026-10-23 internal audit's three errors and the 2026-10-24 audit's two
     // (layout.rs and errors.rs hold the per-field and per-code assertions).
     assert_eq!(Pool::SIZE, 1_442);
     assert_eq!(err(E::VarCommitMismatch), 6064);
@@ -1126,7 +1126,7 @@ fn gating_events_and_layout_are_unchanged() {
     let n = |k: &str| idl[k].as_array().unwrap().len();
     assert_eq!(
         (n("instructions"), n("accounts"), n("events"), n("errors")),
-        (27, 6, 25, 69)
+        (27, 6, 25, 71)
     );
     let buy = idl["instructions"]
         .as_array()

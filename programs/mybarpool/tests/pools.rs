@@ -261,11 +261,12 @@ fn price_must_be_on_the_ladder() {
 
 #[test]
 fn a_disabled_or_unknown_token_is_token_disabled() {
-    // PROGRAM §4.3 tokens[token].enabled; token ≥ 3 has no rule.
+    // PROGRAM §4.3 tokens[token].enabled: 1 and 3 are disabled placeholders, 6 and above have
+    // no rule at all.
     let f = Fixture::new();
     let m = mollusk_for_pools(T0, SLOT_HASH);
     let c = f.expected_config();
-    for token in [1u8, 3, 255] {
+    for token in [1u8, 3, 6, 255] {
         expect_create(
             &f,
             &m,

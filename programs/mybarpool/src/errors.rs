@@ -261,4 +261,14 @@ pub enum MybarpoolError {
     /// 6068 (2026-10-23 audit F3): `draw` after the game's first score post (PROGRAM §4.4).
     #[msg("Draw refused after the first score post")]
     DrawAfterScores,
+    /// 6069 (2026-10-24 audit D1): `draw` at or after the game's kickoff — the earlier of
+    /// `scheduled_kickoff` and `recorded_kickoff`. Once the game is being played the keeper,
+    /// who holds the seed, knows the value and the scores together and could choose which
+    /// pools to reveal; a pool still Locked at kickoff is returned (PROGRAM §4.4, §4.6).
+    #[msg("Draw refused at or after kickoff")]
+    DrawAfterKickoff,
+    /// 6070 (2026-10-24 audit A2): `settle` on a game marked `Suspended`. What was paid stays
+    /// paid; the rest of the pool is returned (no payout yet) or split (PROGRAM §4.5, §4.6).
+    #[msg("Game is suspended; no further settlement")]
+    GameSuspended,
 }

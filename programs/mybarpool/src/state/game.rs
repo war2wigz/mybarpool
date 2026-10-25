@@ -131,4 +131,13 @@ impl GameRecord {
         );
         Ok(())
     }
+
+    /// The last instant a `draw` is accepted (PROGRAM §4.4): the earlier of the scheduled and
+    /// the recorded kickoff. Scores exist from kickoff on, so a draw after it would let the
+    /// seed holder choose which pools get axes once the game's shape is known. The earlier of
+    /// the two so that a keeper-pushed `recorded_kickoff` cannot reopen the window
+    /// (2026-10-24 audit D1).
+    pub fn draw_deadline(&self) -> i64 {
+        self.scheduled_kickoff.min(self.recorded_kickoff)
+    }
 }

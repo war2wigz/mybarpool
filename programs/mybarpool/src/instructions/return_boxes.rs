@@ -1,7 +1,8 @@
 //! `return_boxes`, PROGRAM §4.6: one instruction for every return path. On a
-//! pool unfilled at kickoff, a game the admin marked postponed, cancelled or
-//! suspended before any payout, a pool the admin cancelled, or a continuation
-//! of any of those, the keeper passes the owners to pay in this call and the
+//! pool unfilled at kickoff, a pool filled but still undrawn when the draw
+//! window closes, a game the admin marked postponed, cancelled or suspended
+//! before any payout, a pool the admin cancelled, or a continuation of any of
+//! those, the keeper passes the owners to pay in this call and the
 //! program returns each of them exactly the purchase price of their unreturned
 //! boxes (ARCHITECTURE › Returns "a return is always the full purchase price").
 
@@ -93,13 +94,16 @@ pub fn handle_return_boxes<'info>(ctx: Context<'info, ReturnBoxes<'info>>) -> Re
         MybarpoolError::NotReturnable
     );
     let unfilled = pool.status == PoolStatus::Open && now >= game.recorded_kickoff;
+    // Filled but never drawn by the time `draw` closes (2026-10-24 audit D1): it can no longer
+    // get axes, so the keeper returns it without waiting for the admin.
+    let undrawn = pool.status == PoolStatus::Locked && !pool.drawn && now >= game.draw_deadline();
     let marked =
         matches!(game.status, GameStatus::Postponed | GameStatus::Cancelled) && !pool.fees_paid;
     let suspended = game.status == GameStatus::Suspended && !pool.fees_paid;
     let cancelled = pool.cancelled_by_admin;
     let continuing = pool.status == PoolStatus::Returned && !pool.fees_paid;
     require!(
-        unfilled || marked || suspended || cancelled || continuing,
+        unfilled || undrawn || marked || suspended || cancelled || continuing,
         MybarpoolError::NotReturnable
     );
 

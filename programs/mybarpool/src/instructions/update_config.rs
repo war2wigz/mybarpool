@@ -123,8 +123,14 @@ pub fn handle_update_config(ctx: Context<UpdateConfig>, params: UpdateConfigPara
     if let Some(v) = params.paused {
         config.paused = v;
     }
+    // PROGRAM §2: an index is never reused for a different mint. Once a slot names a mint
+    // the mint is fixed; `sponsor` and `create_pool` read `tokens[pool.token]` live, so a
+    // re-pointed slot would change existing pools' caps in the wrong units (2026-10-24 audit C1).
     for (slot, rule) in config.tokens.iter_mut().zip(params.tokens.iter()) {
         if let Some(r) = rule {
+            if !slot.has_default_mint() {
+                require_keys_eq!(r.mint, slot.mint, MybarpoolError::InvalidConfig);
+            }
             *slot = *r;
         }
     }

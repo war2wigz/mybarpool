@@ -755,6 +755,90 @@ fn a_spare_slot_is_filled_by_update_config_with_its_mint() {
     assert_eq!(config.tokens[2], f.ore_rule());
 }
 
+#[test]
+fn a_filled_slot_keeps_its_mint_for_ever() {
+    // PROGRAM §2 "an index is never reused for a different mint" (2026-10-24 audit C1):
+    // `sponsor` and `create_pool` read `tokens[pool.token]` live, so a re-pointed slot would
+    // judge existing pools' caps in another token's units. The ladder and the cap of a filled
+    // slot may change; its mint may not, and it may not go back to a placeholder.
+    let f = Fixture::new();
+    let m = mollusk();
+
+    // The ladder of the ORE slot changes with the same mint.
+    let mut params = no_update();
+    let mut ore = f.ore_rule();
+    ore.max_sponsorship = ore.max_sponsorship * 2;
+    params.tokens[2] = Some(ore);
+    let result = m.process_and_validate_instruction(
+        &update_config_ix(&f.admin, params, None, Some(&f.ore_mint)),
+        &base_accounts(&f, Some(&f.expected_config())),
+        &[Check::success()],
+    );
+    let config = decode_config(account_of(&result, &config_pda().0));
+    assert_eq!(config.tokens[2], ore);
+
+    // A different mint in the ORE slot, with its account present, is refused.
+    let other = Pubkey::new_unique();
+    let mut params = no_update();
+    let mut repointed = f.ore_rule();
+    repointed.mint = to_a(&other);
+    params.tokens[2] = Some(repointed);
+    let mut accounts = base_accounts(&f, Some(&f.expected_config()));
+    accounts.push((other, legacy_mint_account(11)));
+    let result = m.process_and_validate_instruction(
+        &update_config_ix(&f.admin, params, None, Some(&other)),
+        &accounts,
+        &[Check::err(custom(err(E::InvalidConfig)))],
+    );
+    assert_eq!(
+        decode_config(account_of(&result, &config_pda().0)),
+        f.expected_config()
+    );
+
+    // Back to a placeholder is refused too.
+    let mut params = no_update();
+    params.tokens[2] = Some(TokenRule::PLACEHOLDER);
+    m.process_and_validate_instruction(
+        &update_config_ix(&f.admin, params, None, None),
+        &base_accounts(&f, Some(&f.expected_config())),
+        &[Check::err(custom(err(E::InvalidConfig)))],
+    );
+}
+
+#[test]
+fn one_mint_may_fill_only_one_slot() {
+    // PROGRAM §2 "one mint, one index" (2026-10-24 audit C1): the ORE mint in a spare slot
+    // as well, by `update_config` with the account in the slot's position, or by
+    // `initialize`, is InvalidConfig.
+    let f = Fixture::new();
+    let m = mollusk();
+    let mut params = no_update();
+    params.tokens[3] = Some(f.ore_rule());
+    let mut mints: Mints = [None; TOKEN_COUNT];
+    mints[3] = Some(&f.ore_mint);
+    let result = m.process_and_validate_instruction(
+        &update_config_ix_with_mints(&f.admin, params, mints),
+        &base_accounts(&f, Some(&f.expected_config())),
+        &[Check::err(custom(err(E::InvalidConfig)))],
+    );
+    assert_eq!(
+        decode_config(account_of(&result, &config_pda().0)),
+        f.expected_config()
+    );
+
+    let mut params = f.initialize_params();
+    params.tokens[3] = f.ore_rule();
+    m.process_and_validate_instruction(
+        &initialize_ix_with_mints(
+            &f.admin,
+            params,
+            [None, None, Some(&f.ore_mint), Some(&f.ore_mint), None, None],
+        ),
+        &base_accounts(&f, None),
+        &[Check::err(custom(err(E::InvalidConfig)))],
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Wallet overrides
 // ---------------------------------------------------------------------------

@@ -706,6 +706,54 @@ fn settle_a_quarter_whose_score_is_not_posted_is_scores_not_posted() {
 }
 
 #[test]
+fn settle_on_a_suspended_game_is_game_suspended() {
+    // 2026-10-24 audit A2: once the admin marks the game suspended the unpaid quarters are
+    // split, never settled, however many are posted; otherwise the keeper could choose
+    // settle-then-split or split alone per pool. Checked after PoolNotDrawn and before the
+    // ordering and scores checks; nothing moves.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(T0);
+    for (pool, posted, quarter) in [
+        (standard(&f), 1u8, 1u8),
+        (standard(&f), 4, 1),
+        (standard_settled(&f, 1, true), 2, 2),
+        (standard_settled(&f, 3, true), 4, 4),
+    ] {
+        let (ix, mut accounts) = settle_sol(
+            &f,
+            &m,
+            &pool,
+            posted,
+            quarter,
+            &winner_of(&f, usize::from(quarter - 1)),
+            None,
+        );
+        set_account(
+            &mut accounts,
+            standard_game(),
+            game_record_account(&suspended_record_with_quarters(posted)),
+        );
+        let r = m.process_and_validate_instruction(
+            &ix,
+            &accounts,
+            &[Check::err(custom(err(E::GameSuspended)))],
+        );
+        assert_eq!(decode_pool(account_of(&r, &pool_key(&f, &pool))), pool);
+    }
+    // Before the ordering check: a wrong quarter on a suspended game is still GameSuspended.
+    let (ix, mut accounts) = settle_sol(&f, &m, &standard(&f), 2, 2, &f.buyer_2, None);
+    set_account(
+        &mut accounts,
+        standard_game(),
+        game_record_account(&suspended_record_with_quarters(2)),
+    );
+    assert_eq!(
+        custom_error(&m.process_instruction(&ix, &accounts)),
+        Some(err(E::GameSuspended))
+    );
+}
+
+#[test]
 fn settle_with_the_wrong_winner_is_winner_mismatch() {
     // PROGRAM §4.5; audit focus "never passed in": box 17 is buyer_2's.
     let f = Fixture::new();
@@ -1121,9 +1169,9 @@ fn ore_settle_q1_with_every_ata_present_creates_nothing() {
     assert_eq!(token_amount_of(&result, &spl.fee_ata), ORE_PLATFORM_FEE);
     assert_eq!(token_amount_of(&result, &spl.creator_ata), ORE_CREATOR_FEE);
     assert_eq!(account_of(&result, &f.keeper).lamports, k0);
-    // Inner instructions: three create_idempotent CPIs (each a no-op that calls nothing),
-    // three transfer_checked, one event CPI; no System `CreateAccount` (0) and no Token
-    // `InitializeAccount3` (18).
+    // Inner instructions: three transfer_checked and one event CPI; the create is skipped
+    // for an account that is already initialised for the mint (2026-10-24 audit A1), so no
+    // ATA-program CPI, no System `CreateAccount` (0) and no Token `InitializeAccount3` (18).
     assert_eq!(inner_count(&result, &Pubkey::default(), 0), 0);
     assert_eq!(inner_count(&result, &token_program_id(), 18), 0);
     assert_eq!(
@@ -1131,6 +1179,111 @@ fn ore_settle_q1_with_every_ata_present_creates_nothing() {
         3,
         "three transfer_checked"
     );
+    assert_eq!(
+        inner_count(&result, &associated_token_program_id(), 1),
+        0,
+        "no create_idempotent"
+    );
+}
+
+/// spl-token `SetAuthority { authority_type: AccountOwner, new_authority: Some(new) }`
+/// (tag 6, type 2, `COption::Some`) signed by the current owner. Classic Token accepts it on
+/// an associated token account; Token-2022 ATAs carry `ImmutableOwner` and refuse it.
+fn set_account_owner_ix(
+    token_account: &Pubkey,
+    current_owner: &Pubkey,
+    new: &Pubkey,
+) -> solana_instruction::Instruction {
+    let mut data = vec![6u8, 2u8, 1u8];
+    data.extend_from_slice(new.as_ref());
+    solana_instruction::Instruction::new_with_bytes(
+        token_program_id(),
+        &data,
+        vec![
+            solana_instruction::AccountMeta::new(*token_account, false),
+            solana_instruction::AccountMeta::new_readonly(*current_owner, true),
+        ],
+    )
+}
+
+#[test]
+fn ore_settle_pays_a_derived_ata_whose_owner_was_reassigned() {
+    // 2026-10-24 audit A1: an ORE payee hands their derived ATA to another key with
+    // `SetAuthority(AccountOwner)`. The ATA program's idempotent create would then fail with
+    // `InvalidOwner` and hold every payout of the pool; the program skips the create for an
+    // account already initialised for the mint and pays the derived address, so the payee has
+    // paid whoever they gave the account to and nobody else is held.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(T0);
+    let pool = drawn_pool_for_settlement(&f, &f.expected_config(), &ore_params(0), 0);
+    let (spl, mut accounts) = ore_setup(&f, &m, &pool, 1, 25 * PRICE_ORE, &f.buyer_2, true);
+    let stranger = f.buyer;
+    let reassign = set_account_owner_ix(&spl.winner_ata, &f.buyer_2, &stranger);
+    let step = m.process_and_validate_instruction(&reassign, &accounts, &[Check::success()]);
+    let hijacked = account_of(&step, &spl.winner_ata).clone();
+    assert_eq!(hijacked.owner, token_program_id());
+    assert_eq!(decode_token_owner(&hijacked), stranger);
+    set_account(&mut accounts, spl.winner_ata, hijacked);
+
+    let ix = settle_ix(
+        &f,
+        &f.keeper,
+        &pool,
+        &standard_game(),
+        1,
+        &f.buyer_2,
+        SettleAccounts {
+            integrator: None,
+            spl: Some(spl),
+        },
+    );
+    let k0 = lamports_of(&accounts, &f.keeper);
+    let result = m.process_and_validate_instruction(&ix, &accounts, &[Check::success()]);
+    let winner_ata = account_of(&result, &spl.winner_ata);
+    assert_eq!(
+        decode_token_owner(winner_ata),
+        stranger,
+        "the account stays theirs"
+    );
+    assert_eq!(decode_token_amount(winner_ata), ORE_Q[0]);
+    assert_eq!(token_amount_of(&result, &spl.fee_ata), ORE_PLATFORM_FEE);
+    assert_eq!(token_amount_of(&result, &spl.creator_ata), ORE_CREATOR_FEE);
+    assert_eq!(account_of(&result, &f.keeper).lamports, k0);
+    assert_eq!(
+        decode_pool(account_of(&result, &pool_key(&f, &pool))),
+        settled_pool(&f, &f.expected_config(), &ore_params(0), 0, 1, true)
+    );
+}
+
+#[test]
+fn ore_settle_with_a_foreign_token_account_at_the_derived_address_still_fails() {
+    // The skip is only for an account initialised for the pool's mint: a token account for
+    // another mint planted at the derived address (not reachable on-chain, the address is
+    // per-mint) goes to the ATA program, which refuses it.
+    let f = Fixture::new();
+    let m = mollusk_for_settlement(T0);
+    let pool = drawn_pool_for_settlement(&f, &f.expected_config(), &ore_params(0), 0);
+    let (spl, mut accounts) = ore_setup(&f, &m, &pool, 1, 25 * PRICE_ORE, &f.buyer_2, true);
+    set_account(
+        &mut accounts,
+        spl.winner_ata,
+        token_account(&f.skr_mint, &f.buyer_2, 0),
+    );
+    let ix = settle_ix(
+        &f,
+        &f.keeper,
+        &pool,
+        &standard_game(),
+        1,
+        &f.buyer_2,
+        SettleAccounts {
+            integrator: None,
+            spl: Some(spl),
+        },
+    );
+    let r = m.process_instruction(&ix, &accounts);
+    assert!(!r.program_result.is_ok());
+    assert_eq!(decode_pool(account_of(&r, &pool_key(&f, &pool))), pool);
 }
 
 #[test]

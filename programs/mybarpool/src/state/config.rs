@@ -182,6 +182,14 @@ impl PlatformConfig {
         for (index, rule) in self.tokens.iter().enumerate() {
             rule.validate_ladder()?;
             rule.validate_shape(index)?;
+            // PROGRAM §2: one mint, one index. Two slots naming the same mint would let
+            // one pool's cap be read from another slot's rule (2026-10-24 audit C1).
+            if !rule.has_default_mint() {
+                require!(
+                    self.tokens[..index].iter().all(|r| r.mint != rule.mint),
+                    MybarpoolError::InvalidConfig
+                );
+            }
         }
         Ok(())
     }

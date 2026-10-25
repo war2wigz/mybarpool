@@ -4650,6 +4650,16 @@
       "code": 6068,
       "name": "DrawAfterScores",
       "msg": "Draw refused after the first score post"
+    },
+    {
+      "code": 6069,
+      "name": "DrawAfterKickoff",
+      "msg": "Draw refused at or after kickoff"
+    },
+    {
+      "code": 6070,
+      "name": "GameSuspended",
+      "msg": "Game is suspended; no further settlement"
     }
   ],
   "types": [
