@@ -4,6 +4,9 @@
 //! 1. A success that moves lamports to a stranger fails O3 (destinations).
 //! 2. A success that leaves the vault one lamport short fails O4 (the §3.4 discrepancy moved).
 //! 3. A failure that changed an account fails O2 (atomic).
+//! 4. An SPL success that pays a stranger's token account fails O3, while paying a box owner's
+//!    *derived* associated token account whose owner field was reassigned passes (PROGRAM §5.4
+//!    pays the derived address; the 2026-10-24 audit's A1).
 //!
 //! Each planted bug's healthy twin passes, so the tests pin the oracle's edge, not just its
 //! presence.
@@ -13,7 +16,7 @@ use anchor_lang::{AccountSerialize, Discriminator};
 use mybarpool::{AccessType, PayoutPreset, Pool, PoolStatus};
 use mybarpool_fuzz::model::{Account, Context, Key, Meta, Outcome, Result as Res};
 use mybarpool_fuzz::mutate::SYSTEM_PROGRAM;
-use mybarpool_fuzz::oracle::{check, vault_rent_floor};
+use mybarpool_fuzz::oracle::{associated_token_address, check, vault_rent_floor, TOKEN_PROGRAM};
 
 const PRICE: u64 = 50_000_000; // ARCHITECTURE › Buying: 0.05 SOL
 const POOL: Key = [0xA0; 32];
@@ -77,7 +80,8 @@ fn pool(status: PoolStatus, sold: u8) -> Pool {
         bump: 254,
         vault_bump: 253,
         var_commit: [0; 32],
-        reserved: [0; 96],
+        sponsored_boxes: 0,
+        reserved: [0; 92],
     }
 }
 
@@ -253,4 +257,82 @@ fn a_failure_that_changed_an_account_fails_o2() {
         compute_units: 200_000,
     };
     assert_eq!(lines(&before, &crashed), vec!["O1 no crash"]);
+}
+
+const MINT: Key = [0x3E; 32];
+
+/// A legacy-Token token account (`mint`, `owner`, `amount`; the rest zero).
+fn token(key: Key, owner: Key, amount: u64) -> Account {
+    let mut data = vec![0u8; 165];
+    data[0..32].copy_from_slice(&MINT);
+    data[32..64].copy_from_slice(&owner);
+    data[64..72].copy_from_slice(&amount.to_le_bytes());
+    Account {
+        key,
+        lamports: 2_039_280,
+        data,
+        owner: TOKEN_PROGRAM,
+        executable: false,
+    }
+}
+
+#[test]
+fn an_spl_success_that_pays_a_strangers_token_account_fails_o3_but_the_derived_ata_passes() {
+    let spl = |p: &mut Pool| {
+        p.token = 1;
+        p.mint = Pubkey::new_from_array(MINT);
+        p.token_program = Pubkey::new_from_array(TOKEN_PROGRAM);
+    };
+    let mut p = pool(PoolStatus::Returned, 2);
+    spl(&mut p);
+    let keeper = system([0x11; 32], 1_000_000_000);
+    // The buyer's associated token address, whose owner field the buyer reassigned to the
+    // stranger; and a token account of the stranger's own at some other address.
+    let buyer_ata = associated_token_address(&BUYER, &MINT, &TOKEN_PROGRAM);
+    let strangers_own: Key = [0x56; 32];
+    let before = context(vec![
+        keeper.clone(),
+        pool_account(&p),
+        token(VAULT, POOL, 2 * PRICE),
+        token(buyer_ata, STRANGER, 0),
+        token(strangers_own, STRANGER, 0),
+    ]);
+
+    let mut paid = pool(PoolStatus::Returned, 2);
+    spl(&mut paid);
+    paid.returned = 0b01;
+
+    // Healthy: the box price lands at the buyer's derived address, whoever its owner field
+    // names now.
+    let healthy = Outcome {
+        result: Res::Success,
+        accounts: vec![
+            keeper.clone(),
+            pool_account(&paid),
+            token(VAULT, POOL, PRICE),
+            token(buyer_ata, STRANGER, PRICE),
+            token(strangers_own, STRANGER, 0),
+        ],
+        compute_units: 1,
+    };
+    assert!(
+        check(&before, &healthy).is_empty(),
+        "{:?}",
+        check(&before, &healthy)
+    );
+
+    // Planted: the same tokens land in the stranger's own account.
+    let planted = Outcome {
+        result: Res::Success,
+        accounts: vec![
+            keeper,
+            pool_account(&paid),
+            token(VAULT, POOL, PRICE),
+            token(buyer_ata, STRANGER, 0),
+            token(strangers_own, STRANGER, PRICE),
+        ],
+        compute_units: 1,
+    };
+    let found = lines(&before, &planted);
+    assert_eq!(found, vec!["O3 destinations"]);
 }

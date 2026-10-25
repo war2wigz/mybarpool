@@ -64,7 +64,10 @@ Checked on every mutated run (`src/oracle.rs`):
   the destinations the instruction allows, read from the *resulting* pool and config: `buy` the
   vault only; `settle` the winner, `fee_wallet`, `creator`, `integrator` or their token
   accounts; every other instruction a box owner, a sponsor's recorded wallet, `fee_wallet`,
-  `creator`, `integrator`, the vault, or a state account receiving its rent.
+  `creator`, `integrator`, the vault, or a state account receiving its rent. A token account
+  counts as a wallet's when the wallet owns it *or* when it sits at the wallet's associated
+  token address for its mint and token program: PROGRAM §5.4 pays the derived address, and an
+  owner field the payee reassigned themselves does not move the payout.
 - **O4 vault invariant, on success** — PROGRAM §3.4 holds for every pool in the result whose
   vault is in the context, whenever the input satisfied it: the fuzzer plants vaults and money
   fields anywhere, and a pool that was already off §3.4, or that breaks a §3.3 relation the
@@ -98,10 +101,12 @@ plan as data, the result and the oracle lines, and exits 1. Re-run with the prin
 
 ## Harness correctness
 
-`tests/oracle.rs` plants three bugs in synthetic outcomes — a success that pays a stranger
+`tests/oracle.rs` plants four bugs in synthetic outcomes — a success that pays a stranger
 (O3), a success that leaves the vault one lamport short (O4), a failure that changed an
-account (O2) — and checks each is caught while its healthy twin passes. `cargo test -p
-mybarpool-fuzz` runs them without Mollusk or `protoc`.
+account (O2), an SPL success that pays a stranger's token account while the healthy twin pays
+a box owner's derived address whose owner field was reassigned (O3) — and checks each is
+caught while its healthy twin passes. `cargo test -p mybarpool-fuzz` runs them without
+Mollusk or `protoc`; the CI fuzz job runs them before the fuzzer.
 
 ## Why the library is pure
 

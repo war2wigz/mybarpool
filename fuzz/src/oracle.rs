@@ -5,7 +5,8 @@
 //! - O2 **Atomic.** On any failure every resulting account equals its input.
 //! - O3 **Money, on success.** Lamports are conserved over the account set; per mint, token
 //!   amounts are conserved; the accounts whose lamports or token balance increased are a subset
-//!   of the destinations the instruction allows, read from the *resulting* pool and config.
+//!   of the destinations the instruction allows (a wallet, a token account it owns, or its
+//!   associated token address), read from the *resulting* pool and config.
 //! - O4 **Vault invariant, on success.** The vault holds PROGRAM §3.4's amount for the
 //!   resulting pool's status.
 //! - O5 **`buy` relations, on success.** `sold` grew by `count`; exactly `count` boxes went from
@@ -53,8 +54,21 @@ pub const TOKEN_PROGRAM: Key =
 /// The Token-2022 program.
 pub const TOKEN_2022_PROGRAM: Key =
     Pubkey::from_str_const("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb").to_bytes();
+/// The associated-token program.
+pub const ASSOCIATED_TOKEN_PROGRAM: Key =
+    Pubkey::from_str_const("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL").to_bytes();
 /// PROGRAM §1 `BOXES`.
 pub const BOXES: usize = 25;
+
+/// The associated token address of `wallet` for `mint` under `token_program`.
+pub fn associated_token_address(wallet: &Key, mint: &Key, token_program: &Key) -> Key {
+    Pubkey::find_program_address(
+        &[wallet, token_program, mint],
+        &Pubkey::new_from_array(ASSOCIATED_TOKEN_PROGRAM),
+    )
+    .0
+    .to_bytes()
+}
 
 /// The rent-exempt minimum of a 0-byte account, the SOL vault's own floor (PROGRAM §3.4).
 pub fn vault_rent_floor() -> u64 {
@@ -300,9 +314,19 @@ pub fn o3_money(before: &Context, after: &Outcome) -> Vec<Violation> {
         if !lamports_up && !tokens_up {
             continue;
         }
+        // A token account is a permitted destination when a permitted wallet owns it, or when
+        // it sits at a permitted wallet's associated token address for its mint and token
+        // program: PROGRAM §5.4 pays the derived address, and an owner field the wallet itself
+        // reassigned (`SetAuthority`) does not move the payout (the 2026-10-24 audit's A1).
         let ok = allowed.accounts.contains(&a.key)
             || allowed.wallets.contains(&a.key)
-            || token_account(a).is_some_and(|(_, owner, _)| allowed.wallets.contains(&owner));
+            || token_account(a).is_some_and(|(mint, owner, _)| {
+                allowed.wallets.contains(&owner)
+                    || allowed
+                        .wallets
+                        .iter()
+                        .any(|w| associated_token_address(w, &mint, &a.owner) == a.key)
+            });
         if !ok {
             out.push(v(
                 "O3 destinations",

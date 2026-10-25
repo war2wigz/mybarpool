@@ -257,6 +257,11 @@ jobs:
           EJECT_FUZZ_FIXTURES="$PWD/target/fuzz-fixtures" cargo test -p mybarpool --locked --features fuzz-fixtures
           ls target/fuzz-fixtures | wc -l
 
+      - name: The harness's own tests (the planted-bug oracle checks, the mutation plans)
+        # `fuzz/tests/oracle.rs` builds the pure library without Mollusk; it had rotted
+        # unnoticed when `Pool` gained a field (2026-10-24 internal audit).
+        run: cargo test -p mybarpool-fuzz --locked
+
       - name: Replay every seed, then fuzz for 600 seconds
         # Prints the proptest seed it used; `--seed <n>` reproduces a run. A violation is a
         # bug or a harness bug; both are red.
