@@ -22,6 +22,7 @@ permissions:
 
 env:
   DYLINT_NIGHTLY: nightly-2025-09-18
+  DYLINT_VERSION: 6.3.0
   CARGO_AUDIT_VERSION: "0.22.2"
 
 jobs:
@@ -41,8 +42,11 @@ jobs:
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           "$HOME/.cargo/bin/rustup" toolchain install "$DYLINT_NIGHTLY" --profile minimal -c llvm-tools -c rustc-dev
 
-      - name: Install cargo-dylint and dylint-link
-        run: cargo install cargo-dylint dylint-link --locked
+      - name: Install cargo-dylint and dylint-link ${{ env.DYLINT_VERSION }}
+        # Pinned: Clippy renamed its default branch to main on 2026-10-28 and dylint_driver
+        # before 6.3.0 revparses `master` in its Clippy clone, so an unpinned install that
+        # resolved to 6.2.0 failed to build the driver.
+        run: cargo install cargo-dylint dylint-link --version "$DYLINT_VERSION" --locked
 
       - name: cargo dylint --all
         # Libraries come from [workspace.metadata.dylint] in Cargo.toml,
