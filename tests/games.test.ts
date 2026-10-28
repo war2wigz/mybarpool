@@ -175,7 +175,7 @@ describe("game instructions (Surfpool, mainnet fork)", () => {
 
     const rent = await rpc.getMinimumBalanceForRentExemption(153n).send();
     expect(await fetchLamports(game)).toBe(rent);
-    expect(rent).toBe(1_955_760n); // (128 + 153) × 6 960, recorded in NOTES
+    expect(rent).toBe(1_427_480n); // (128 + 153) × 5 080, mainnet's rate since SIMD-0437-2 (epoch 1033)
 
     const events = await emittedEvents(signature);
     expect(events.map(eventName)).toEqual(["GameCreated"]);

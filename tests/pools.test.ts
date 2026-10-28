@@ -273,13 +273,13 @@ describe("pool instructions (Surfpool, mainnet fork)", () => {
     // ARCHITECTURE › Fees worked example at the initial 500 / 500: creator 0.0875 SOL.
     expect(stored.creatorFee).toBe(87_500_000n);
 
-    // Rent (PROGRAM §3.3–§3.5; ARCHITECTURE › Pool creation ≈ 0.014 SOL ± 10 %).
+    // Rent (PROGRAM §3.3–§3.5; ARCHITECTURE › Pool creation ≈ 0.010 SOL ± 10 % at mainnet's 5 080 lamports per byte).
     expect(await fetchLamports(pool)).toBe(rent.pool);
     expect(await fetchLamports(counter)).toBe(rent.counter);
     expect(await fetchLamports(vault)).toBe(rent.solVault + 2n * PRICE);
     const solTotal = rent.pool + rent.solVault + rent.counter;
-    expect(solTotal).toBeGreaterThanOrEqual(12_600_000n);
-    expect(solTotal).toBeLessThanOrEqual(15_400_000n);
+    expect(solTotal).toBeGreaterThanOrEqual(9_000_000n);
+    expect(solTotal).toBeLessThanOrEqual(11_000_000n);
     console.log(
       `rent: pool ${rent.pool}, counter ${rent.counter}, sponsorship ${rent.sponsorship}, SOL vault ${rent.solVault}, SPL vault ${rent.splVault}; SOL pool total ${solTotal}, SPL pool total ${rent.pool + rent.splVault + rent.counter}`,
     );
@@ -680,8 +680,8 @@ describe("pool instructions (Surfpool, mainnet fork)", () => {
     expect(await tokenAmount(vault)).toBe(PRICE_ORE);
     expect(await fetchLamports(vault)).toBe(rent.splVault);
     const splTotal = rent.pool + rent.splVault + rent.counter;
-    expect(splTotal).toBeGreaterThanOrEqual(12_600_000n);
-    expect(splTotal).toBeLessThanOrEqual(15_400_000n);
+    expect(splTotal).toBeGreaterThanOrEqual(9_000_000n);
+    expect(splTotal).toBeLessThanOrEqual(11_000_000n);
 
     await send(
       buyerB,
