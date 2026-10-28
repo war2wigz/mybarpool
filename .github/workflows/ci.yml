@@ -29,7 +29,7 @@ permissions:
 env:
   SOLANA_VERSION: "4.3.2"
   ANCHOR_VERSION: "1.2.0"
-  SURFPOOL_VERSION: "1.6.1"
+  SURFPOOL_VERSION: "1.7.0"
   # The fork commit the Entropy fixture was built from; the same value is in
   # tests/helpers/entropy.ts (ENTROPY_FORK_COMMIT) and names the fixture file.
   ENTROPY_FORK_COMMIT: "5a869c8c1a89842cfbbbb904fa7b61da083f3dae"
@@ -66,7 +66,7 @@ jobs:
         env:
           AGAVE_INSTALL_INIT_SHA256: 924dca1387848a1ff4509b885b02371b78b1bb5843cacf3367ff9342d078ae77
           ANCHOR_SHA256: 0c9c41a3292c281cc6eadb78d6e1c8224d8324a34b0736a89d640fd314db05b7
-          SURFPOOL_SHA256: 64cff3fd6bb00bb0d5c7edef2915a491338d14eb19b7130abf9c81ee5357d165
+          SURFPOOL_SHA256: 5bef2b0b186a74622508f104b6d2e4e2db040932b6d8f3a811172e241f802a63
         run: |
           set -euo pipefail
           mkdir -p /tmp/toolchain && cd /tmp/toolchain
@@ -210,7 +210,7 @@ jobs:
         env:
           AGAVE_INSTALL_INIT_SHA256: 924dca1387848a1ff4509b885b02371b78b1bb5843cacf3367ff9342d078ae77
           ANCHOR_SHA256: 0c9c41a3292c281cc6eadb78d6e1c8224d8324a34b0736a89d640fd314db05b7
-          SURFPOOL_SHA256: 64cff3fd6bb00bb0d5c7edef2915a491338d14eb19b7130abf9c81ee5357d165
+          SURFPOOL_SHA256: 5bef2b0b186a74622508f104b6d2e4e2db040932b6d8f3a811172e241f802a63
         run: |
           set -euo pipefail
           mkdir -p /tmp/toolchain && cd /tmp/toolchain

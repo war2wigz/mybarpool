@@ -34,6 +34,10 @@ import { MYBARPOOL_PROGRAM_ADDRESS } from "../generated/index.js";
  * a reason to read two commitments.
  */
 export const COMMITMENT = "finalized" as const;
+/**
+ * The commitments a caller may still name where an option allows one (`blockhashCommitment`,
+ * the watchers' `commitment`); `COMMITMENT` is the default everywhere.
+ */
 export type Commitment = "confirmed" | "finalized";
 
 /**

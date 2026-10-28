@@ -33,7 +33,7 @@ Solana Foundation's image pinned by digest and compares the hash with the plain 
 |---|---|---|
 | Mollusk unit tests | `cargo test -p mybarpool --locked` | 372 tests over every instruction in isolation and in chains, with the `Clock` and `SlotHashes` sysvars set directly; the Entropy fork's verified bytecode loaded as a second program; the shared vector files cross-checked against the SDK |
 | Compute-unit table | `cargo bench -p mybarpool --locked` | Rewrites `compute_units.md` (54 rows); a changed row is a review item, not a failure |
-| Localnet | `anchor test` (Surfpool 1.6.1 forking mainnet) | 17 files, 130 tests: the per-step suites and eight lifecycle scripts under `tests/lifecycle/`, one per path from creation to `close_pool`, against the real SKR and ORE mints |
+| Localnet | `anchor test` (Surfpool 1.7.0 forking mainnet) | 17 files, 130 tests: the per-step suites and eight lifecycle scripts under `tests/lifecycle/`, one per path from creation to `close_pool`, against the real SKR and ORE mints |
 | Fuzzer | `fuzz/` — see its [README](../../fuzz/README.md) | Mollusk fixtures ejected from every unit-test instruction (807), replayed and mutated under proptest for a fixed budget, checked against the §10 Money oracle; CI runs 600 s. At this commit: 2,820,630 cases in 600 s (seed 2114127522115581660) and 4,271,419 in 900 s on the bytecode one doc-comment change earlier (seed 9023521409103873441), both clean; before the audit's fixes, 6,193,692 in 1,200 s (seed 16502337001721866570) |
 | Schema snapshot | `cargo test -p mybarpool --test schema` | `tests/fixtures/schema-snapshot.json` against the committed IDL: additive changes only (§10 Layout) |
 | Lints | `DYLINT_RUSTFLAGS="-D warnings" cargo dylint --all --workspace -- --lib` | OtterSec anchor-lints at a pinned commit; see §5 |
@@ -50,7 +50,7 @@ green before and after):
 | platform-tools | v1.57 (SBF rustc 1.95) |
 | Host rustc | `rust-toolchain.toml`; crate `rust-version` 1.89 |
 | Mollusk | 0.16.2 |
-| Surfpool | 1.6.1 |
+| Surfpool | 1.7.0 |
 | `solana-verify` | 0.5.2 |
 | cargo-dylint / anchor-lints | 6.1.0 / `otter-sec/anchor-lints@d8116dd`, nightly-2025-09-18 |
 | cargo-audit | 0.22.2 |
