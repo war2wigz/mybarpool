@@ -54,6 +54,7 @@ export type SetVarInstruction<
   TProgram extends string = typeof MYBARPOOL_PROGRAM_ADDRESS,
   TAccountScoreAuthority extends string | AccountMeta<string> = string,
   TAccountConfig extends string | AccountMeta<string> = string,
+  TAccountGame extends string | AccountMeta<string> = string,
   TAccountPool extends string | AccountMeta<string> = string,
   TAccountVar extends string | AccountMeta<string> = string,
   TAccountEventAuthority extends string | AccountMeta<string> = string,
@@ -68,6 +69,7 @@ export type SetVarInstruction<
         ? ReadonlySignerAccount<TAccountScoreAuthority> & AccountSignerMeta<TAccountScoreAuthority>
         : TAccountScoreAuthority,
       TAccountConfig extends string ? ReadonlyAccount<TAccountConfig> : TAccountConfig,
+      TAccountGame extends string ? ReadonlyAccount<TAccountGame> : TAccountGame,
       TAccountPool extends string ? WritableAccount<TAccountPool> : TAccountPool,
       TAccountVar extends string ? ReadonlyAccount<TAccountVar> : TAccountVar,
       TAccountEventAuthority extends string
@@ -103,6 +105,7 @@ export function getSetVarInstructionDataCodec(): FixedSizeCodec<
 export type SetVarAsyncInput<
   TAccountScoreAuthority extends InstructionSignerInput = InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput = InstructionAccountInput,
   TAccountPool extends InstructionAccountInput = InstructionAccountInput,
   TAccountVar extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
@@ -112,6 +115,12 @@ export type SetVarAsyncInput<
   scoreAuthority: TAccountScoreAuthority;
   /** PROGRAM §3.1 `PlatformConfig`; read for `entropy_provider`. */
   config?: TAccountConfig;
+  /**
+   * PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the kickoff: a binding
+   * at or after it is refused, so the commit a draw is checked against is always on the
+   * pool before the game has a shape (PROGRAM §4.4, 2026-11-02).
+   */
+  game: TAccountGame;
   /** PROGRAM §3.3 `Pool`, re-derived from its own fields. */
   pool: TAccountPool;
   /** `Var::try_from_account` in the handler. Not an Anchor account (steel layout). */
@@ -123,6 +132,7 @@ export type SetVarAsyncInput<
 export async function getSetVarInstructionAsync<
   TAccountScoreAuthority extends InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput,
   TAccountPool extends InstructionAccountInput,
   TAccountVar extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
@@ -132,6 +142,7 @@ export async function getSetVarInstructionAsync<
   input: SetVarAsyncInput<
     TAccountScoreAuthority,
     TAccountConfig,
+    TAccountGame,
     TAccountPool,
     TAccountVar,
     TAccountEventAuthority,
@@ -146,6 +157,7 @@ export async function getSetVarInstructionAsync<
       InstructionAccountInputAddress<TAccountScoreAuthority>
     >,
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+    ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountVar, InstructionAccountInputAddress<TAccountVar>>,
     ResolvedInstructionAccountMeta<
@@ -165,6 +177,7 @@ export async function getSetVarInstructionAsync<
   const originalAccounts = {
     scoreAuthority: { value: input.scoreAuthority ?? null, isSigner: true, isWritable: false },
     config: { value: input.config ?? null, isSigner: false, isWritable: false },
+    game: { value: input.game ?? null, isSigner: false, isWritable: false },
     pool: { value: input.pool ?? null, isSigner: false, isWritable: true },
     var: { value: input.var ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
@@ -191,6 +204,7 @@ export async function getSetVarInstructionAsync<
     accounts: [
       getAccountMeta("scoreAuthority", accounts.scoreAuthority),
       getAccountMeta("config", accounts.config),
+      getAccountMeta("game", accounts.game),
       getAccountMeta("pool", accounts.pool),
       getAccountMeta("var", accounts.var),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
@@ -205,6 +219,7 @@ export async function getSetVarInstructionAsync<
       InstructionAccountInputAddress<TAccountScoreAuthority>
     >,
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+    ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountVar, InstructionAccountInputAddress<TAccountVar>>,
     ResolvedInstructionAccountMeta<
@@ -218,6 +233,7 @@ export async function getSetVarInstructionAsync<
 export type SetVarInput<
   TAccountScoreAuthority extends InstructionSignerInput = InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput = InstructionAccountInput,
   TAccountPool extends InstructionAccountInput = InstructionAccountInput,
   TAccountVar extends InstructionAccountInput = InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput = InstructionAccountInput,
@@ -227,6 +243,12 @@ export type SetVarInput<
   scoreAuthority: TAccountScoreAuthority;
   /** PROGRAM §3.1 `PlatformConfig`; read for `entropy_provider`. */
   config: TAccountConfig;
+  /**
+   * PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the kickoff: a binding
+   * at or after it is refused, so the commit a draw is checked against is always on the
+   * pool before the game has a shape (PROGRAM §4.4, 2026-11-02).
+   */
+  game: TAccountGame;
   /** PROGRAM §3.3 `Pool`, re-derived from its own fields. */
   pool: TAccountPool;
   /** `Var::try_from_account` in the handler. Not an Anchor account (steel layout). */
@@ -238,6 +260,7 @@ export type SetVarInput<
 export function getSetVarInstruction<
   TAccountScoreAuthority extends InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput,
   TAccountPool extends InstructionAccountInput,
   TAccountVar extends InstructionAccountInput,
   TAccountEventAuthority extends InstructionAccountInput,
@@ -247,6 +270,7 @@ export function getSetVarInstruction<
   input: SetVarInput<
     TAccountScoreAuthority,
     TAccountConfig,
+    TAccountGame,
     TAccountPool,
     TAccountVar,
     TAccountEventAuthority,
@@ -260,6 +284,7 @@ export function getSetVarInstruction<
     InstructionAccountInputAddress<TAccountScoreAuthority>
   >,
   ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+  ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
   ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
   ResolvedInstructionAccountMeta<TAccountVar, InstructionAccountInputAddress<TAccountVar>>,
   ResolvedInstructionAccountMeta<
@@ -278,6 +303,7 @@ export function getSetVarInstruction<
   const originalAccounts = {
     scoreAuthority: { value: input.scoreAuthority ?? null, isSigner: true, isWritable: false },
     config: { value: input.config ?? null, isSigner: false, isWritable: false },
+    game: { value: input.game ?? null, isSigner: false, isWritable: false },
     pool: { value: input.pool ?? null, isSigner: false, isWritable: true },
     var: { value: input.var ?? null, isSigner: false, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isSigner: false, isWritable: false },
@@ -298,6 +324,7 @@ export function getSetVarInstruction<
     accounts: [
       getAccountMeta("scoreAuthority", accounts.scoreAuthority),
       getAccountMeta("config", accounts.config),
+      getAccountMeta("game", accounts.game),
       getAccountMeta("pool", accounts.pool),
       getAccountMeta("var", accounts.var),
       getAccountMeta("eventAuthority", accounts.eventAuthority),
@@ -312,6 +339,7 @@ export function getSetVarInstruction<
       InstructionAccountInputAddress<TAccountScoreAuthority>
     >,
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+    ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountVar, InstructionAccountInputAddress<TAccountVar>>,
     ResolvedInstructionAccountMeta<
@@ -332,12 +360,18 @@ export type ParsedSetVarInstruction<
     scoreAuthority: TAccountMetas[0];
     /** PROGRAM §3.1 `PlatformConfig`; read for `entropy_provider`. */
     config: TAccountMetas[1];
+    /**
+     * PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the kickoff: a binding
+     * at or after it is refused, so the commit a draw is checked against is always on the
+     * pool before the game has a shape (PROGRAM §4.4, 2026-11-02).
+     */
+    game: TAccountMetas[2];
     /** PROGRAM §3.3 `Pool`, re-derived from its own fields. */
-    pool: TAccountMetas[2];
+    pool: TAccountMetas[3];
     /** `Var::try_from_account` in the handler. Not an Anchor account (steel layout). */
-    var: TAccountMetas[3];
-    eventAuthority: TAccountMetas[4];
-    program: TAccountMetas[5];
+    var: TAccountMetas[4];
+    eventAuthority: TAccountMetas[5];
+    program: TAccountMetas[6];
   };
   data: SetVarInstructionData;
 };
@@ -350,10 +384,10 @@ export function parseSetVarInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedSetVarInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 7) {
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
       actualAccountMetas: instruction.accounts.length,
-      expectedAccountMetas: 6,
+      expectedAccountMetas: 7,
     });
   }
   let accountIndex = 0;
@@ -367,6 +401,7 @@ export function parseSetVarInstruction<
     accounts: {
       scoreAuthority: getNextAccount(),
       config: getNextAccount(),
+      game: getNextAccount(),
       pool: getNextAccount(),
       var: getNextAccount(),
       eventAuthority: getNextAccount(),

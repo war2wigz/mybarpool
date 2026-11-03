@@ -79,4 +79,5 @@ export const MYBARPOOL_ERROR_NAMES: Readonly<Record<number, string>> = Object.fr
   6068: "DrawAfterScores",
   6069: "DrawAfterKickoff",
   6070: "GameSuspended",
+  6071: "VarAfterKickoff",
 });

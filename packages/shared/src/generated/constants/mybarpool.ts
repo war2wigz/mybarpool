@@ -24,6 +24,8 @@ export const COUNTER_SEED: ReadonlyUint8Array = new Uint8Array([99, 111, 117, 11
 
 export const CREATOR_BPS_MAX: number = 500;
 
+export const DRAW_GRACE: bigint = 600n;
+
 export const ENTROPY_PROGRAM: Address = address("ASo8r4EEFLPAMDk1w3XdKbEmq4c1GynbsHGa6RGG83fH");
 
 export const GAME_SEED: ReadonlyUint8Array = new Uint8Array([103, 97, 109, 101]);

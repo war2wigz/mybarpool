@@ -54,6 +54,7 @@ export type ReplaceVarInstruction<
   TProgram extends string = typeof MYBARPOOL_PROGRAM_ADDRESS,
   TAccountAdmin extends string | AccountMeta<string> = string,
   TAccountConfig extends string | AccountMeta<string> = string,
+  TAccountGame extends string | AccountMeta<string> = string,
   TAccountPool extends string | AccountMeta<string> = string,
   TAccountNewVar extends string | AccountMeta<string> = string,
   TAccountSlotHashes extends string | AccountMeta<string> =
@@ -70,6 +71,7 @@ export type ReplaceVarInstruction<
         ? ReadonlySignerAccount<TAccountAdmin> & AccountSignerMeta<TAccountAdmin>
         : TAccountAdmin,
       TAccountConfig extends string ? ReadonlyAccount<TAccountConfig> : TAccountConfig,
+      TAccountGame extends string ? ReadonlyAccount<TAccountGame> : TAccountGame,
       TAccountPool extends string ? WritableAccount<TAccountPool> : TAccountPool,
       TAccountNewVar extends string ? ReadonlyAccount<TAccountNewVar> : TAccountNewVar,
       TAccountSlotHashes extends string ? ReadonlyAccount<TAccountSlotHashes> : TAccountSlotHashes,
@@ -106,6 +108,7 @@ export function getReplaceVarInstructionDataCodec(): FixedSizeCodec<
 export type ReplaceVarAsyncInput<
   TAccountAdmin extends InstructionSignerInput = InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput = InstructionAccountInput,
   TAccountPool extends InstructionAccountInput = InstructionAccountInput,
   TAccountNewVar extends InstructionAccountInput = InstructionAccountInput,
   TAccountSlotHashes extends InstructionAccountInput = InstructionAccountInput,
@@ -116,6 +119,12 @@ export type ReplaceVarAsyncInput<
   admin: TAccountAdmin;
   /** PROGRAM §3.1 `PlatformConfig`; read for `entropy_provider`. */
   config?: TAccountConfig;
+  /**
+   * PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the kickoff: a
+   * replacement at or after it would be a fresh commit chosen with the game under way
+   * (PROGRAM §4.4, 2026-11-02).
+   */
+  game: TAccountGame;
   /** PROGRAM §3.3 `Pool`, re-derived from its own fields. */
   pool: TAccountPool;
   /** The fresh `Var` bound in place of `pool.var`. */
@@ -129,6 +138,7 @@ export type ReplaceVarAsyncInput<
 export async function getReplaceVarInstructionAsync<
   TAccountAdmin extends InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput,
   TAccountPool extends InstructionAccountInput,
   TAccountNewVar extends InstructionAccountInput,
   TAccountSlotHashes extends InstructionAccountInput,
@@ -139,6 +149,7 @@ export async function getReplaceVarInstructionAsync<
   input: ReplaceVarAsyncInput<
     TAccountAdmin,
     TAccountConfig,
+    TAccountGame,
     TAccountPool,
     TAccountNewVar,
     TAccountSlotHashes,
@@ -151,6 +162,7 @@ export async function getReplaceVarInstructionAsync<
     TProgramAddress,
     ResolvedInstructionAccountMeta<TAccountAdmin, InstructionAccountInputAddress<TAccountAdmin>>,
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+    ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountNewVar, InstructionAccountInputAddress<TAccountNewVar>>,
     ResolvedInstructionAccountMeta<
@@ -174,6 +186,7 @@ export async function getReplaceVarInstructionAsync<
   const originalAccounts = {
     admin: { value: input.admin ?? null, isSigner: true, isWritable: false },
     config: { value: input.config ?? null, isSigner: false, isWritable: false },
+    game: { value: input.game ?? null, isSigner: false, isWritable: false },
     pool: { value: input.pool ?? null, isSigner: false, isWritable: true },
     newVar: { value: input.newVar ?? null, isSigner: false, isWritable: false },
     slotHashes: { value: input.slotHashes ?? null, isSigner: false, isWritable: false },
@@ -205,6 +218,7 @@ export async function getReplaceVarInstructionAsync<
     accounts: [
       getAccountMeta("admin", accounts.admin),
       getAccountMeta("config", accounts.config),
+      getAccountMeta("game", accounts.game),
       getAccountMeta("pool", accounts.pool),
       getAccountMeta("newVar", accounts.newVar),
       getAccountMeta("slotHashes", accounts.slotHashes),
@@ -217,6 +231,7 @@ export async function getReplaceVarInstructionAsync<
     TProgramAddress,
     ResolvedInstructionAccountMeta<TAccountAdmin, InstructionAccountInputAddress<TAccountAdmin>>,
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+    ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountNewVar, InstructionAccountInputAddress<TAccountNewVar>>,
     ResolvedInstructionAccountMeta<
@@ -234,6 +249,7 @@ export async function getReplaceVarInstructionAsync<
 export type ReplaceVarInput<
   TAccountAdmin extends InstructionSignerInput = InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput = InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput = InstructionAccountInput,
   TAccountPool extends InstructionAccountInput = InstructionAccountInput,
   TAccountNewVar extends InstructionAccountInput = InstructionAccountInput,
   TAccountSlotHashes extends InstructionAccountInput = InstructionAccountInput,
@@ -244,6 +260,12 @@ export type ReplaceVarInput<
   admin: TAccountAdmin;
   /** PROGRAM §3.1 `PlatformConfig`; read for `entropy_provider`. */
   config: TAccountConfig;
+  /**
+   * PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the kickoff: a
+   * replacement at or after it would be a fresh commit chosen with the game under way
+   * (PROGRAM §4.4, 2026-11-02).
+   */
+  game: TAccountGame;
   /** PROGRAM §3.3 `Pool`, re-derived from its own fields. */
   pool: TAccountPool;
   /** The fresh `Var` bound in place of `pool.var`. */
@@ -257,6 +279,7 @@ export type ReplaceVarInput<
 export function getReplaceVarInstruction<
   TAccountAdmin extends InstructionSignerInput,
   TAccountConfig extends InstructionAccountInput,
+  TAccountGame extends InstructionAccountInput,
   TAccountPool extends InstructionAccountInput,
   TAccountNewVar extends InstructionAccountInput,
   TAccountSlotHashes extends InstructionAccountInput,
@@ -267,6 +290,7 @@ export function getReplaceVarInstruction<
   input: ReplaceVarInput<
     TAccountAdmin,
     TAccountConfig,
+    TAccountGame,
     TAccountPool,
     TAccountNewVar,
     TAccountSlotHashes,
@@ -278,6 +302,7 @@ export function getReplaceVarInstruction<
   TProgramAddress,
   ResolvedInstructionAccountMeta<TAccountAdmin, InstructionAccountInputAddress<TAccountAdmin>>,
   ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+  ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
   ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
   ResolvedInstructionAccountMeta<TAccountNewVar, InstructionAccountInputAddress<TAccountNewVar>>,
   ResolvedInstructionAccountMeta<
@@ -300,6 +325,7 @@ export function getReplaceVarInstruction<
   const originalAccounts = {
     admin: { value: input.admin ?? null, isSigner: true, isWritable: false },
     config: { value: input.config ?? null, isSigner: false, isWritable: false },
+    game: { value: input.game ?? null, isSigner: false, isWritable: false },
     pool: { value: input.pool ?? null, isSigner: false, isWritable: true },
     newVar: { value: input.newVar ?? null, isSigner: false, isWritable: false },
     slotHashes: { value: input.slotHashes ?? null, isSigner: false, isWritable: false },
@@ -325,6 +351,7 @@ export function getReplaceVarInstruction<
     accounts: [
       getAccountMeta("admin", accounts.admin),
       getAccountMeta("config", accounts.config),
+      getAccountMeta("game", accounts.game),
       getAccountMeta("pool", accounts.pool),
       getAccountMeta("newVar", accounts.newVar),
       getAccountMeta("slotHashes", accounts.slotHashes),
@@ -337,6 +364,7 @@ export function getReplaceVarInstruction<
     TProgramAddress,
     ResolvedInstructionAccountMeta<TAccountAdmin, InstructionAccountInputAddress<TAccountAdmin>>,
     ResolvedInstructionAccountMeta<TAccountConfig, InstructionAccountInputAddress<TAccountConfig>>,
+    ResolvedInstructionAccountMeta<TAccountGame, InstructionAccountInputAddress<TAccountGame>>,
     ResolvedInstructionAccountMeta<TAccountPool, InstructionAccountInputAddress<TAccountPool>>,
     ResolvedInstructionAccountMeta<TAccountNewVar, InstructionAccountInputAddress<TAccountNewVar>>,
     ResolvedInstructionAccountMeta<
@@ -361,14 +389,20 @@ export type ParsedReplaceVarInstruction<
     admin: TAccountMetas[0];
     /** PROGRAM §3.1 `PlatformConfig`; read for `entropy_provider`. */
     config: TAccountMetas[1];
+    /**
+     * PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the kickoff: a
+     * replacement at or after it would be a fresh commit chosen with the game under way
+     * (PROGRAM §4.4, 2026-11-02).
+     */
+    game: TAccountMetas[2];
     /** PROGRAM §3.3 `Pool`, re-derived from its own fields. */
-    pool: TAccountMetas[2];
+    pool: TAccountMetas[3];
     /** The fresh `Var` bound in place of `pool.var`. */
-    newVar: TAccountMetas[3];
+    newVar: TAccountMetas[4];
     /** gone (2026-10-23 audit F2). */
-    slotHashes: TAccountMetas[4];
-    eventAuthority: TAccountMetas[5];
-    program: TAccountMetas[6];
+    slotHashes: TAccountMetas[5];
+    eventAuthority: TAccountMetas[6];
+    program: TAccountMetas[7];
   };
   data: ReplaceVarInstructionData;
 };
@@ -381,10 +415,10 @@ export function parseReplaceVarInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedReplaceVarInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 8) {
     throw new SolanaError(SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, {
       actualAccountMetas: instruction.accounts.length,
-      expectedAccountMetas: 7,
+      expectedAccountMetas: 8,
     });
   }
   let accountIndex = 0;
@@ -398,6 +432,7 @@ export function parseReplaceVarInstruction<
     accounts: {
       admin: getNextAccount(),
       config: getNextAccount(),
+      game: getNextAccount(),
       pool: getNextAccount(),
       newVar: getNextAccount(),
       slotHashes: getNextAccount(),

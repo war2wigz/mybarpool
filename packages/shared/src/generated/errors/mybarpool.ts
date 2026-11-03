@@ -152,10 +152,12 @@ export const MYBARPOOL_ERROR__VAR_END_AT_MISMATCH = 0x17b2; // 6066
 export const MYBARPOOL_ERROR__SAMPLE_WINDOW_OPEN = 0x17b3; // 6067
 /** DrawAfterScores: Draw refused after the first score post */
 export const MYBARPOOL_ERROR__DRAW_AFTER_SCORES = 0x17b4; // 6068
-/** DrawAfterKickoff: Draw refused at or after kickoff */
+/** DrawAfterKickoff: Draw refused once the grace past kickoff has ended */
 export const MYBARPOOL_ERROR__DRAW_AFTER_KICKOFF = 0x17b5; // 6069
 /** GameSuspended: Game is suspended; no further settlement */
 export const MYBARPOOL_ERROR__GAME_SUSPENDED = 0x17b6; // 6070
+/** VarAfterKickoff: Var binding refused at or after kickoff */
+export const MYBARPOOL_ERROR__VAR_AFTER_KICKOFF = 0x17b7; // 6071
 
 export type MybarpoolError =
   | typeof MYBARPOOL_ERROR__ADDON_BUDGET_EXCEEDED
@@ -216,6 +218,7 @@ export type MybarpoolError =
   | typeof MYBARPOOL_ERROR__TOO_MANY_VAR_REPLACEMENTS
   | typeof MYBARPOOL_ERROR__UNAUTHORIZED
   | typeof MYBARPOOL_ERROR__UNSUPPORTED_MINT_EXTENSION
+  | typeof MYBARPOOL_ERROR__VAR_AFTER_KICKOFF
   | typeof MYBARPOOL_ERROR__VAR_ALREADY_SAMPLED
   | typeof MYBARPOOL_ERROR__VAR_ALREADY_SET
   | typeof MYBARPOOL_ERROR__VAR_COMMIT_MISMATCH
@@ -239,7 +242,7 @@ if (process.env["NODE_ENV"] !== "production") {
     [MYBARPOOL_ERROR__BOX_ALREADY_SPONSORED]: `Box already sponsored or box index out of range`,
     [MYBARPOOL_ERROR__BOXES_STILL_OUTSTANDING]: `Boxes still outstanding`,
     [MYBARPOOL_ERROR__COUNTER_NOT_EMPTY]: `Counter is not empty`,
-    [MYBARPOOL_ERROR__DRAW_AFTER_KICKOFF]: `Draw refused at or after kickoff`,
+    [MYBARPOOL_ERROR__DRAW_AFTER_KICKOFF]: `Draw refused once the grace past kickoff has ended`,
     [MYBARPOOL_ERROR__DRAW_AFTER_SCORES]: `Draw refused after the first score post`,
     [MYBARPOOL_ERROR__FEE_ACCOUNT_MISMATCH]: `Fee account does not match`,
     [MYBARPOOL_ERROR__FEES_ALREADY_PAID]: `Fees already paid`,
@@ -291,6 +294,7 @@ if (process.env["NODE_ENV"] !== "production") {
     [MYBARPOOL_ERROR__TOO_MANY_VAR_REPLACEMENTS]: `Var has already been replaced twice`,
     [MYBARPOOL_ERROR__UNAUTHORIZED]: `Signer is not authorized for this instruction`,
     [MYBARPOOL_ERROR__UNSUPPORTED_MINT_EXTENSION]: `Mint has an unsupported extension`,
+    [MYBARPOOL_ERROR__VAR_AFTER_KICKOFF]: `Var binding refused at or after kickoff`,
     [MYBARPOOL_ERROR__VAR_ALREADY_SAMPLED]: `Var already has a sample recorded`,
     [MYBARPOOL_ERROR__VAR_ALREADY_SET]: `Var is already set on this pool`,
     [MYBARPOOL_ERROR__VAR_COMMIT_MISMATCH]: `Var seed does not hash to the commit recorded on the pool`,
