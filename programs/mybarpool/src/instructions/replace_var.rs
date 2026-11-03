@@ -12,7 +12,7 @@ use crate::errors::MybarpoolError;
 use crate::events::VarReplaced;
 use crate::instructions::set_var::require_fresh;
 use crate::slot_hashes::hash_for_slot;
-use crate::state::{PlatformConfig, Pool};
+use crate::state::{GameRecord, PlatformConfig, Pool};
 
 #[derive(Accounts)]
 #[event_cpi]
@@ -26,11 +26,16 @@ pub struct ReplaceVar<'info> {
         has_one = admin @ MybarpoolError::Unauthorized,
     )]
     pub config: Box<Account<'info, PlatformConfig>>,
+    /// PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the kickoff: a
+    /// replacement at or after it would be a fresh commit chosen with the game under way
+    /// (PROGRAM §4.4, 2026-11-02).
+    pub game: Account<'info, GameRecord>,
     /// PROGRAM §3.3 `Pool`, re-derived from its own fields.
     #[account(
         mut,
         seeds = [POOL_SEED, pool.game.as_ref(), pool.creator.as_ref(), &pool.nonce.to_le_bytes()],
         bump = pool.bump,
+        has_one = game,
     )]
     pub pool: Box<Account<'info, Pool>>,
     /// CHECK: owner `ENTROPY_PROGRAM` by constraint; every `set_var` check by the handler.
@@ -47,6 +52,7 @@ pub fn handle_replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
     let clock = Clock::get()?;
     let ReplaceVar {
         config,
+        game,
         pool,
         new_var,
         slot_hashes,
@@ -56,6 +62,12 @@ pub fn handle_replace_var(ctx: Context<ReplaceVar>) -> Result<()> {
     // PROGRAM §4.4 checks, in order.
     pool.require_locked()?;
     require!(!pool.drawn, MybarpoolError::AlreadyDrawn);
+    // No new commit once the game is under way (PROGRAM §4.4): a pool whose window was
+    // missed with kickoff passed is returned after `DRAW_GRACE`, not re-rolled.
+    require!(
+        clock.unix_timestamp < game.kickoff(),
+        MybarpoolError::VarAfterKickoff
+    );
     // PROGRAM §4.4: the admin replaces a Var, never binds the first one; a pool with no Var has
     // no window to miss, and the first binding is the keeper's `set_var` (Step 5 audit L1).
     require_keys_neq!(pool.var, Pubkey::default(), MybarpoolError::VarNotSet);

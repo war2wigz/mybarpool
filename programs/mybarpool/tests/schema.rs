@@ -417,10 +417,11 @@ fn the_committed_idl_matches_the_schema_snapshot_or_extends_it_additively() {
     // `BoxAlreadySponsored` (27 / 6 / 25 / 66), plus the 2026-10-23 internal audit's three
     // errors: 27 / 6 / 25 / 69, plus the 2026-10-24 audit's two: 27 / 6 / 25 / 71. The 10-23
     // audit re-froze the snapshot with the account-list changes it made (`memo_program` on the
-    // seven paying instructions, `game` on `draw`, `slot_hashes` on `replace_var`), and the
+    // seven paying instructions, `game` on `draw`, `slot_hashes` on `replace_var`), the
     // 10-24 six-token-slot change re-froze it once more (`mint_3..5` on the two config writers,
-    // `PlatformConfig` 992 bytes): non-additive changes made before any mainnet deployment
-    // (PROGRAM §10 Layout).
+    // `PlatformConfig` 992 bytes), and the 2026-11-02 draw grace again (`game` on `set_var`
+    // and `replace_var`, `VarAfterKickoff`: 27 / 6 / 25 / 72): non-additive changes made
+    // before any mainnet deployment (PROGRAM §10 Layout).
     assert_eq!(
         (
             current.instructions.len(),
@@ -428,7 +429,7 @@ fn the_committed_idl_matches_the_schema_snapshot_or_extends_it_additively() {
             current.events.len(),
             current.errors.len()
         ),
-        (27, 6, 25, 71)
+        (27, 6, 25, 72)
     );
     assert_eq!(
         current
@@ -517,7 +518,7 @@ fn the_additive_changes_pass_and_everything_else_fails() {
     });
     more.errors.push(ErrorSchema {
         name: "SomethingNew".into(),
-        code: 6071,
+        code: 6072,
     });
     compare(&committed, &more).unwrap();
 
@@ -529,7 +530,7 @@ fn the_additive_changes_pass_and_everything_else_fails() {
     });
     assert!(compare(&committed, &skip)
         .unwrap_err()
-        .contains("next free code is 6071"));
+        .contains("next free code is 6072"));
 
     // A new Pool field before reserved, reserved shrunk by its size: fine (the Step 5b shape).
     let mut grown = committed.clone();

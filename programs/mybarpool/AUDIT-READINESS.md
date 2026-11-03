@@ -1145,10 +1145,15 @@ entry (depth 1 → 32: 29,819 → 36,179).
   the rest. Before this, a settle attempt stopped at `ScoresNotPosted` only because no score
   follows a suspension, and a posted-but-unsettled quarter left the keeper a choice between
   settling it and splitting it.
-- **The draw closes at kickoff** — the earlier of `scheduled_kickoff` and `recorded_kickoff`
-  (`DrawAfterKickoff` 6069, 2026-10-24 audit D1) — not at the first score post. A pool that
-  locks inside the last two minutes before kickoff cannot be drawn and is returned
-  (`return_boxes`' undrawn arm, from the same instant). The keeper can still veto one sample
+- **The draw closes ten minutes after kickoff** — `DRAW_GRACE` past the earlier of
+  `scheduled_kickoff` and `recorded_kickoff` (`DrawAfterKickoff` 6069; 2026-10-24 audit D1
+  closed it at kickoff itself, the 2026-11-02 grace moved it) — not at the first score post.
+  The binding is what must precede kickoff: `set_var` and `replace_var` read the game record
+  and refuse from then on (`VarAfterKickoff` 6071), so the commit is fixed before the game has
+  a shape and the grace only lets a bound pool's sample, reveal and `draw` land; the grace is
+  shorter than `MIN_QUARTER_SECONDS`, so `DrawAfterScores` stays behind it. A pool that locks
+  too late for the binding, or whose draw misses the grace, is returned (`return_boxes`'
+  undrawn arm: at kickoff with no `Var` bound, else when the grace ends). The keeper can still veto one sample
   window by closing its own `Var` inside it (Entropy lets the authority `Close` at any time;
   nobody can sample a closed account) and have the admin replace it after: the same
   best-of-three ARCHITECTURE › Randomness discloses, by another route, visible as a
@@ -1268,6 +1273,30 @@ in one line each:
 The money slice found nothing beyond two of the Infos, and re-verified that the 2026-10-23
 fixes hold. No instruction's account list changed, so the schema snapshot was extended, not
 re-frozen: two errors, 6069 and 6070, seventy-one in all.
+
+### The 2026-11-02 draw grace
+
+The kickoff close above returned every pool that filled in the last minute or two before
+kickoff: the `Var` open, the 150-slot sample window and the reveal take about that long, and
+a `Locked` pool at the whistle went back to its buyers. A full pool returned for want of time
+alone is the wrong outcome for the people in it, and D1's reasoning — the seed holder could
+read the game's shape before choosing which pools to draw — bears on choosing the commit, not
+on finishing a draw whose commit is already on the pool. The change: `DRAW_GRACE` (600 s) in
+§1; `draw` accepts until `min(scheduled_kickoff, recorded_kickoff) + DRAW_GRACE`
+(`DrawAfterKickoff` from then); `set_var` and `replace_var` take the pool's game record and
+refuse at or after that kickoff (`VarAfterKickoff` 6071), so a draw inside the grace can only
+finish a binding made before the game had a shape; `return_boxes`' undrawn arm opens at kickoff
+for a pool with no `Var` and when the grace ends for a bound one. The grace is shorter than
+`MIN_QUARTER_SECONDS`, so the first post can never precede the window's end and
+`DrawAfterScores` remains a backstop. What the grace does not change: a bound `Var`'s value is
+fixed by its commit and the end slot's hash, neither chosen after kickoff; a missed window
+inside the grace cannot be replaced (the admin's `replace_var` is refused too), so the pool
+returns. Two account lists changed (`game` on `set_var` and `replace_var`), so the schema
+snapshot was re-frozen; seventy-two errors in all. Mollusk: `draw_within_the_grace_past_kickoff_is_accepted_and_refused_once_it_ends`,
+`draw_deadline_is_the_grace_past_the_earlier_of_the_scheduled_and_recorded_kickoff`,
+`set_var_and_replace_var_at_or_after_kickoff_are_var_after_kickoff`,
+`return_boxes_locked_undrawn_with_a_var_bound_waits_for_the_draw_grace`; localnet:
+`returns.test.ts` item 7.
 
 ## 10. Out of scope
 

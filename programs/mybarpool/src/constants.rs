@@ -36,6 +36,13 @@ pub const TOTAL_BPS_MAX: u16 = 1500;
 #[constant]
 pub const MIN_QUARTER_SECONDS: i64 = 900;
 
+/// PROGRAM §1 `DRAW_GRACE`: ten minutes past kickoff in which a pool that filled in the last
+/// moments before it can still be sampled and drawn, provided its `Var` was bound before
+/// kickoff. Shorter than `MIN_QUARTER_SECONDS`, so the window always closes before the first
+/// score can be posted (2026-11-02: a full pool is never returned for want of time alone).
+#[constant]
+pub const DRAW_GRACE: i64 = 600;
+
 /// PROGRAM §1 `KICKOFF_UPDATE_BOUND`: 72 hours; how far a recorded kickoff may move from the scheduled one.
 #[constant]
 pub const KICKOFF_UPDATE_BOUND: i64 = 259_200;

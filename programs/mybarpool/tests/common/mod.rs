@@ -1691,6 +1691,7 @@ pub fn set_var_ix(signer: &Pubkey, pool: &Pool, var: &Pubkey) -> Instruction {
         mybarpool::accounts::SetVar {
             score_authority: to_a(signer),
             config: to_a(&config_pda().0),
+            game: to_a(&to_m(&pool.game)),
             pool: to_a(&pool_key),
             var: to_a(var),
             event_authority: to_a(&event_authority_pda()),
@@ -1738,6 +1739,7 @@ pub fn replace_var_ix(signer: &Pubkey, pool: &Pool, new_var: &Pubkey) -> Instruc
         mybarpool::accounts::ReplaceVar {
             admin: to_a(signer),
             config: to_a(&config_pda().0),
+            game: to_a(&to_m(&pool.game)),
             pool: to_a(&pool_key),
             new_var: to_a(new_var),
             slot_hashes: to_a(&solana_sdk_ids::sysvar::slot_hashes::ID),

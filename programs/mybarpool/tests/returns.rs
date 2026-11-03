@@ -13,6 +13,7 @@ use anchor_lang::error::ErrorCode;
 use common::*;
 use mollusk_svm::result::{Check, InstructionResult};
 use mollusk_svm::Mollusk;
+use mybarpool::constants::DRAW_GRACE;
 use mybarpool::{
     BoxesReturned, GameKey, GameRecord, GameStatus, MybarpoolError as E, PayoutPreset, Pool,
     PoolCancelled, PoolClosed, PoolStatus, SponsorshipReturned,
@@ -428,6 +429,47 @@ fn return_boxes_locked_undrawn_reads_the_earlier_kickoff() {
         err(E::NotReturnable),
     );
     let at = mollusk_for_settlement(SCHEDULED - 3_600);
+    ok(&at, &ix, &setup(&f, &at, &pool, &earlier, 0));
+}
+
+#[test]
+fn return_boxes_locked_undrawn_with_a_var_bound_waits_for_the_draw_grace() {
+    // PROGRAM §4.6 undrawn (2026-11-02): a filled pool with a Var bound before kickoff is a
+    // draw under way, and `draw` accepts it until `kickoff + DRAW_GRACE`; the return opens
+    // the second the window closes, never while `draw` could still land. A pool nothing was
+    // bound to cannot be drawn after kickoff (`set_var` is VarAfterKickoff), so it returns at
+    // kickoff (above).
+    let f = Fixture::new();
+    let mut pool = sol_pool(&f, PoolStatus::Locked, &full_plan(&f));
+    pool.var = to_a(&f.var_key());
+    pool.var_end_at = END_AT;
+    let ix = rb(&f, &pool, None, &[f.creator, f.buyer, f.buyer_2]);
+    for at in [SCHEDULED - 1, SCHEDULED, SCHEDULED + DRAW_GRACE - 1] {
+        let m = mollusk_for_settlement(at);
+        fails_with(
+            &m,
+            &ix,
+            &setup(&f, &m, &pool, &standard_record(), 0),
+            err(E::NotReturnable),
+        );
+    }
+    let m = mollusk_for_settlement(SCHEDULED + DRAW_GRACE);
+    let result = ok(&m, &ix, &setup(&f, &m, &pool, &standard_record(), 0));
+    let after = decode_pool(account_of(&result, &pool_key(&pool)));
+    assert_eq!(after.status, PoolStatus::Returned);
+    assert_eq!(after.returned, 0x1FF_FFFF);
+    assert_eq!(after.var, pool.var, "the binding stays on the record");
+
+    // The earlier of the two kickoffs still carries the grace.
+    let earlier = moved_record(SCHEDULED - 3_600);
+    let before = mollusk_for_settlement(SCHEDULED - 3_600 + DRAW_GRACE - 1);
+    fails_with(
+        &before,
+        &ix,
+        &setup(&f, &before, &pool, &earlier, 0),
+        err(E::NotReturnable),
+    );
+    let at = mollusk_for_settlement(SCHEDULED - 3_600 + DRAW_GRACE);
     ok(&at, &ix, &setup(&f, &at, &pool, &earlier, 0));
 }
 

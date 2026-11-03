@@ -2082,6 +2082,17 @@
           }
         },
         {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the kickoff: a",
+            "replacement at or after it would be a fresh commit chosen with the game under way",
+            "(PROGRAM §4.4, 2026-11-02)."
+          ],
+          "relations": [
+            "pool"
+          ]
+        },
+        {
           "name": "pool",
           "docs": [
             "PROGRAM §3.3 `Pool`, re-derived from its own fields."
@@ -2770,6 +2781,17 @@
               }
             ]
           }
+        },
+        {
+          "name": "game",
+          "docs": [
+            "PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the kickoff: a binding",
+            "at or after it is refused, so the commit a draw is checked against is always on the",
+            "pool before the game has a shape (PROGRAM §4.4, 2026-11-02)."
+          ],
+          "relations": [
+            "pool"
+          ]
         },
         {
           "name": "pool",
@@ -4654,12 +4676,17 @@
     {
       "code": 6069,
       "name": "DrawAfterKickoff",
-      "msg": "Draw refused at or after kickoff"
+      "msg": "Draw refused once the grace past kickoff has ended"
     },
     {
       "code": 6070,
       "name": "GameSuspended",
       "msg": "Game is suspended; no further settlement"
+    },
+    {
+      "code": 6071,
+      "name": "VarAfterKickoff",
+      "msg": "Var binding refused at or after kickoff"
     }
   ],
   "types": [
@@ -7487,6 +7514,17 @@
       ],
       "type": "u16",
       "value": "500"
+    },
+    {
+      "name": "DRAW_GRACE",
+      "docs": [
+        "PROGRAM §1 `DRAW_GRACE`: ten minutes past kickoff in which a pool that filled in the last",
+        "moments before it can still be sampled and drawn, provided its `Var` was bound before",
+        "kickoff. Shorter than `MIN_QUARTER_SECONDS`, so the window always closes before the first",
+        "score can be posted (2026-11-02: a full pool is never returned for want of time alone)."
+      ],
+      "type": "i64",
+      "value": "600"
     },
     {
       "name": "ENTROPY_PROGRAM",

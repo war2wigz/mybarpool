@@ -8,7 +8,7 @@ use crate::constants::{CONFIG_SEED, ENTROPY_PROGRAM, POOL_SEED, VAR_END_AT_MAX_L
 use crate::entropy::Var;
 use crate::errors::MybarpoolError;
 use crate::events::VarSet;
-use crate::state::{PlatformConfig, Pool};
+use crate::state::{GameRecord, PlatformConfig, Pool};
 
 #[derive(Accounts)]
 #[event_cpi]
@@ -22,11 +22,16 @@ pub struct SetVar<'info> {
         has_one = score_authority @ MybarpoolError::Unauthorized,
     )]
     pub config: Box<Account<'info, PlatformConfig>>,
+    /// PROGRAM §3.2 `GameRecord`, the pool's game (`has_one`); read for the kickoff: a binding
+    /// at or after it is refused, so the commit a draw is checked against is always on the
+    /// pool before the game has a shape (PROGRAM §4.4, 2026-11-02).
+    pub game: Account<'info, GameRecord>,
     /// PROGRAM §3.3 `Pool`, re-derived from its own fields.
     #[account(
         mut,
         seeds = [POOL_SEED, pool.game.as_ref(), pool.creator.as_ref(), &pool.nonce.to_le_bytes()],
         bump = pool.bump,
+        has_one = game,
     )]
     pub pool: Box<Account<'info, Pool>>,
     /// CHECK: owner `ENTROPY_PROGRAM` by constraint; length, discriminator and every field by
@@ -71,12 +76,22 @@ pub fn require_lead(v: &Var, slot: u64) -> Result<()> {
 pub fn handle_set_var(ctx: Context<SetVar>) -> Result<()> {
     let clock = Clock::get()?;
     let SetVar {
-        config, pool, var, ..
+        config,
+        game,
+        pool,
+        var,
+        ..
     } = ctx.accounts;
 
     // PROGRAM §4.4 checks, in order.
     pool.require_locked()?;
     require_keys_eq!(pool.var, Pubkey::default(), MybarpoolError::VarAlreadySet);
+    // The commit is fixed before kickoff; only the sample, the reveal and the draw may run
+    // into `DRAW_GRACE` (PROGRAM §4.4). A pool still unbound at kickoff is returned.
+    require!(
+        clock.unix_timestamp < game.kickoff(),
+        MybarpoolError::VarAfterKickoff
+    );
     let v = Var::try_from_account(var)?;
     require_fresh(&v, config, clock.slot)?;
     require_lead(&v, clock.slot)?;

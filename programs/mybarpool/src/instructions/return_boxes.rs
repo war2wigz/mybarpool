@@ -95,8 +95,15 @@ pub fn handle_return_boxes<'info>(ctx: Context<'info, ReturnBoxes<'info>>) -> Re
     );
     let unfilled = pool.status == PoolStatus::Open && now >= game.recorded_kickoff;
     // Filled but never drawn by the time `draw` closes (2026-10-24 audit D1): it can no longer
-    // get axes, so the keeper returns it without waiting for the admin.
-    let undrawn = pool.status == PoolStatus::Locked && !pool.drawn && now >= game.draw_deadline();
+    // get axes, so the keeper returns it without waiting for the admin. The close is kickoff
+    // for a pool with no Var (nothing can bind one now) and `DRAW_GRACE` later for one whose
+    // commit is on the pool (PROGRAM §4.4, 2026-11-02).
+    let draw_closed = if pool.var == Pubkey::default() {
+        now >= game.kickoff()
+    } else {
+        now >= game.draw_deadline()
+    };
+    let undrawn = pool.status == PoolStatus::Locked && !pool.drawn && draw_closed;
     let marked =
         matches!(game.status, GameStatus::Postponed | GameStatus::Cancelled) && !pool.fees_paid;
     let suspended = game.status == GameStatus::Suspended && !pool.fees_paid;

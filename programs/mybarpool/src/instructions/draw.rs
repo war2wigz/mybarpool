@@ -56,9 +56,11 @@ pub fn handle_draw(ctx: Context<Draw>) -> Result<()> {
     require!(!pool.drawn, MybarpoolError::AlreadyDrawn);
     // A marked game's pools are returned or split, never drawn (2026-10-24 audit).
     game.require_scheduled()?;
-    // The window closes at kickoff: from then on the game has a shape the seed holder could
-    // read before choosing which pools to give axes. A pool still Locked at kickoff is
-    // returned by `return_boxes` (2026-10-24 audit D1; ARCHITECTURE › Randomness).
+    // The window closes `DRAW_GRACE` past kickoff (2026-11-02; was kickoff itself, 2026-10-24
+    // audit D1): the commit is on the pool before kickoff (`set_var`), the slot hash is the
+    // chain's, so inside the grace the seed holder can finish the draw or leave it, never
+    // steer it; the grace ends before the first score can be posted. A pool still Locked when
+    // it closes is returned by `return_boxes` (ARCHITECTURE › Randomness).
     require!(
         clock.unix_timestamp < game.draw_deadline(),
         MybarpoolError::DrawAfterKickoff

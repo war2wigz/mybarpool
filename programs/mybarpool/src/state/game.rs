@@ -6,7 +6,7 @@
 
 use anchor_lang::prelude::*;
 
-use crate::constants::QUARTERS;
+use crate::constants::{DRAW_GRACE, QUARTERS};
 use crate::errors::MybarpoolError;
 
 /// PROGRAM §2 game key: season, week, home, away. Five bytes on the wire (`season` u16 LE,
@@ -132,12 +132,20 @@ impl GameRecord {
         Ok(())
     }
 
-    /// The last instant a `draw` is accepted (PROGRAM §4.4): the earlier of the scheduled and
-    /// the recorded kickoff. Scores exist from kickoff on, so a draw after it would let the
-    /// seed holder choose which pools get axes once the game's shape is known. The earlier of
-    /// the two so that a keeper-pushed `recorded_kickoff` cannot reopen the window
-    /// (2026-10-24 audit D1).
-    pub fn draw_deadline(&self) -> i64 {
+    /// Kickoff as the draw rules see it (PROGRAM §4.4): the earlier of the scheduled and the
+    /// recorded kickoff, so that a keeper-pushed `recorded_kickoff` cannot reopen a window
+    /// (2026-10-24 audit D1). `set_var` and `replace_var` close here: the commit a draw will
+    /// be checked against is on the pool before the game has a shape.
+    pub fn kickoff(&self) -> i64 {
         self.scheduled_kickoff.min(self.recorded_kickoff)
+    }
+
+    /// The last instant a `draw` is accepted (PROGRAM §4.4): `DRAW_GRACE` past `kickoff()`.
+    /// A pool that filled in the final moments still gets its axes; with the commit fixed
+    /// before kickoff and the slot hash fixed by the chain, the seed holder can finish the
+    /// draw or let the pool be returned, never steer it, and `DRAW_GRACE` ends before the
+    /// first score can be posted (`MIN_QUARTER_SECONDS`; `DrawAfterScores` stands behind it).
+    pub fn draw_deadline(&self) -> i64 {
+        self.kickoff().saturating_add(DRAW_GRACE)
     }
 }

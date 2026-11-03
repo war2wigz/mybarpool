@@ -13,7 +13,9 @@ use anchor_lang::error::ErrorCode;
 use common::*;
 use mollusk_svm::result::Check;
 use mybarpool::axes::axis;
-use mybarpool::constants::{AXIS_LABEL_AWAY, AXIS_LABEL_HOME, VAR_END_AT_MAX_LEAD};
+use mybarpool::constants::{
+    AXIS_LABEL_AWAY, AXIS_LABEL_HOME, DRAW_GRACE, MIN_QUARTER_SECONDS, VAR_END_AT_MAX_LEAD,
+};
 use mybarpool::entropy::fallback_hash;
 use mybarpool::{
     DigitsDrawn, GameKey, GameStatus, MybarpoolError as E, Pool, PoolStatus, VarReplaced,
@@ -1434,15 +1436,21 @@ fn draw_mollusk_at(unix_timestamp: i64) -> mollusk_svm::Mollusk {
 }
 
 #[test]
-fn draw_at_or_after_kickoff_is_refused_and_the_second_before_is_accepted() {
-    // 2026-10-24 audit D1: from kickoff on the game has a shape the seed holder can read, so
-    // a draw at or after `scheduled_kickoff` is `DrawAfterKickoff` even with nothing posted;
-    // the second before is the last one accepted. Checked after AlreadyDrawn and before the
-    // scores check and the Var reads.
+fn draw_within_the_grace_past_kickoff_is_accepted_and_refused_once_it_ends() {
+    // 2026-10-24 audit D1 with the 2026-11-02 grace: the seed holder can read the game's
+    // shape from kickoff on, but the first quarter is MIN_QUARTER_SECONDS long and a pool
+    // that fills seconds before kickoff still has to be drawn. `draw` accepts until
+    // `kickoff + DRAW_GRACE`; the scores check (`DrawAfterScores`) stays the backstop inside
+    // the grace. Checked after AlreadyDrawn and before the Var reads.
+    assert!(DRAW_GRACE < MIN_QUARTER_SECONDS);
     let f = Fixture::new();
     let var = f.var_key();
     let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
-    for at in [SCHEDULED, SCHEDULED + 1, SCHEDULED + 4 * 3_600] {
+    for at in [
+        SCHEDULED + DRAW_GRACE,
+        SCHEDULED + DRAW_GRACE + 1,
+        SCHEDULED + 4 * 3_600,
+    ] {
         let m = draw_mollusk_at(at);
         let accounts = draw_accounts(
             &f,
@@ -1457,41 +1465,49 @@ fn draw_at_or_after_kickoff_is_refused_and_the_second_before_is_accepted() {
         );
         assert_eq!(decode_pool(account_of(&r, &pool_key(&f))), pool, "{at}");
     }
-    let m = draw_mollusk_at(SCHEDULED - 1);
-    let accounts = draw_accounts(
-        &f,
-        &m,
-        &pool,
-        Some((&var, &f.revealed_var(END_AT, END_HASH, &SEED))),
-    );
-    let r = m.process_and_validate_instruction(
-        &draw_ix(&f.keeper, &pool, &var),
-        &accounts,
-        &[Check::success()],
-    );
-    assert_eq!(
-        decode_pool(account_of(&r, &pool_key(&f))).status,
-        PoolStatus::Drawn
-    );
+    for at in [SCHEDULED - 1, SCHEDULED, SCHEDULED + 1, SCHEDULED + DRAW_GRACE - 1] {
+        let m = draw_mollusk_at(at);
+        let accounts = draw_accounts(
+            &f,
+            &m,
+            &pool,
+            Some((&var, &f.revealed_var(END_AT, END_HASH, &SEED))),
+        );
+        let r = m.process_and_validate_instruction(
+            &draw_ix(&f.keeper, &pool, &var),
+            &accounts,
+            &[Check::success()],
+        );
+        assert_eq!(
+            decode_pool(account_of(&r, &pool_key(&f))).status,
+            PoolStatus::Drawn,
+            "{at}"
+        );
+    }
 }
 
 #[test]
-fn draw_deadline_is_the_earlier_of_the_scheduled_and_recorded_kickoff() {
+fn draw_deadline_is_the_grace_past_the_earlier_of_the_scheduled_and_recorded_kickoff() {
     // 2026-10-24 audit D1: a keeper-pushed `recorded_kickoff` cannot reopen the window (the
     // scheduled time still closes it); a kickoff moved earlier closes it at the recorded time.
+    // Both carry the DRAW_GRACE.
     let f = Fixture::new();
     let var = f.var_key();
     let pool = sampled_pool(&f, &var, END_AT, END_AT + 3, END_HASH);
     let revealed = f.revealed_var(END_AT, END_HASH, &SEED);
     let cases = [
-        (SCHEDULED + 3_600, SCHEDULED, Err(E::DrawAfterKickoff)),
-        (SCHEDULED + 3_600, SCHEDULED - 1, Ok(())),
         (
-            SCHEDULED - 3_600,
-            SCHEDULED - 3_600,
+            SCHEDULED + 3_600,
+            SCHEDULED + DRAW_GRACE,
             Err(E::DrawAfterKickoff),
         ),
-        (SCHEDULED - 3_600, SCHEDULED - 3_601, Ok(())),
+        (SCHEDULED + 3_600, SCHEDULED + DRAW_GRACE - 1, Ok(())),
+        (
+            SCHEDULED - 3_600,
+            SCHEDULED - 3_600 + DRAW_GRACE,
+            Err(E::DrawAfterKickoff),
+        ),
+        (SCHEDULED - 3_600, SCHEDULED - 3_600 + DRAW_GRACE - 1, Ok(())),
     ];
     for (recorded, at, expected) in cases {
         let m = draw_mollusk_at(at);
@@ -1507,6 +1523,54 @@ fn draw_deadline_is_the_earlier_of_the_scheduled_and_recorded_kickoff() {
         };
         m.process_and_validate_instruction(&draw_ix(&f.keeper, &pool, &var), &accounts, &[check]);
     }
+}
+
+#[test]
+fn set_var_and_replace_var_at_or_after_kickoff_are_var_after_kickoff() {
+    // 2026-11-02 grace: the draw window past kickoff is for finishing a draw already under
+    // way, not for starting one. Binding a Var (or swapping it) needs a Var opened before
+    // kickoff; at kickoff and after, both are VarAfterKickoff, whatever the Var looks like.
+    // The second before kickoff still binds. Checked after the status checks, before the
+    // Var reads (so no Var account content matters).
+    let f = Fixture::new();
+    let a = f.var_key();
+    let (b, b_fields) = var_b(&f);
+    for at in [SCHEDULED, SCHEDULED + 1, SCHEDULED + DRAW_GRACE - 1] {
+        let mut m = draw_mollusk_at(at);
+        m.sysvars.clock.slot = END_AT - 10;
+        let pool = pool_with(&f, PoolStatus::Locked, 25, &f.buyer_2);
+        let accounts = draw_accounts(&f, &m, &pool, Some((&a, &f.fresh_var(END_AT))));
+        let r = m.process_and_validate_instruction(
+            &set_var_ix(&f.keeper, &pool, &a),
+            &accounts,
+            &[Check::err(custom(err(E::VarAfterKickoff)))],
+        );
+        assert_eq!(decode_pool(account_of(&r, &pool_key(&f))), pool, "set_var {at}");
+
+        let bound = locked_pool_with_var(&f, &a, END_AT);
+        let mut accounts = draw_accounts(&f, &m, &bound, Some((&a, &f.fresh_var(END_AT))));
+        set_account(&mut accounts, b, var_account(&b_fields));
+        let r = m.process_and_validate_instruction(
+            &replace_var_ix(&f.admin, &bound, &b),
+            &accounts,
+            &[Check::err(custom(err(E::VarAfterKickoff)))],
+        );
+        assert_eq!(
+            decode_pool(account_of(&r, &pool_key(&f))),
+            bound,
+            "replace_var {at}"
+        );
+    }
+    let mut m = draw_mollusk_at(SCHEDULED - 1);
+    m.sysvars.clock.slot = END_AT - 10;
+    let pool = pool_with(&f, PoolStatus::Locked, 25, &f.buyer_2);
+    let accounts = draw_accounts(&f, &m, &pool, Some((&a, &f.fresh_var(END_AT))));
+    let r = m.process_and_validate_instruction(
+        &set_var_ix(&f.keeper, &pool, &a),
+        &accounts,
+        &[Check::success()],
+    );
+    assert_eq!(decode_pool(account_of(&r, &pool_key(&f))).var, to_a(&a));
 }
 
 #[test]

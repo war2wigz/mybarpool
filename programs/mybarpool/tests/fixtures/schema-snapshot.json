@@ -2213,6 +2213,12 @@
           "optional": false
         },
         {
+          "name": "game",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
           "name": "pool",
           "writable": true,
           "signer": false,
@@ -2518,6 +2524,12 @@
         },
         {
           "name": "config",
+          "writable": false,
+          "signer": false,
+          "optional": false
+        },
+        {
+          "name": "game",
           "writable": false,
           "signer": false,
           "optional": false
@@ -3384,6 +3396,10 @@
     {
       "name": "GameSuspended",
       "code": 6070
+    },
+    {
+      "name": "VarAfterKickoff",
+      "code": 6071
     }
   ]
 }

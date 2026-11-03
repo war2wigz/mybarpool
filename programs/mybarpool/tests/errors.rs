@@ -8,7 +8,7 @@ use anchor_lang::error::ERROR_CODE_OFFSET;
 use mybarpool::MybarpoolError as E;
 
 /// PROGRAM §8, in the listed order, then the six appended errors.
-const EXPECTED: [E; 71] = [
+const EXPECTED: [E; 72] = [
     E::Unauthorized,
     E::Paused,
     E::GameNotScheduled,
@@ -80,6 +80,7 @@ const EXPECTED: [E; 71] = [
     E::DrawAfterScores,
     E::DrawAfterKickoff,
     E::GameSuspended,
+    E::VarAfterKickoff,
 ];
 
 #[test]
@@ -127,6 +128,11 @@ fn the_2026_10_23_audit_codes() {
 }
 
 #[test]
+fn the_2026_11_02_draw_grace_code() {
+    assert_eq!(E::VarAfterKickoff as u32, 71); // 6071
+}
+
+#[test]
 fn the_step_3_codes_from_program_section_8() {
     assert_eq!(E::GameNotScheduled as u32, 2); // 6002
     assert_eq!(E::GameAlreadyMarked as u32, 3); // 6003
@@ -147,5 +153,5 @@ fn every_error_in_program_section_8_order() {
             "{variant:?} is not at index {index}"
         );
     }
-    assert_eq!(EXPECTED.len(), 71);
+    assert_eq!(EXPECTED.len(), 72);
 }
