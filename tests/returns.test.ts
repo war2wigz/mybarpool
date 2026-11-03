@@ -857,7 +857,15 @@ describe("returns, splits and cancellations (Surfpool, the platform's Entropy de
     // MIN_QUARTER_SECONDS before anything can be settled, so its draw may finish up to
     // `kickoff + DRAW_GRACE`; the grace is for finishing a draw under way, never starting one.
     expect(DRAW_GRACE).toBe(600n);
-    const { game: GG, kickoff } = await newGame(1n);
+    // The kickoff is a minute out and the chain walks to it in real time: a time travel
+    // between the binding and the sample would put `end_at` thousands of slots behind the
+    // tip, outside the SlotHashes window no real sample could ever cross (it failed in CI
+    // that way); the keeper's real case is a sample thirty seconds after the whistle.
+    const GG_LEAD = 75n;
+    const key = { ...KEY, week: week++ };
+    const kickoff = (await chainNow()) + GG_LEAD;
+    const GG = await gamePda(key, kickoff);
+    await send(keeper, await createGameInstruction(keeper, key, kickoff));
     const s = scenario(GG);
     const buys = [[buyerA, 10] as const, [buyerB, 10] as const];
     const B1 = await fill(s, {}, buys); // bound before kickoff, drawn inside the grace
@@ -867,8 +875,13 @@ describe("returns, splits and cancellations (Surfpool, the platform's Entropy de
     const bound2 = await bindFreshVar(s, B2);
     expect((await fetchPool(B1.pool)).var).toBe(bound1.varAddress);
     expect((await fetchPool(N1.pool)).var).toBe(SYSTEM_PROGRAM);
+    expect(await chainNow()).toBeLessThan(kickoff); // bound in time, else GG_LEAD is too short
 
-    await travelTo(kickoff + 2n, "GG kickoff");
+    // Wait out the whistle on the chain's clock, no time travel.
+    for (let now = await chainNow(); now <= kickoff; now = await chainNow())
+      await new Promise((r) => setTimeout(r, 500));
+    travelled.push(`GG kickoff: ${kickoff} → ${await chainNow()} (waited)`);
+    expect((await currentSlot()) - bound1.endAt).toBeLessThan(512n); // inside SlotHashes
 
     // B1: the sample, reveal and draw land after kickoff and succeed.
     await drawBoundPool(s, B1, bound1);
