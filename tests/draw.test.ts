@@ -246,7 +246,7 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
   async function openBindAndSample(seed: Uint8Array): Promise<{ refs: PoolRefs; v: Opened }> {
     const refs = await lockedPool();
     const v = await openFresh(keeper, keeper.address, seed);
-    await send(keeper, await setVarInstruction(keeper, refs.pool, v.address));
+    await send(keeper, await setVarInstruction(keeper, refs.game, refs.pool, v.address));
     expect(Uint8Array.from((await fetchPool(refs.pool)).varCommit)).toEqual(keccak(seed));
     await waitForSlot(v.endAt + 1n);
     await sampleVar(stranger, refs.pool, v.address);
@@ -334,7 +334,10 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     expect(varInfo.value?.lamports).toBe(await rentForVar());
 
     // set_var by the keeper: the pool records var, end_at and the commit.
-    const setSig = await send(keeper, await setVarInstruction(keeper, p1.pool, v1.address));
+    const setSig = await send(
+      keeper,
+      await setVarInstruction(keeper, p1.game, p1.pool, v1.address),
+    );
     measured["set_var"] = await computeUnitsConsumed(setSig);
     let pool = await fetchPool(p1.pool);
     expect(pool.var).toBe(v1.address);
@@ -423,7 +426,10 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     // The stranger opens its own Var naming itself provider: Open succeeds on the fork.
     const own = await openFresh(stranger, stranger.address, seedOf(0x31), { ahead: 300n });
     expect(
-      await sendExpectingError(keeper, await setVarInstruction(keeper, refs.pool, own.address)),
+      await sendExpectingError(
+        keeper,
+        await setVarInstruction(keeper, refs.game, refs.pool, own.address),
+      ),
     ).toBe(errorCode("VarProviderMismatch")); // 6035
     // The keeper opens a Var naming the stranger as provider, who does not sign: Open succeeds
     // too (the fork keeps Regolith's commented provider check — the unsigned-provider fact).
@@ -432,7 +438,7 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     expect(
       await sendExpectingError(
         keeper,
-        await setVarInstruction(keeper, refs.pool, unsigned.address),
+        await setVarInstruction(keeper, refs.game, refs.pool, unsigned.address),
       ),
     ).toBe(errorCode("VarProviderMismatch")); // 6035
   });
@@ -533,12 +539,15 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     const SEED_B = seedOf(0x52);
     const p5 = await lockedPool();
     const a = await openFresh(keeper, keeper.address, SEED_A);
-    await send(keeper, await setVarInstruction(keeper, p5.pool, a.address));
+    await send(keeper, await setVarInstruction(keeper, p5.game, p5.pool, a.address));
     expect(Uint8Array.from((await fetchPool(p5.pool)).varCommit)).toEqual(keccak(SEED_A));
     // 2026-10-23 audit F2: while A's window is ahead, a replacement is SampleWindowOpen.
     const early = await openFresh(keeper, keeper.address, seedOf(0x53));
     expect(
-      await sendExpectingError(admin, await replaceVarInstruction(admin, p5.pool, early.address)),
+      await sendExpectingError(
+        admin,
+        await replaceVarInstruction(admin, p5.game, p5.pool, early.address),
+      ),
     ).toBe(errorCode("SampleWindowOpen")); // 6067
     expect((await fetchPool(p5.pool)).var).toBe(a.address);
 
@@ -560,7 +569,10 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
 
     // Open B, replace: the pool's recorded commit moves with it.
     const b = await openFresh(keeper, keeper.address, SEED_B);
-    const replaceSig = await send(admin, await replaceVarInstruction(admin, p5.pool, b.address));
+    const replaceSig = await send(
+      admin,
+      await replaceVarInstruction(admin, p5.game, p5.pool, b.address),
+    );
     let pool = await fetchPool(p5.pool);
     expect(pool.var).toBe(b.address);
     expect(pool.varEndAt).toBe(b.endAt);
@@ -578,7 +590,10 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     // Step 5 audit L1: the admin never binds the first Var.
     const p6 = await lockedPool();
     expect(
-      await sendExpectingError(admin, await replaceVarInstruction(admin, p6.pool, b.address)),
+      await sendExpectingError(
+        admin,
+        await replaceVarInstruction(admin, p6.game, p6.pool, b.address),
+      ),
     ).toBe(errorCode("VarNotSet")); // 6032
     expect((await fetchPool(p6.pool)).varReplacements).toBe(0);
 
@@ -592,14 +607,17 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     expect(pool.homeAxis).toEqual(Array.from(drawAxes((await fetchVar(b.address))!.value).home));
     // A pool with a verified sample (now drawn) is never replaced: PoolNotLocked first.
     expect(
-      await sendExpectingError(admin, await replaceVarInstruction(admin, p5.pool, a.address)),
+      await sendExpectingError(
+        admin,
+        await replaceVarInstruction(admin, p5.game, p5.pool, a.address),
+      ),
     ).toBe(errorCode("PoolNotLocked")); // 6027
   });
 
   it("8. the Step 5 negatives hold against the fork: shape, too early, missed window fails inside Entropy, forged fallback", async () => {
     const refs = await lockedPool();
     const setVarBy = async (who: KeyPairSigner, v: Address) =>
-      sendExpectingError(who, await setVarInstruction(who, refs.pool, v));
+      sendExpectingError(who, await setVarInstruction(who, refs.game, refs.pool, v));
     expect(await setVarBy(admin, (await plantFresh(seedOf(0x81), { ahead: 300n })).address)).toBe(
       errorCode("Unauthorized"), // 6000
     );
@@ -621,7 +639,7 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
 
     // Bind a planted Var and the window negatives.
     const v = await plantFresh(seedOf(0x86), { ahead: 300n });
-    await send(keeper, await setVarInstruction(keeper, refs.pool, v.address));
+    await send(keeper, await setVarInstruction(keeper, refs.game, refs.pool, v.address));
     expect(await setVarBy(keeper, v.address)).toBe(errorCode("VarAlreadySet")); // 6031
     expect(await sampleVarExpectingError(keeper, refs.pool, v.address)).toBe(
       errorCode("SampleTooEarly"), // 6062
@@ -689,11 +707,11 @@ describe("draw (Surfpool, the platform's Entropy deployment preloaded from the f
     expect(measured["sample_var"]!).toBeLessThan(250_000n);
   });
 
-  it("10. the IDL has 27 instructions, 6 accounts, 25 events, 71 errors, the Step 5b fields with docs", () => {
+  it("10. the IDL has 27 instructions, 6 accounts, 25 events, 72 errors, the Step 5b fields with docs", () => {
     expect(IDL.instructions).toHaveLength(27); // 19 after Step 6, + the seven §4.6 instructions, + sponsor_box
     expect(IDL.accounts).toHaveLength(6);
     expect(IDL.events).toHaveLength(25); // 18 after Step 6, + the six §4.6 events, + BoxSponsored
-    expect(IDL.errors).toHaveLength(71);
+    expect(IDL.errors).toHaveLength(72);
     const idl = IDL as unknown as {
       instructions: {
         name: string;

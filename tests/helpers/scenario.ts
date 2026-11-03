@@ -128,15 +128,15 @@ export async function fill(
 }
 
 /**
- * Draw a `Locked` pool with nothing planted: `Open` → `set_var` → wait → `sample_var` →
- * `Reveal` → `draw`. `Open` and `set_var` both have to land inside the `WINDOW_AHEAD` slots
- * before `end_at`; when the box is slow and the window is about to close (or `set_var` reports
- * `VarNotFresh`, the Step 7 flake), the opening is abandoned and a fresh `Var` is opened.
+ * Bind a fresh `Var` to a `Locked` pool: `Open` → `set_var`. Both have to land inside the
+ * `WINDOW_AHEAD` slots before `end_at`; when the box is slow and the window is about to close
+ * (or `set_var` reports `VarNotFresh`, the Step 7 flake), the opening is abandoned and a fresh
+ * `Var` is opened. Returns what the sample and the reveal need.
  */
-export async function drawLockedPool(
-  s: Pick<Scenario, "keeper" | "sampler" | "nextVarId">,
+export async function bindFreshVar(
+  s: Pick<Scenario, "keeper" | "nextVarId">,
   refs: PoolRefs,
-): Promise<{ varAddress: Address; value: Uint8Array }> {
+): Promise<{ varAddress: Address; seed: Uint8Array; endAt: bigint }> {
   let varAddress: Address | undefined;
   let seed: Uint8Array | undefined;
   let endAt = 0n;
@@ -162,36 +162,57 @@ export async function drawLockedPool(
       ),
     );
     if ((await currentSlot()) + 4n >= endAt) {
-      console.log(
-        `drawLockedPool: Open landed too close to end_at (attempt ${attempt}); re-opening`,
-      );
+      console.log(`bindFreshVar: Open landed too close to end_at (attempt ${attempt}); re-opening`);
       continue;
     }
     try {
-      await send(s.keeper, await setVarInstruction(s.keeper, refs.pool, varAddress));
+      await send(s.keeper, await setVarInstruction(s.keeper, refs.game, refs.pool, varAddress));
       break;
     } catch (error) {
       if (attempt < OPEN_ATTEMPTS && /VarNotFresh|6036/.test(String(error))) {
-        console.log(`drawLockedPool: set_var VarNotFresh (attempt ${attempt}); re-opening`);
+        console.log(`bindFreshVar: set_var VarNotFresh (attempt ${attempt}); re-opening`);
         continue;
       }
       throw error;
     }
   }
+  return { varAddress: varAddress!, seed: seed!, endAt };
+}
+
+/**
+ * Finish a bound pool's draw: wait for the window, `sample_var` → `Reveal` → `draw`.
+ */
+export async function drawBoundPool(
+  s: Pick<Scenario, "keeper" | "sampler">,
+  refs: PoolRefs,
+  bound: { varAddress: Address; seed: Uint8Array; endAt: bigint },
+): Promise<{ varAddress: Address; value: Uint8Array }> {
+  const { varAddress, seed, endAt } = bound;
   await waitForSlot(endAt + 1n);
   await send(s.sampler, [
     setComputeUnitLimit(CU_LIMIT),
-    await sampleVarInstruction(s.sampler, refs.pool, varAddress!),
+    await sampleVarInstruction(s.sampler, refs.pool, varAddress),
   ]);
-  await send(s.keeper, revealInstruction(s.keeper, varAddress!, seed!));
-  const revealed = (await fetchVar(varAddress!))!;
-  expect(revealed.value).toEqual(entropyValue(revealed.slotHash, seed!, 1n));
-  await send(s.keeper, await drawInstruction(s.keeper, refs.game, refs.pool, varAddress!));
+  await send(s.keeper, revealInstruction(s.keeper, varAddress, seed));
+  const revealed = (await fetchVar(varAddress))!;
+  expect(revealed.value).toEqual(entropyValue(revealed.slotHash, seed, 1n));
+  await send(s.keeper, await drawInstruction(s.keeper, refs.game, refs.pool, varAddress));
   const pool = await fetchPool(refs.pool);
   expect(pool.status).toBe(PoolStatus.Drawn);
   const axes = drawAxes(revealed.value);
   expect(pool.homeAxis).toEqual(Array.from(axes.home));
-  return { varAddress: varAddress!, value: revealed.value };
+  return { varAddress, value: revealed.value };
+}
+
+/**
+ * Draw a `Locked` pool with nothing planted: `Open` → `set_var` → wait → `sample_var` →
+ * `Reveal` → `draw` (`bindFreshVar` then `drawBoundPool`).
+ */
+export async function drawLockedPool(
+  s: Pick<Scenario, "keeper" | "sampler" | "nextVarId">,
+  refs: PoolRefs,
+): Promise<{ varAddress: Address; value: Uint8Array }> {
+  return drawBoundPool(s, refs, await bindFreshVar(s, refs));
 }
 
 /**

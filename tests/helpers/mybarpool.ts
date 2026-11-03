@@ -1396,15 +1396,17 @@ export const digitsDrawnDecoder: Decoder<DigitsDrawn> = getStructDecoder([
   ["awayAxis", digits10()],
 ]);
 
-/** `set_var`: `score_authority (s)`, `config`, `pool (w)`, `var`, event CPI. */
+/** `set_var`: `score_authority (s)`, `config`, `game`, `pool (w)`, `var`, event CPI. */
 export async function setVarInstruction(
   keeper: TransactionSigner,
+  game: Address,
   pool: Address,
   varAddress: Address,
 ): Promise<SignedInstruction> {
   const accounts: SignedMetas = [
     { address: keeper.address, role: AccountRole.READONLY_SIGNER, signer: keeper },
     { address: await configPda(), role: AccountRole.READONLY },
+    { address: game, role: AccountRole.READONLY },
     { address: pool, role: AccountRole.WRITABLE },
     { address: varAddress, role: AccountRole.READONLY },
     ...(await eventCpiAccounts()),
@@ -1459,15 +1461,17 @@ export async function drawInstruction(
   };
 }
 
-/** `replace_var`: `admin (s)`, `config`, `pool (w)`, `new_var`, SlotHashes, event CPI. */
+/** `replace_var`: `admin (s)`, `config`, `game`, `pool (w)`, `new_var`, SlotHashes, event CPI. */
 export async function replaceVarInstruction(
   admin: TransactionSigner,
+  game: Address,
   pool: Address,
   newVar: Address,
 ): Promise<SignedInstruction> {
   const accounts: SignedMetas = [
     { address: admin.address, role: AccountRole.READONLY_SIGNER, signer: admin },
     { address: await configPda(), role: AccountRole.READONLY },
+    { address: game, role: AccountRole.READONLY },
     { address: pool, role: AccountRole.WRITABLE },
     { address: newVar, role: AccountRole.READONLY },
     { address: SLOT_HASHES_SYSVAR, role: AccountRole.READONLY },

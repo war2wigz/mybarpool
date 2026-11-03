@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { SPONSORSHIP_SIZE, winningBox, type Digits } from "@mybarpool/shared";
+import { keccak, SPONSORSHIP_SIZE, winningBox, type Digits } from "@mybarpool/shared";
 import {
   airdropFactory,
   createKeyPairSignerFromBytes,
@@ -28,6 +28,7 @@ import {
 } from "@solana/kit";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { currentSlot, entropyVarPda, openInstruction } from "./helpers/entropy.js";
 import { Localnet } from "../scripts/localnet.js";
 import {
   ata,
@@ -50,6 +51,7 @@ import {
   creatorCounterDecoder,
   decodeAccount,
   decodeEvent,
+  drawInstruction,
   emittedEvents,
   errorCode,
   eventName,
@@ -68,6 +70,7 @@ import {
   PoolStatus,
   postScoresInstruction,
   quarterSettledDecoder,
+  replaceVarInstruction,
   returnBoxesInstruction,
   returnSponsorshipInstruction,
   rpc,
@@ -76,6 +79,7 @@ import {
   sendExpectingError,
   setComputeUnitLimit,
   settleInstruction,
+  setVarInstruction,
   SLOT_HASHES_SYSVAR,
   splitInstruction,
   sponsorInstruction,
@@ -94,9 +98,12 @@ import {
   type SplPool,
 } from "./helpers/mybarpool.js";
 import {
+  bindFreshVar,
   CU_LIMIT,
+  drawBoundPool,
   drawnPool as drawnPoolScenario,
   fetchPool,
+  fill,
   PRICE,
   PRICE_ORE,
   type Scenario,
@@ -118,6 +125,8 @@ const SCORES: [number, number][] = [
 const BATCH_CU_LIMIT = 1_400_000;
 const ORE: SplPool = { mint: ORE_MINT, tokenProgram: TOKEN_PROGRAM };
 const DUST_SPONSORSHIP = 1_000_000_013n;
+/** PROGRAM §1 `DRAW_GRACE`, read from the committed IDL (ten minutes). */
+const DRAW_GRACE = BigInt(IDL.constants.find((c) => c.name === "DRAW_GRACE")!.value);
 
 const localnet = new Localnet();
 
@@ -139,6 +148,8 @@ function transferInstruction(from: TransactionSigner, to: Address, amount: bigin
     data,
   } as Instruction;
 }
+
+const seedOf = (byte: number) => new Uint8Array(32).fill(byte);
 
 function popcount(bits: number): number {
   let n = 0;
@@ -841,11 +852,83 @@ describe("returns, splits and cancellations (Surfpool, the platform's Entropy de
     expect(measured["split_ore_3_owners_one_create"]!).toBeLessThan(150_000n);
   });
 
-  it("7. the IDL has 27 instructions, 6 accounts, 25 events, 71 errors, docs on each new item", () => {
+  it("7. the draw grace: a pool bound before kickoff draws inside DRAW_GRACE; set_var and replace_var at kickoff are VarAfterKickoff; an unbound pool returns at kickoff, a bound one once the grace ends", async () => {
+    // 2026-11-02: a pool that fills seconds before kickoff still has the first quarter's
+    // MIN_QUARTER_SECONDS before anything can be settled, so its draw may finish up to
+    // `kickoff + DRAW_GRACE`; the grace is for finishing a draw under way, never starting one.
+    expect(DRAW_GRACE).toBe(600n);
+    const { game: GG, kickoff } = await newGame(1n);
+    const s = scenario(GG);
+    const buys = [[buyerA, 10] as const, [buyerB, 10] as const];
+    const B1 = await fill(s, {}, buys); // bound before kickoff, drawn inside the grace
+    const B2 = await fill(s, {}, buys); // bound before kickoff, never drawn
+    const N1 = await fill(s, {}, buys); // nothing bound
+    const bound1 = await bindFreshVar(s, B1);
+    const bound2 = await bindFreshVar(s, B2);
+    expect((await fetchPool(B1.pool)).var).toBe(bound1.varAddress);
+    expect((await fetchPool(N1.pool)).var).toBe(SYSTEM_PROGRAM);
+
+    await travelTo(kickoff + 2n, "GG kickoff");
+
+    // B1: the sample, reveal and draw land after kickoff and succeed.
+    await drawBoundPool(s, B1, bound1);
+    expect((await fetchPool(B1.pool)).status).toBe(PoolStatus.Drawn);
+
+    // N1: a Var opened now cannot be bound (6071); the pool returns at the purchase price.
+    const id = nextVarId++;
+    const late = await entropyVarPda(keeper.address, id);
+    await withRetry(() => rpc.getAccountInfo(late, { encoding: "base64" }).send());
+    const endAt = (await currentSlot()) + 300n;
+    await send(
+      keeper,
+      await openInstruction(
+        keeper,
+        keeper,
+        id,
+        keeper.address,
+        keccak(seedOf(9)),
+        false,
+        1n,
+        endAt,
+      ),
+    );
+    expect(
+      await sendExpectingError(keeper, await setVarInstruction(keeper, GG, N1.pool, late)),
+    ).toBe(errorCode("VarAfterKickoff")); // 6071
+    // B2: the admin cannot swap the binding either.
+    expect(
+      await sendExpectingError(admin, await replaceVarInstruction(admin, GG, B2.pool, late)),
+    ).toBe(errorCode("VarAfterKickoff")); // 6071
+    const a0 = await fetchLamports(buyerA.address);
+    await returnBoxes(N1, [creator.address, buyerA.address, buyerB.address], { counter: true });
+    expect((await fetchPool(N1.pool)).status).toBe(PoolStatus.Returned);
+    expect((await fetchLamports(buyerA.address)) - a0).toBe(500_000_000n);
+
+    // B2: still inside the grace, so not returnable; past it, draw is refused and the return opens.
+    expect(await returnBoxesError(B2, [creator.address, buyerA.address, buyerB.address])).toBe(
+      errorCode("NotReturnable"), // 6046
+    );
+    await travelTo(kickoff + DRAW_GRACE, "GG grace end");
+    expect(
+      await sendExpectingError(
+        keeper,
+        await drawInstruction(keeper, GG, B2.pool, bound2.varAddress),
+      ),
+    ).toBe(errorCode("DrawAfterKickoff")); // 6069
+    const b0 = await fetchLamports(buyerB.address);
+    await returnBoxes(B2, [creator.address, buyerA.address, buyerB.address], { counter: true });
+    const p = await fetchPool(B2.pool);
+    expect(p.status).toBe(PoolStatus.Returned);
+    expect(p.var).toBe(bound2.varAddress);
+    expect((await fetchLamports(buyerB.address)) - b0).toBe(500_000_000n);
+    expect(await openCount(creator.address, GG)).toBe(0);
+  }, 600_000);
+
+  it("8. the IDL has 27 instructions, 6 accounts, 25 events, 72 errors, docs on each new item", () => {
     expect(IDL.instructions).toHaveLength(27);
     expect(IDL.accounts).toHaveLength(6);
     expect(IDL.events).toHaveLength(25);
-    expect(IDL.errors).toHaveLength(71);
+    expect(IDL.errors).toHaveLength(72);
     const idl = IDL as unknown as {
       instructions: {
         name: string;

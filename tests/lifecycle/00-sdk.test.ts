@@ -282,7 +282,7 @@ async function drawThroughSdk(
     endAt,
   );
   const setVar = await getSetVarInstructionAsync(
-    { scoreAuthority: keeper, pool: poolAddress, var: varAddress },
+    { scoreAuthority: keeper, game, pool: poolAddress, var: varAddress },
     { programAddress: client.programAddress },
   );
   await run(`open+set_var (${format})`, format, keeper, [open, setVar]);
